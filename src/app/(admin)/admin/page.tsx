@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,50 +16,51 @@ import Link from "next/link";
 
 export default async function AdminPage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Vérifier admin
-  const { data: profile } = await supabase
+  // Vérifier admin via service role
+  const { data: profile } = await admin
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
   if (profile?.role !== "admin") redirect("/dashboard");
 
-  // Stats
-  const { count: totalClients } = await supabase
+  // Stats (via admin client pour éviter RLS)
+  const { count: totalClients } = await admin
     .from("profiles")
     .select("id", { count: "exact", head: true })
     .eq("role", "dentiste")
     .eq("statut_compte", "approuve");
 
-  const { count: inscriptionsEnAttente } = await supabase
+  const { count: inscriptionsEnAttente } = await admin
     .from("profiles")
     .select("id", { count: "exact", head: true })
     .eq("role", "dentiste")
     .eq("statut_compte", "en_attente");
 
-  const { count: totalCommandes } = await supabase
+  const { count: totalCommandes } = await admin
     .from("commandes")
     .select("id", { count: "exact", head: true });
 
-  const { count: commandesEnCours } = await supabase
+  const { count: commandesEnCours } = await admin
     .from("commandes")
     .select("id", { count: "exact", head: true })
     .in("statut", ["en_attente", "acceptee", "en_cours", "controle_qualite"]);
 
-  const { data: recentCommandes } = await supabase
+  const { data: recentCommandes } = await admin
     .from("commandes")
     .select("*, dentiste:profiles!dentiste_id(nom, prenom)")
     .order("created_at", { ascending: false })
     .limit(10);
 
   // Chiffre d'affaires
-  const { data: paiements } = await supabase
+  const { data: paiements } = await admin
     .from("paiements")
     .select("montant")
     .eq("statut", "paye");

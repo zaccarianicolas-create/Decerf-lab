@@ -5,7 +5,16 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Users,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Plus,
+  X,
+  UserPlus,
+} from "lucide-react";
 
 type Client = {
   id: string;
@@ -39,6 +48,17 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
   const [clients, setClients] = useState(initialClients);
   const [isPending, startTransition] = useTransition();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    cabinet_nom: "",
+    avec_compte: true,
+  });
 
   const updateStatut = async (
     clientId: string,
@@ -66,11 +86,190 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     setLoadingId(null);
   };
 
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+
+    try {
+      const res = await fetch("/api/admin/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateError(data.error || "Erreur lors de la création");
+        return;
+      }
+      // Reload page to get fresh data
+      window.location.reload();
+    } catch {
+      setCreateError("Erreur réseau");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const pendingClients = clients.filter((c) => c.statut_compte === "en_attente");
   const otherClients = clients.filter((c) => c.statut_compte !== "en_attente");
 
   return (
     <div className="space-y-8">
+      {/* Bouton + Formulaire de création */}
+      <div>
+        {!showCreateForm ? (
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            className="gap-2 bg-sky-600 hover:bg-sky-700"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau client
+          </Button>
+        ) : (
+          <Card>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-sky-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Créer un nouveau client
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setCreateError(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateClient} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Prénom *"
+                    placeholder="Jean"
+                    value={formData.prenom}
+                    onChange={(e) =>
+                      setFormData({ ...formData, prenom: e.target.value })
+                    }
+                    required
+                  />
+                  <Input
+                    label="Nom *"
+                    placeholder="Dupont"
+                    value={formData.nom}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nom: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Email *"
+                    type="email"
+                    placeholder="dr.dupont@cabinet.fr"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    required
+                  />
+                  <Input
+                    label="Téléphone"
+                    type="tel"
+                    placeholder="06 12 34 56 78"
+                    value={formData.telephone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, telephone: e.target.value })
+                    }
+                  />
+                </div>
+                <Input
+                  label="Nom du cabinet"
+                  placeholder="Cabinet dentaire du centre"
+                  value={formData.cabinet_nom}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cabinet_nom: e.target.value })
+                  }
+                />
+
+                {/* Toggle avec/sans compte */}
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="mb-2 text-sm font-medium text-gray-700">
+                    Type de compte
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, avec_compte: true })
+                      }
+                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                        formData.avec_compte
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium">Avec compte plateforme</span>
+                      <p className="mt-0.5 text-xs opacity-70">
+                        Le client recevra un email d&apos;invitation pour se
+                        connecter
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, avec_compte: false })
+                      }
+                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                        !formData.avec_compte
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium">Sans compte plateforme</span>
+                      <p className="mt-0.5 text-xs opacity-70">
+                        Fiche client uniquement, pas d&apos;accès à la
+                        plateforme
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {createError && (
+                  <p className="text-sm text-red-600">{createError}</p>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setCreateError(null);
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={creating}
+                    className="gap-2 bg-sky-600 hover:bg-sky-700"
+                  >
+                    {creating ? "Création..." : "Créer le client"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* Inscriptions en attente */}
       {pendingClients.length > 0 && (
         <div>

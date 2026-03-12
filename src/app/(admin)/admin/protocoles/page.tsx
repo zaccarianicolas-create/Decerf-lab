@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { ClientsTable } from "./clients-table";
+import { ProtocolesManager } from "./protocoles-manager";
 
-export default async function AdminClientsPage() {
+export default async function AdminProtocolesPage() {
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -12,22 +12,21 @@ export default async function AdminClientsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: clients } = await admin
-    .from("profiles")
-    .select("*, cabinet:cabinets(*)")
-    .eq("role", "dentiste")
-    .order("created_at", { ascending: false });
+  const { data: protocoles } = await admin
+    .from("protocoles")
+    .select("*")
+    .order("ordre", { ascending: true });
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des clients</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Protocoles</h1>
         <p className="text-sm text-gray-500">
-          Validez les inscriptions et gérez les praticiens
+          Procédures et protocoles du laboratoire
         </p>
       </div>
 
-      <ClientsTable initialClients={clients ?? []} />
+      <ProtocolesManager initialProtocoles={protocoles ?? []} />
     </div>
   );
 }
