@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, FlaskConical } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -33,9 +34,13 @@ export function Navbar() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600">
-            <FlaskConical className="h-5 w-5 text-white" />
-          </div>
+          <Image
+            src="/images/decerflogo.png"
+            alt="DECERF LAB"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-lg"
+          />
           <div className="flex flex-col">
             <span className="text-lg font-bold tracking-tight text-slate-900">DECERF LAB</span>
             <span className="text-[10px] uppercase tracking-widest text-slate-400">

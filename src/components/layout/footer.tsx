@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FlaskConical, Mail, Phone, MapPin } from "lucide-react";
+import Image from "next/image";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
   return (
@@ -9,9 +10,13 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600">
-                <FlaskConical className="h-5 w-5 text-white" />
-              </div>
+              <Image
+                src="/images/decerflogo.png"
+                alt="DECERF LAB"
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-lg"
+              />
               <div className="flex flex-col">
                 <span className="text-lg font-bold tracking-tight text-slate-900">
                   DECERF LAB
