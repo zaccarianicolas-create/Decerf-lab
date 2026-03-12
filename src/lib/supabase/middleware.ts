@@ -63,11 +63,38 @@ export async function updateSession(request: NextRequest) {
 
   // Si l'utilisateur est connecté, vérifier le statut de son compte
   if (user && (isProtectedRoute || isAuthRoute || isPendingRoute)) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, statut_compte")
-      .eq("id", user.id)
-      .single();
+    // Utiliser la service role key pour bypasser RLS dans le middleware
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    let profile: { role: string; statut_compte: string } | null = null;
+
+    if (serviceRoleKey) {
+      // Fetch direct avec service role pour fiabilité en Edge Runtime
+      try {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/profiles?select=role,statut_compte&id=eq.${user.id}`,
+          {
+            headers: {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+          }
+        );
+        const data = await res.json();
+        profile = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      } catch (e) {
+        console.error("Middleware: failed to fetch profile", e);
+      }
+    }
+
+    // Fallback: requête via le client supabase si service role indispo
+    if (!profile) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role, statut_compte")
+        .eq("id", user.id)
+        .single();
+      profile = data;
+    }
 
     // Compte en attente de validation → rediriger vers page d'attente
     if (profile && profile.statut_compte !== "approuve" && profile.role !== "admin") {
