@@ -93,6 +93,13 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // Admin qui visite /dashboard → rediriger vers /admin
+    if (profile?.role === "admin" && request.nextUrl.pathname.startsWith("/dashboard")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
+    }
+
     // Vérifier l'accès admin
     if (request.nextUrl.pathname.startsWith("/admin")) {
       if (profile?.role !== "admin") {
