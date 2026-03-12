@@ -33,12 +33,15 @@ export default async function CompteEnAttentePage() {
       <Card className="w-full max-w-md">
         <CardContent className="p-8 text-center">
           <Image
-            src="/images/decerflogo.png"
+            src="/images/logod.png"
             alt="DECERF LAB"
             width={160}
             height={45}
-            className="mx-auto mb-6 h-11 w-auto"
+            className="mx-auto mb-1 h-11 w-auto"
           />
+          <p className="mb-5 text-[10px] font-medium uppercase tracking-widest text-gray-400">
+            Laboratoire dentaire
+          </p>
 
           {isRejected ? (
             <>

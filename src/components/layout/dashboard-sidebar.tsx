@@ -29,14 +29,17 @@ export function DashboardSidebar() {
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center border-b border-gray-200 px-4">
-          <Link href="/">
+          <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/images/decerflogo.png"
+              src="/images/logod.png"
               alt="DECERF LAB"
               width={140}
               height={40}
-              className="h-9 w-auto"
+              className="h-8 w-auto"
             />
+            <span className="text-[9px] font-medium uppercase tracking-widest text-gray-400">
+              Laboratoire dentaire
+            </span>
           </Link>
         </div>
 

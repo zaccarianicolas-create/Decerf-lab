@@ -33,15 +33,18 @@ export function Navbar() {
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/decerflogo.png"
+            src="/images/logod.png"
             alt="DECERF LAB"
             width={160}
             height={45}
-            className="h-11 w-auto"
+            className="h-10 w-auto"
             priority
           />
+          <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+            Laboratoire dentaire
+          </span>
         </Link>
 
         {/* Desktop nav */}

@@ -55,13 +55,16 @@ function LoginForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <Image
-          src="/images/decerflogo.png"
+          src="/images/logod.png"
           alt="DECERF LAB"
           width={180}
           height={50}
-          className="mx-auto mb-2 h-12 w-auto"
+          className="mx-auto mb-1 h-11 w-auto"
         />
-        <CardTitle className="text-2xl">Connexion</CardTitle>
+        <p className="text-[10px] font-medium uppercase tracking-widest text-gray-400">
+          Laboratoire dentaire
+        </p>
+        <CardTitle className="mt-4 text-2xl">Connexion</CardTitle>
         <p className="text-sm text-gray-500">
           Accédez à votre espace DECERF LAB
         </p>

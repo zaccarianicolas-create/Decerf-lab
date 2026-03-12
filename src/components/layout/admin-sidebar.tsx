@@ -33,14 +33,17 @@ export function AdminSidebar() {
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center border-b border-gray-800 px-4">
-          <Link href="/admin">
+          <Link href="/admin" className="flex items-center gap-2">
             <Image
-              src="/images/decerflogo.png"
+              src="/images/logod.png"
               alt="DECERF LAB"
               width={140}
               height={40}
-              className="h-9 w-auto brightness-0 invert"
+              className="h-8 w-auto brightness-0 invert"
             />
+            <span className="text-[9px] font-medium uppercase tracking-widest text-gray-500">
+              Laboratoire dentaire
+            </span>
           </Link>
         </div>
 
