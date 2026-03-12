@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -10,8 +10,10 @@ import {
   User,
   Plus,
   FileText,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const dentistLinks = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
@@ -23,6 +25,14 @@ const dentistLinks = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-white lg:block">
@@ -67,8 +77,8 @@ export function DashboardSidebar() {
           })}
         </nav>
 
-        {/* Lien vers le site */}
-        <div className="border-t border-gray-200 p-4">
+        {/* Footer */}
+        <div className="space-y-2 border-t border-gray-200 p-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
@@ -76,6 +86,13 @@ export function DashboardSidebar() {
             <FileText className="h-4 w-4" />
             Retour au site
           </Link>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 text-sm text-red-500 hover:text-red-700"
+          >
+            <LogOut className="h-4 w-4" />
+            Déconnexion
+          </button>
         </div>
       </div>
     </aside>

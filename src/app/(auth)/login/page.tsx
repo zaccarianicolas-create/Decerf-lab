@@ -47,6 +47,21 @@ function LoginForm() {
       return;
     }
 
+    // Déterminer la redirection selon le rôle
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && redirect === "/dashboard") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role === "admin") {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+    }
+
     router.push(redirect);
     router.refresh();
   };

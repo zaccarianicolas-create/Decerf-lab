@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -12,8 +12,10 @@ import {
   FileText,
   CreditCard,
   BookOpen,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const adminLinks = [
   { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
@@ -27,6 +29,14 @@ const adminLinks = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-gray-900 lg:block">
@@ -72,7 +82,7 @@ export function AdminSidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-gray-800 p-4">
+        <div className="space-y-2 border-t border-gray-800 p-4">
           <Link
             href="/"
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300"
@@ -80,6 +90,13 @@ export function AdminSidebar() {
             <FileText className="h-4 w-4" />
             Retour au site
           </Link>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 text-sm text-red-400 hover:text-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            Déconnexion
+          </button>
         </div>
       </div>
     </aside>
