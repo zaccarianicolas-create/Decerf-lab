@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FlaskConical } from "lucide-react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,9 +91,13 @@ export default function RegisterPage() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600">
-          <FlaskConical className="h-6 w-6 text-white" />
-        </div>
+        <Image
+          src="/images/decerflogo.png"
+          alt="DECERF LAB"
+          width={180}
+          height={50}
+          className="mx-auto mb-2 h-12 w-auto"
+        />
         <CardTitle className="text-2xl">Créer un compte</CardTitle>
         <p className="text-sm text-gray-500">
           Rejoignez DECERF LAB en tant que praticien

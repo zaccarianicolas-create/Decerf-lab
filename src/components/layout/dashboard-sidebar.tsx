@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,7 +9,6 @@ import {
   MessageSquare,
   User,
   Plus,
-  FlaskConical,
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,11 +28,16 @@ export function DashboardSidebar() {
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-white lg:block">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-            <FlaskConical className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-gray-900">DECERF LAB</span>
+        <div className="flex h-16 items-center border-b border-gray-200 px-4">
+          <Link href="/">
+            <Image
+              src="/images/decerflogo.png"
+              alt="DECERF LAB"
+              width={140}
+              height={40}
+              className="h-9 w-auto"
+            />
+          </Link>
         </div>
 
         {/* Navigation */}

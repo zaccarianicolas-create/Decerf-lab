@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,7 +9,6 @@ import {
   Package,
   MessageSquare,
   Settings,
-  FlaskConical,
   FileText,
   CreditCard,
   BookOpen,
@@ -32,16 +32,16 @@ export function AdminSidebar() {
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-gray-900 lg:block">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-gray-800 px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-            <FlaskConical className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-white">DECERF LAB</span>
-            <span className="text-[9px] uppercase tracking-wider text-gray-400">
-              Administration
-            </span>
-          </div>
+        <div className="flex h-16 items-center border-b border-gray-800 px-4">
+          <Link href="/admin">
+            <Image
+              src="/images/decerflogo.png"
+              alt="DECERF LAB"
+              width={140}
+              height={40}
+              className="h-9 w-auto brightness-0 invert"
+            />
+          </Link>
         </div>
 
         {/* Navigation */}

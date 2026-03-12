@@ -9,22 +9,14 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center">
               <Image
                 src="/images/decerflogo.png"
                 alt="DECERF LAB"
-                width={36}
-                height={36}
-                className="h-9 w-9 rounded-lg"
+                width={160}
+                height={45}
+                className="h-11 w-auto"
               />
-              <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight text-slate-900">
-                  DECERF LAB
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-slate-400">
-                  Laboratoire dentaire et orthodontique
-                </span>
-              </div>
             </Link>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-500">
               Votre partenaire de confiance pour des prothèses dentaires de haute
