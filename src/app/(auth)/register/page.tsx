@@ -74,12 +74,20 @@ export default function RegisterPage() {
             <span className="text-2xl">✓</span>
           </div>
           <h2 className="text-xl font-semibold text-gray-900">
-            Inscription réussie !
+            Inscription enregistrée !
           </h2>
           <p className="mt-2 text-sm text-gray-500">
-            Vérifiez votre boîte mail pour confirmer votre compte, puis
-            connectez-vous.
+            Un email de confirmation vous a été envoyé. Veuillez vérifier votre
+            boîte mail et cliquer sur le lien de confirmation.
           </p>
+          <div className="mt-4 rounded-lg bg-amber-50 p-3">
+            <p className="text-sm text-amber-700">
+              <strong>Note :</strong> Après confirmation de votre email, votre
+              compte devra être validé par notre équipe avant de pouvoir accéder
+              à la plateforme. Vous serez notifié par email une fois votre compte
+              approuvé.
+            </p>
+          </div>
           <Link href="/login" className="mt-6 block">
             <Button className="w-full">Se connecter</Button>
           </Link>

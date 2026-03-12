@@ -44,12 +44,14 @@ export async function updateSession(request: NextRequest) {
   // Routes protégées
   const protectedRoutes = ["/dashboard", "/admin"];
   const authRoutes = ["/login", "/register"];
+  const pendingRoute = "/compte-en-attente";
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
+  const isPendingRoute = request.nextUrl.pathname === pendingRoute;
 
   // Rediriger vers login si pas authentifié
   if (!user && isProtectedRoute) {
@@ -59,25 +61,45 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Rediriger vers dashboard si déjà connecté et visite login/register
-  if (user && isAuthRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
-  // Vérifier l'accès admin
-  if (user && request.nextUrl.pathname.startsWith("/admin")) {
+  // Si l'utilisateur est connecté, vérifier le statut de son compte
+  if (user && (isProtectedRoute || isAuthRoute || isPendingRoute)) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, statut_compte")
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    // Compte en attente de validation → rediriger vers page d'attente
+    if (profile && profile.statut_compte !== "approuve" && profile.role !== "admin") {
+      if (!isPendingRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = pendingRoute;
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    // Compte approuvé visitant la page d'attente → rediriger vers dashboard
+    if (isPendingRoute && profile?.statut_compte === "approuve") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
+    }
+
+    // Rediriger vers dashboard si déjà connecté et visite login/register
+    if (isAuthRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = profile?.role === "admin" ? "/admin" : "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Vérifier l'accès admin
+    if (request.nextUrl.pathname.startsWith("/admin")) {
+      if (profile?.role !== "admin") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

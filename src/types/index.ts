@@ -3,6 +3,7 @@
 // ============================================
 
 export type UserRole = "admin" | "dentiste";
+export type StatutCompte = "en_attente" | "approuve" | "rejete";
 
 export type StatutCommande =
   | "brouillon"

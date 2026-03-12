@@ -8,8 +8,10 @@ import {
   CreditCard,
   TrendingUp,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import Link from "next/link";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -31,7 +33,14 @@ export default async function AdminPage() {
   const { count: totalClients } = await supabase
     .from("profiles")
     .select("id", { count: "exact", head: true })
-    .eq("role", "dentiste");
+    .eq("role", "dentiste")
+    .eq("statut_compte", "approuve");
+
+  const { count: inscriptionsEnAttente } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "dentiste")
+    .eq("statut_compte", "en_attente");
 
   const { count: totalCommandes } = await supabase
     .from("commandes")
@@ -63,6 +72,18 @@ export default async function AdminPage() {
         </h1>
         <p className="text-sm text-gray-500">Vue d&apos;ensemble du laboratoire</p>
       </div>
+
+      {/* Alerte inscriptions en attente */}
+      {(inscriptionsEnAttente ?? 0) > 0 && (
+        <Link href="/admin/clients">
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 transition-colors hover:bg-amber-100">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <p className="text-sm font-medium text-amber-800">
+              {inscriptionsEnAttente} inscription{(inscriptionsEnAttente ?? 0) > 1 ? "s" : ""} en attente de validation
+            </p>
+          </div>
+        </Link>
+      )}
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
