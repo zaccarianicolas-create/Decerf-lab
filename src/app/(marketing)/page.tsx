@@ -173,8 +173,8 @@ export default function HomePage() {
             <div className="animate-fade-in-up-delay relative">
               <div className="relative overflow-hidden rounded-2xl shadow-2xl">
                 <Image
-                  src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&q=80"
-                  alt="Laboratoire dentaire moderne DECERF LAB"
+                  src="https://images.unsplash.com/photo-1578307985320-b5af7a7c4a21?w=800&q=80"
+                  alt="Prothèses dentaires et moulages en laboratoire"
                   width={800}
                   height={600}
                   className="h-auto w-full object-cover"
@@ -256,8 +256,8 @@ export default function HomePage() {
             <div className="relative">
               <div className="overflow-hidden rounded-2xl">
                 <Image
-                  src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&q=80"
-                  alt="Prothésiste dentaire au travail"
+                  src="https://images.unsplash.com/photo-1621607512022-6aecc834f838?w=800&q=80"
+                  alt="Confection de prothèses dentaires en laboratoire"
                   width={800}
                   height={600}
                   className="h-auto w-full object-cover"
@@ -354,8 +354,8 @@ export default function HomePage() {
             <div className="relative">
               <div className="overflow-hidden rounded-2xl">
                 <Image
-                  src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800&q=80"
-                  alt="Équipement de laboratoire dentaire"
+                  src="https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80"
+                  alt="Moulages et empreintes dentaires en laboratoire"
                   width={800}
                   height={600}
                   className="h-auto w-full object-cover"

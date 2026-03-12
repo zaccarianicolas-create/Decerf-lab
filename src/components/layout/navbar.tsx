@@ -65,7 +65,7 @@ export function Navbar() {
             </Button>
           </Link>
           <Link href="/register">
-            <Button size="sm" className="bg-sky-600 hover:bg-sky-700">Espace praticien</Button>
+            <Button size="sm" className="bg-sky-600 hover:bg-sky-700">S&apos;inscrire</Button>
           </Link>
         </div>
 
@@ -104,7 +104,7 @@ export function Navbar() {
               </Button>
             </Link>
             <Link href="/register" onClick={() => setIsOpen(false)}>
-              <Button className="w-full bg-sky-600 hover:bg-sky-700">Espace praticien</Button>
+              <Button className="w-full bg-sky-600 hover:bg-sky-700">S&apos;inscrire</Button>
             </Link>
           </div>
         </div>
