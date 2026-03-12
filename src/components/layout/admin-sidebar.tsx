@@ -32,16 +32,16 @@ export function AdminSidebar() {
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-gray-900 lg:block">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b border-gray-800 px-4">
-          <Link href="/admin" className="flex items-center gap-2">
+        <div className="flex h-20 items-center border-b border-gray-800 px-4">
+          <Link href="/admin" className="flex flex-col items-start">
             <Image
               src="/images/logod.png"
               alt="DECERF LAB"
-              width={140}
-              height={40}
-              className="h-8 w-auto brightness-0 invert"
+              width={150}
+              height={42}
+              className="h-10 w-auto brightness-0 invert"
             />
-            <span className="text-[9px] font-medium uppercase tracking-widest text-gray-500">
+            <span className="-mt-0.5 text-[8px] font-medium uppercase tracking-[0.2em] text-gray-500">
               Laboratoire dentaire
             </span>
           </Link>

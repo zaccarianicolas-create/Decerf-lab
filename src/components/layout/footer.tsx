@@ -9,15 +9,15 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex flex-col items-start">
               <Image
                 src="/images/logod.png"
                 alt="DECERF LAB"
-                width={160}
-                height={45}
-                className="h-10 w-auto"
+                width={180}
+                height={50}
+                className="h-12 w-auto"
               />
-              <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+              <span className="-mt-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-slate-400">
                 Laboratoire dentaire
               </span>
             </Link>

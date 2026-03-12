@@ -35,11 +35,11 @@ export default async function CompteEnAttentePage() {
           <Image
             src="/images/logod.png"
             alt="DECERF LAB"
-            width={160}
-            height={45}
-            className="mx-auto mb-1 h-11 w-auto"
+            width={180}
+            height={50}
+            className="mx-auto mb-0.5 h-13 w-auto"
           />
-          <p className="mb-5 text-[10px] font-medium uppercase tracking-widest text-gray-400">
+          <p className="mb-5 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
             Laboratoire dentaire
           </p>
 

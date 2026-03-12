@@ -102,11 +102,11 @@ export default function RegisterPage() {
         <Image
           src="/images/logod.png"
           alt="DECERF LAB"
-          width={180}
-          height={50}
-          className="mx-auto mb-1 h-11 w-auto"
+          width={200}
+          height={55}
+          className="mx-auto mb-0.5 h-14 w-auto"
         />
-        <p className="text-[10px] font-medium uppercase tracking-widest text-gray-400">
+        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
           Laboratoire dentaire
         </p>
         <CardTitle className="mt-4 text-2xl">Créer un compte</CardTitle>
