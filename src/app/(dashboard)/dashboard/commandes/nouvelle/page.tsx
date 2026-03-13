@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Upload, Users, UserPlus, Truck, Monitor } from "lucide-react";
 
 const itemSchema = z.object({
+  service_labo_id: z.string().optional(),
   type_travail: z.string().min(1, "Requis"),
   description: z.string().optional(),
   dents: z.string().optional(),
@@ -38,30 +39,19 @@ const commandeSchema = z.object({
 
 type CommandeForm = z.infer<typeof commandeSchema>;
 
-const typesTravauxOptions = [
-  { value: "couronne", label: "Couronne" },
-  { value: "bridge", label: "Bridge" },
-  { value: "inlay_onlay", label: "Inlay / Onlay" },
-  { value: "facette", label: "Facette" },
-  { value: "prothese_amovible", label: "Prothèse amovible" },
-  { value: "prothese_complete", label: "Prothèse complète" },
-  { value: "implant", label: "Implant" },
-  { value: "orthodontie", label: "Orthodontie" },
-  { value: "gouttiere", label: "Gouttière" },
-  { value: "autre", label: "Autre" },
-];
+const MATERIAUX_LABELS: Record<string, string> = {
+  zircone: "Zircone",
+  emax: "E.max",
+  metal: "Métal",
+  ceramique: "Céramique",
+  resine: "Résine",
+  composite: "Composite",
+  titane: "Titane",
+  chrome_cobalt: "Chrome-Cobalt",
+  autre: "Autre",
+};
 
-const materiauxOptions = [
-  { value: "zircone", label: "Zircone" },
-  { value: "emax", label: "E.max" },
-  { value: "metal", label: "Métal" },
-  { value: "ceramique", label: "Céramique" },
-  { value: "resine", label: "Résine" },
-  { value: "composite", label: "Composite" },
-  { value: "titane", label: "Titane" },
-  { value: "chrome_cobalt", label: "Chrome-Cobalt" },
-  { value: "autre", label: "Autre" },
-];
+const ALL_MATERIAUX = Object.entries(MATERIAUX_LABELS).map(([value, label]) => ({ value, label }));
 
 const teintesOptions = [
   "A1", "A2", "A3", "A3.5", "A4",
@@ -76,22 +66,31 @@ export default function NouvelleCommandePage() {
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+  const [servicesLabo, setServicesLabo] = useState<any[]>([]);
   const [patientMode, setPatientMode] = useState<"existing" | "new">("existing");
 
   const supabase = createClient();
 
-  // Load patients
+  // Load patients & services
   useEffect(() => {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      const { data } = await supabase
-        .from("patients")
-        .select("id, reference, nom, prenom")
-        .eq("dentiste_id", userData.user.id)
-        .eq("actif", true)
-        .order("nom");
-      setPatients(data ?? []);
+      const [patientsRes, servicesRes] = await Promise.all([
+        supabase
+          .from("patients")
+          .select("id, reference, nom, prenom")
+          .eq("dentiste_id", userData.user.id)
+          .eq("actif", true)
+          .order("nom"),
+        supabase
+          .from("services_labo")
+          .select("*")
+          .eq("actif", true)
+          .order("ordre"),
+      ]);
+      setPatients(patientsRes.data ?? []);
+      setServicesLabo(servicesRes.data ?? []);
     };
     load();
   }, []);
@@ -107,7 +106,7 @@ export default function NouvelleCommandePage() {
     defaultValues: {
       priorite: "normale",
       mode_reception: "envoi_numerique",
-      items: [{ type_travail: "", dents: "", materiau: "", teinte: "" }],
+      items: [{ service_labo_id: "", type_travail: "", dents: "", materiau: "", teinte: "" }],
     },
   });
 
@@ -174,6 +173,7 @@ export default function NouvelleCommandePage() {
     // Créer les items
     const items = data.items.map((item) => ({
       commande_id: commande.id,
+      service_labo_id: item.service_labo_id || null,
       type_travail: item.type_travail,
       description: item.description || null,
       dents: item.dents ? item.dents.split(",").map((d) => d.trim()) : null,
@@ -445,6 +445,7 @@ export default function NouvelleCommandePage() {
               className="gap-2"
               onClick={() =>
                 append({
+                  service_labo_id: "",
                   type_travail: "",
                   dents: "",
                   materiau: "",
@@ -457,84 +458,189 @@ export default function NouvelleCommandePage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-6">
-            {fields.map((field, index) => (
-              <div
-                key={field.id}
-                className="relative rounded-lg border border-gray-200 p-4"
-              >
-                {fields.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="absolute right-3 top-3 rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1">
+            {fields.map((field, index) => {
+              const selectedServiceId = watch(`items.${index}.service_labo_id`);
+              const selectedService = servicesLabo.find(
+                (s: any) => s.id === selectedServiceId
+              );
+              const materiauxForService =
+                selectedService?.materiaux_disponibles?.length > 0
+                  ? selectedService.materiaux_disponibles.map((m: string) => ({
+                      value: m,
+                      label: MATERIAUX_LABELS[m] || m,
+                    }))
+                  : ALL_MATERIAUX;
+
+              return (
+                <div
+                  key={field.id}
+                  className="relative rounded-lg border border-gray-200 p-4"
+                >
+                  {fields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="absolute right-3 top-3 rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+
+                  {/* Service selector */}
+                  <div className="mb-4 space-y-1">
                     <label className="text-sm font-medium text-gray-700">
-                      Type de travail
+                      Service / Type de travail
                     </label>
                     <select
                       className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                      {...register(`items.${index}.type_travail`)}
+                      {...register(`items.${index}.service_labo_id`)}
+                      onChange={(e) => {
+                        const svc = servicesLabo.find(
+                          (s: any) => s.id === e.target.value
+                        );
+                        register(`items.${index}.service_labo_id`).onChange(e);
+                        if (svc?.type_travail) {
+                          // Auto-fill type_travail hidden field
+                          const el = document.querySelector(
+                            `[name="items.${index}.type_travail"]`
+                          ) as HTMLSelectElement;
+                          if (el) {
+                            el.value = svc.type_travail;
+                            el.dispatchEvent(new Event("change", { bubbles: true }));
+                          }
+                        }
+                      }}
                     >
-                      <option value="">Sélectionner...</option>
-                      {typesTravauxOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
+                      <option value="">Sélectionner un service...</option>
+                      {(() => {
+                        const grouped: Record<string, any[]> = {};
+                        servicesLabo.forEach((s: any) => {
+                          const cat = s.categorie || "autre";
+                          if (!grouped[cat]) grouped[cat] = [];
+                          grouped[cat].push(s);
+                        });
+                        const catLabels: Record<string, string> = {
+                          prothese_fixe: "Prothèse fixe",
+                          prothese_amovible: "Prothèse amovible",
+                          implantologie: "Implantologie",
+                          orthodontie: "Orthodontie",
+                          esthetique: "Esthétique",
+                          autre: "Autre",
+                        };
+                        return Object.entries(grouped).map(([cat, svcs]) => (
+                          <optgroup
+                            key={cat}
+                            label={catLabels[cat] || cat}
+                          >
+                            {svcs.map((s: any) => (
+                              <option key={s.id} value={s.id}>
+                                {s.nom}
+                                {s.prix_indicatif
+                                  ? ` — ${Number(s.prix_indicatif).toFixed(2)} €`
+                                  : ""}
+                                {s.duree_estimee_jours
+                                  ? ` (≈ ${s.duree_estimee_jours}j)`
+                                  : ""}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ));
+                      })()}
                     </select>
                   </div>
-                  <Input
-                    label="Dents (n°)"
-                    placeholder="11, 12, 21"
-                    {...register(`items.${index}.dents`)}
+
+                  {/* Service info banner */}
+                  {selectedService && (
+                    <div className="mb-4 rounded-lg border border-sky-100 bg-sky-50/50 p-3">
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        {selectedService.mode_fourniture === "numerique_stl" && (
+                          <span className="flex items-center gap-1">
+                            <Monitor className="h-3.5 w-3.5 text-sky-600" /> Envoi numérique uniquement
+                          </span>
+                        )}
+                        {selectedService.mode_fourniture === "empreinte_physique" && (
+                          <span className="flex items-center gap-1">
+                            <Truck className="h-3.5 w-3.5 text-teal-600" /> Empreinte physique uniquement
+                          </span>
+                        )}
+                        {selectedService.mode_fourniture === "les_deux" && (
+                          <span className="flex items-center gap-1">
+                            <Monitor className="h-3.5 w-3.5" /> Numérique ou physique
+                          </span>
+                        )}
+                        {selectedService.prix_indicatif && (
+                          <span className="font-medium text-gray-900">
+                            {Number(selectedService.prix_indicatif).toFixed(2)} €
+                          </span>
+                        )}
+                        {selectedService.duree_estimee_jours && (
+                          <span>≈ {selectedService.duree_estimee_jours} jours</span>
+                        )}
+                      </div>
+                      {selectedService.instructions && (
+                        <p className="mt-1.5 text-xs text-amber-700">
+                          📋 {selectedService.instructions}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hidden type_travail for DB - auto-filled by service selection */}
+                  <input
+                    type="hidden"
+                    {...register(`items.${index}.type_travail`)}
+                    value={selectedService?.type_travail || watch(`items.${index}.type_travail`) || "autre"}
                   />
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">
-                      Matériau
-                    </label>
-                    <select
-                      className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                      {...register(`items.${index}.materiau`)}
-                    >
-                      <option value="">Sélectionner...</option>
-                      {materiauxOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Input
+                      label="Dents (n°)"
+                      placeholder="11, 12, 21"
+                      {...register(`items.${index}.dents`)}
+                    />
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Matériau
+                      </label>
+                      <select
+                        className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                        {...register(`items.${index}.materiau`)}
+                      >
+                        <option value="">Sélectionner...</option>
+                        {materiauxForService.map((opt: any) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Teinte
+                      </label>
+                      <select
+                        className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                        {...register(`items.${index}.teinte`)}
+                      >
+                        <option value="">Sélectionner...</option>
+                        {teintesOptions.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">
-                      Teinte
-                    </label>
-                    <select
-                      className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                      {...register(`items.${index}.teinte`)}
-                    >
-                      <option value="">Sélectionner...</option>
-                      {teintesOptions.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="mt-3">
+                    <Input
+                      label="Notes"
+                      placeholder="Détails supplémentaires..."
+                      {...register(`items.${index}.notes`)}
+                    />
                   </div>
                 </div>
-                <div className="mt-3">
-                  <Input
-                    label="Notes"
-                    placeholder="Détails supplémentaires..."
-                    {...register(`items.${index}.notes`)}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {errors.items?.message && (
               <p className="text-sm text-red-600">{errors.items.message}</p>
             )}

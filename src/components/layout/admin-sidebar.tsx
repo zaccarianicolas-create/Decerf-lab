@@ -14,6 +14,7 @@ import {
   BookOpen,
   LogOut,
   Briefcase,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +25,7 @@ const adminLinks = [
   { label: "Travaux", href: "/admin/travaux", icon: Briefcase },
   { label: "Commandes", href: "/admin/commandes", icon: Package },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Services", href: "/admin/services", icon: Wrench },
   { label: "Protocoles", href: "/admin/protocoles", icon: BookOpen },
   { label: "Paiements", href: "/admin/paiements", icon: CreditCard },
   { label: "Paramètres", href: "/admin/parametres", icon: Settings },

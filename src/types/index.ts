@@ -241,6 +241,33 @@ export interface CertificatConformite {
   patient?: Patient;
 }
 
+export type CategorieService =
+  | "prothese_fixe"
+  | "prothese_amovible"
+  | "implantologie"
+  | "orthodontie"
+  | "esthetique"
+  | "autre";
+
+export type ModeFourniture = "numerique_stl" | "empreinte_physique" | "les_deux";
+
+export interface ServiceLabo {
+  id: string;
+  nom: string;
+  description: string | null;
+  categorie: CategorieService;
+  type_travail: TypeTravail | null;
+  materiaux_disponibles: Materiau[];
+  mode_fourniture: ModeFourniture;
+  prix_indicatif: number | null;
+  duree_estimee_jours: number | null;
+  instructions: string | null;
+  actif: boolean;
+  ordre: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
