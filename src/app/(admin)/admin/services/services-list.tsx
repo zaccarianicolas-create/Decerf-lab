@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,15 @@ import {
   ArrowUpDown,
   Euro,
   Clock,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
+import {
+  toggleServiceActif,
+  deleteService as deleteServiceAction,
+  saveService,
+  reorderServices,
+} from "./actions";
 
 type Service = {
   id: string;
@@ -105,13 +112,20 @@ export function ServicesList({
 }: {
   initialServices: Service[];
 }) {
-  const supabase = createClient();
   const [services, setServices] = useState(initialServices);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Drag and drop state
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const filtered =
     filterCat === "all"
@@ -119,6 +133,11 @@ export function ServicesList({
       : services.filter((s) => s.categorie === filterCat);
 
   const actifs = services.filter((s) => s.actif).length;
+
+  const showError = (msg: string) => {
+    setError(msg);
+    setTimeout(() => setError(null), 4000);
+  };
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -140,6 +159,7 @@ export function ServicesList({
     });
     setEditingId(s.id);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSave = async () => {
@@ -160,51 +180,43 @@ export function ServicesList({
       instructions: form.instructions || null,
     };
 
-    if (editingId) {
-      const { error } = await supabase
-        .from("services_labo")
-        .update(payload)
-        .eq("id", editingId);
-      if (!error) {
-        setServices((prev) =>
-          prev.map((s) => (s.id === editingId ? { ...s, ...payload } : s))
-        );
-      }
-    } else {
-      const maxOrdre = Math.max(0, ...services.map((s) => s.ordre));
-      const { data, error } = await supabase
-        .from("services_labo")
-        .insert({ ...payload, ordre: maxOrdre + 1 })
-        .select()
-        .single();
-      if (!error && data) {
-        setServices([...services, data]);
-      }
+    const maxOrdre = Math.max(0, ...services.map((s) => s.ordre));
+    const result = await saveService(editingId, payload, maxOrdre);
+
+    if (!result.success) {
+      showError(result.error || "Erreur lors de l'enregistrement");
+    } else if (editingId) {
+      setServices((prev) =>
+        prev.map((s) => (s.id === editingId ? { ...s, ...payload } : s))
+      );
+    } else if (result.data) {
+      setServices((prev) => [...prev, result.data as Service]);
     }
+
     resetForm();
     setSaving(false);
   };
 
-  const toggleActif = async (id: string, actif: boolean) => {
-    const { error } = await supabase
-      .from("services_labo")
-      .update({ actif: !actif })
-      .eq("id", id);
-    if (!error) {
+  const handleToggle = async (id: string, actif: boolean) => {
+    setTogglingId(id);
+    const result = await toggleServiceActif(id, actif);
+    if (result.success) {
       setServices((prev) =>
         prev.map((s) => (s.id === id ? { ...s, actif: !actif } : s))
       );
+    } else {
+      showError(result.error || "Erreur lors de la mise à jour");
     }
+    setTogglingId(null);
   };
 
-  const deleteService = async (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Supprimer ce service ?")) return;
-    const { error } = await supabase
-      .from("services_labo")
-      .delete()
-      .eq("id", id);
-    if (!error) {
+    const result = await deleteServiceAction(id);
+    if (result.success) {
       setServices((prev) => prev.filter((s) => s.id !== id));
+    } else {
+      showError(result.error || "Erreur lors de la suppression");
     }
   };
 
@@ -217,8 +229,113 @@ export function ServicesList({
     }));
   };
 
+  // --- Drag and drop handlers ---
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, id: string) => {
+      if (filterCat !== "all") {
+        e.preventDefault();
+        return;
+      }
+      setDraggedId(id);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", id);
+      if (e.currentTarget instanceof HTMLElement) {
+        e.currentTarget.style.opacity = "0.5";
+      }
+    },
+    [filterCat]
+  );
+
+  const handleDragEnd = useCallback((e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = "1";
+    }
+    setDraggedId(null);
+    setDragOverId(null);
+    dragCounterRef.current = 0;
+  }, []);
+
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent, id: string) => {
+      e.preventDefault();
+      dragCounterRef.current++;
+      if (id !== draggedId) {
+        setDragOverId(id);
+      }
+    },
+    [draggedId]
+  );
+
+  const handleDragLeave = useCallback(() => {
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setDragOverId(null);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent, targetId: string) => {
+      e.preventDefault();
+      setDragOverId(null);
+      dragCounterRef.current = 0;
+
+      if (!draggedId || draggedId === targetId) {
+        setDraggedId(null);
+        return;
+      }
+
+      const currentOrder = [...services];
+      const draggedIndex = currentOrder.findIndex((s) => s.id === draggedId);
+      const targetIndex = currentOrder.findIndex((s) => s.id === targetId);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        setDraggedId(null);
+        return;
+      }
+
+      // Remove dragged item and insert at target position
+      const [moved] = currentOrder.splice(draggedIndex, 1);
+      currentOrder.splice(targetIndex, 0, moved);
+
+      // Assign new ordres
+      const reordered = currentOrder.map((s, i) => ({
+        ...s,
+        ordre: i + 1,
+      }));
+
+      // Optimistic update
+      const previousServices = services;
+      setServices(reordered);
+      setDraggedId(null);
+
+      // Persist to DB
+      setReordering(true);
+      const ids = reordered.map((s) => ({ id: s.id, ordre: s.ordre }));
+      const result = await reorderServices(ids);
+      if (!result.success) {
+        showError(result.error || "Erreur lors du réordonnancement");
+        setServices(previousServices);
+      }
+      setReordering(false);
+    },
+    [draggedId, services]
+  );
+
   return (
     <div className="space-y-6">
+      {/* Error toast */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
@@ -250,7 +367,7 @@ export function ServicesList({
 
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilterCat("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -286,6 +403,21 @@ export function ServicesList({
           Nouveau service
         </Button>
       </div>
+
+      {/* Reorder hint */}
+      {filterCat === "all" && services.length > 1 && (
+        <p className="flex items-center gap-1.5 text-xs text-gray-400">
+          <GripVertical className="h-3.5 w-3.5" />
+          Glissez-déposez les services pour modifier l&apos;ordre
+          d&apos;affichage
+          {reordering && (
+            <span className="ml-2 flex items-center gap-1 text-sky-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Enregistrement…
+            </span>
+          )}
+        </p>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -461,7 +593,11 @@ export function ServicesList({
                   disabled={saving || !form.nom}
                   className="gap-2 bg-sky-600 hover:bg-sky-700"
                 >
-                  <Save className="h-4 w-4" />
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
                   {saving
                     ? "Enregistrement..."
                     : editingId
@@ -485,14 +621,40 @@ export function ServicesList({
           </Card>
         ) : (
           filtered.map((s) => (
-            <Card
+            <div
               key={s.id}
-              className={`transition-opacity ${!s.actif ? "opacity-50" : ""}`}
+              draggable={filterCat === "all"}
+              onDragStart={(e) => handleDragStart(e, s.id)}
+              onDragEnd={handleDragEnd}
+              onDragEnter={(e) => handleDragEnter(e, s.id)}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, s.id)}
+            >
+            <Card
+              className={`transition-all ${!s.actif ? "opacity-50" : ""} ${
+                draggedId === s.id ? "scale-[0.98] shadow-lg" : ""
+              } ${
+                dragOverId === s.id && draggedId !== s.id
+                  ? "border-sky-400 ring-2 ring-sky-200"
+                  : ""
+              }`}
             >
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
-                  {/* Drag handle placeholder */}
-                  <div className="mt-1 text-gray-300">
+                  {/* Drag handle */}
+                  <div
+                    className={`mt-1 ${
+                      filterCat === "all"
+                        ? "cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing"
+                        : "text-gray-200"
+                    }`}
+                    title={
+                      filterCat === "all"
+                        ? "Glisser pour réordonner"
+                        : "Affichez tous les services pour réordonner"
+                    }
+                  >
                     <GripVertical className="h-5 w-5" />
                   </div>
 
@@ -502,7 +664,8 @@ export function ServicesList({
                       <h3 className="font-semibold text-gray-900">{s.nom}</h3>
                       <span
                         className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${
-                          CATEGORIE_COLORS[s.categorie] || CATEGORIE_COLORS.autre
+                          CATEGORIE_COLORS[s.categorie] ||
+                          CATEGORIE_COLORS.autre
                         }`}
                       >
                         {CATEGORIES.find((c) => c.value === s.categorie)
@@ -580,15 +743,18 @@ export function ServicesList({
                   {/* Actions */}
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => toggleActif(s.id, s.actif)}
+                      onClick={() => handleToggle(s.id, s.actif)}
+                      disabled={togglingId === s.id}
                       className={`rounded-lg p-2 transition-colors ${
                         s.actif
                           ? "text-green-600 hover:bg-green-50"
                           : "text-gray-400 hover:bg-gray-100"
-                      }`}
+                      } disabled:opacity-50`}
                       title={s.actif ? "Désactiver" : "Activer"}
                     >
-                      {s.actif ? (
+                      {togglingId === s.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : s.actif ? (
                         <Eye className="h-4 w-4" />
                       ) : (
                         <EyeOff className="h-4 w-4" />
@@ -597,12 +763,14 @@ export function ServicesList({
                     <button
                       onClick={() => startEdit(s)}
                       className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-sky-600"
+                      title="Modifier"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => deleteService(s.id)}
+                      onClick={() => handleDelete(s.id)}
                       className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                      title="Supprimer"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -610,6 +778,7 @@ export function ServicesList({
                 </div>
               </CardContent>
             </Card>
+            </div>
           ))
         )}
       </div>
