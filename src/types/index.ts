@@ -49,6 +49,7 @@ export type Teinte =
 
 export type StatutPaiement = "en_attente" | "paye" | "echoue" | "rembourse";
 export type Priorite = "normale" | "urgente" | "express";
+export type ModeReception = "envoi_numerique" | "enlevement";
 
 // ============================================
 // Database Row Types
@@ -63,6 +64,7 @@ export interface Profile {
   role: UserRole;
   avatar_url: string | null;
   cabinet_id: string | null;
+  numero_inami: string | null;
   actif: boolean;
   created_at: string;
   updated_at: string;
@@ -90,6 +92,10 @@ export interface Commande {
   dentiste_id: string;
   cabinet_id: string | null;
   patient_ref: string | null;
+  patient_id: string | null;
+  mode_reception: ModeReception;
+  adresse_enlevement: string | null;
+  date_enlevement: string | null;
   statut: StatutCommande;
   priorite: Priorite;
   date_souhaitee: string | null;
@@ -105,6 +111,8 @@ export interface Commande {
   cabinet?: Cabinet;
   items?: CommandeItem[];
   fichiers?: Fichier[];
+  patient?: Patient;
+  certificat?: CertificatConformite;
 }
 
 export interface CommandeItem {
@@ -183,6 +191,54 @@ export interface Paiement {
   methode: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Patient {
+  id: string;
+  reference: string;
+  dentiste_id: string;
+  nom: string;
+  prenom: string;
+  date_naissance: string | null;
+  sexe: "M" | "F" | "X" | null;
+  notes: string | null;
+  actif: boolean;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  dentiste?: Profile;
+  commandes?: Commande[];
+}
+
+export interface CertificatConformite {
+  id: string;
+  numero_certificat: string;
+  commande_id: string;
+  patient_id: string | null;
+  labo_nom: string;
+  labo_adresse: string | null;
+  labo_responsable: string | null;
+  labo_numero_agrement: string | null;
+  dentiste_id: string | null;
+  dentiste_nom: string | null;
+  dentiste_inami: string | null;
+  patient_reference: string | null;
+  description_travail: string;
+  materiaux_utilises: string | null;
+  dents: string | null;
+  lot_materiaux: string | null;
+  normes_appliquees: string;
+  declaration_conformite: string;
+  contenu_complet: string | null;
+  date_emission: string;
+  signe_par: string | null;
+  envoye_au_praticien: boolean;
+  date_envoi: string | null;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  commande?: Commande;
+  patient?: Patient;
 }
 
 export interface Notification {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Users, UserPlus, Truck, Monitor } from "lucide-react";
 
 const itemSchema = z.object({
   type_travail: z.string().min(1, "Requis"),
@@ -21,7 +21,15 @@ const itemSchema = z.object({
 });
 
 const commandeSchema = z.object({
-  patient_ref: z.string().min(1, "Référence patient requise"),
+  patient_id: z.string().optional(),
+  patient_ref: z.string().optional(),
+  new_patient_nom: z.string().optional(),
+  new_patient_prenom: z.string().optional(),
+  new_patient_date_naissance: z.string().optional(),
+  new_patient_sexe: z.string().optional(),
+  mode_reception: z.enum(["envoi_numerique", "enlevement"]),
+  adresse_enlevement: z.string().optional(),
+  date_enlevement: z.string().optional(),
   priorite: z.enum(["normale", "urgente", "express"]),
   date_souhaitee: z.string().optional(),
   notes_dentiste: z.string().optional(),
@@ -67,19 +75,43 @@ export default function NouvelleCommandePage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [patientMode, setPatientMode] = useState<"existing" | "new">("existing");
+
+  const supabase = createClient();
+
+  // Load patients
+  useEffect(() => {
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data } = await supabase
+        .from("patients")
+        .select("id, reference, nom, prenom")
+        .eq("dentiste_id", userData.user.id)
+        .eq("actif", true)
+        .order("nom");
+      setPatients(data ?? []);
+    };
+    load();
+  }, []);
 
   const {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CommandeForm>({
     resolver: zodResolver(commandeSchema),
     defaultValues: {
       priorite: "normale",
+      mode_reception: "envoi_numerique",
       items: [{ type_travail: "", dents: "", materiau: "", teinte: "" }],
     },
   });
+
+  const modeReception = watch("mode_reception");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -88,19 +120,44 @@ export default function NouvelleCommandePage() {
 
   const onSubmit = async (data: CommandeForm) => {
     setError(null);
-    const supabase = createClient();
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+
+    let patientId = data.patient_id || null;
+
+    // Create new patient if needed
+    if (patientMode === "new" && data.new_patient_nom && data.new_patient_prenom) {
+      const { data: newPatient, error: patErr } = await supabase
+        .from("patients")
+        .insert({
+          dentiste_id: user.id,
+          nom: data.new_patient_nom,
+          prenom: data.new_patient_prenom,
+          date_naissance: data.new_patient_date_naissance || null,
+          sexe: data.new_patient_sexe || null,
+        })
+        .select()
+        .single();
+
+      if (patErr || !newPatient) {
+        setError("Erreur lors de la création du patient");
+        return;
+      }
+      patientId = newPatient.id;
+    }
 
     // Créer la commande
     const { data: commande, error: cmdError } = await supabase
       .from("commandes")
       .insert({
         dentiste_id: user.id,
-        patient_ref: data.patient_ref,
+        patient_id: patientId,
+        patient_ref: data.patient_ref || null,
+        mode_reception: data.mode_reception,
+        adresse_enlevement: data.mode_reception === "enlevement" ? data.adresse_enlevement || null : null,
+        date_enlevement: data.mode_reception === "enlevement" ? data.date_enlevement || null : null,
         priorite: data.priorite,
         date_souhaitee: data.date_souhaitee || null,
         notes_dentiste: data.notes_dentiste || null,
@@ -169,17 +226,180 @@ export default function NouvelleCommandePage() {
           </div>
         )}
 
-        {/* Infos générales */}
+        {/* Patient */}
         <Card>
           <CardHeader>
-            <CardTitle>Informations générales</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-sky-600" />
+              Patient
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Toggle existing / new */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPatientMode("existing")}
+                className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                  patientMode === "existing"
+                    ? "border-sky-500 bg-sky-50 text-sky-700"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                <Users className="mb-1 h-4 w-4" />
+                <span className="font-medium">Patient existant</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPatientMode("new")}
+                className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                  patientMode === "new"
+                    ? "border-sky-500 bg-sky-50 text-sky-700"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                <UserPlus className="mb-1 h-4 w-4" />
+                <span className="font-medium">Nouveau patient</span>
+              </button>
+            </div>
+
+            {patientMode === "existing" ? (
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Sélectionner un patient
+                </label>
+                <select
+                  className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                  {...register("patient_id")}
+                >
+                  <option value="">Choisir un patient...</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.prenom} {p.nom} ({p.reference})
+                    </option>
+                  ))}
+                </select>
+                {patients.length === 0 && (
+                  <p className="text-xs text-gray-400">
+                    Aucun patient enregistré.{" "}
+                    <button
+                      type="button"
+                      onClick={() => setPatientMode("new")}
+                      className="text-sky-600 hover:underline"
+                    >
+                      Créer un nouveau patient
+                    </button>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Prénom *"
+                  placeholder="Jean"
+                  {...register("new_patient_prenom")}
+                />
+                <Input
+                  label="Nom *"
+                  placeholder="Dupont"
+                  {...register("new_patient_nom")}
+                />
+                <Input
+                  label="Date de naissance"
+                  type="date"
+                  {...register("new_patient_date_naissance")}
+                />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Sexe
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                    {...register("new_patient_sexe")}
+                  >
+                    <option value="">Non renseigné</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                    <option value="X">Autre</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Mode de réception + Infos générales */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Mode de réception & Détails</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Mode de réception */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Mode de réception
+              </label>
+              <div className="flex gap-3">
+                <label
+                  className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 transition-colors ${
+                    modeReception === "envoi_numerique"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="envoi_numerique"
+                    {...register("mode_reception")}
+                    className="sr-only"
+                  />
+                  <Monitor className="h-5 w-5 text-sky-600" />
+                  <div>
+                    <p className="text-sm font-medium">Envoi numérique</p>
+                    <p className="text-xs text-gray-500">Fichiers STL / empreinte digitale</p>
+                  </div>
+                </label>
+                <label
+                  className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 transition-colors ${
+                    modeReception === "enlevement"
+                      ? "border-sky-500 bg-sky-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="enlevement"
+                    {...register("mode_reception")}
+                    className="sr-only"
+                  />
+                  <Truck className="h-5 w-5 text-teal-600" />
+                  <div>
+                    <p className="text-sm font-medium">Enlèvement</p>
+                    <p className="text-xs text-gray-500">Récupération au cabinet</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {modeReception === "enlevement" && (
+              <div className="grid grid-cols-1 gap-4 rounded-lg border border-teal-100 bg-teal-50/50 p-4 sm:grid-cols-2">
+                <Input
+                  label="Adresse d'enlèvement"
+                  placeholder="123 Rue du Cabinet, 1000 Bruxelles"
+                  {...register("adresse_enlevement")}
+                />
+                <Input
+                  label="Date d'enlèvement souhaitée"
+                  type="date"
+                  {...register("date_enlevement")}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input
-                label="Référence patient"
-                placeholder="Ex: PAT-001"
-                error={errors.patient_ref?.message}
+                label="Référence libre"
+                placeholder="Ex: Ref cabinet"
                 {...register("patient_ref")}
               />
               <div className="space-y-1">

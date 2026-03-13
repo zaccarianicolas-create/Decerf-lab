@@ -13,6 +13,7 @@ import {
   CreditCard,
   BookOpen,
   LogOut,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +21,7 @@ import { createClient } from "@/lib/supabase/client";
 const adminLinks = [
   { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
   { label: "Clients", href: "/admin/clients", icon: Users },
+  { label: "Travaux", href: "/admin/travaux", icon: Briefcase },
   { label: "Commandes", href: "/admin/commandes", icon: Package },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
   { label: "Protocoles", href: "/admin/protocoles", icon: BookOpen },

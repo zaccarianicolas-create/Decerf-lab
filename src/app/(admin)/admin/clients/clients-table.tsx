@@ -14,7 +14,9 @@ import {
   Plus,
   X,
   UserPlus,
+  Eye,
 } from "lucide-react";
+import Link from "next/link";
 
 type Client = {
   id: string;
@@ -388,6 +390,13 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-1">
+                            <Link
+                              href={`/admin/clients/${client.id}`}
+                              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Voir
+                            </Link>
                             {client.statut_compte === "rejete" && (
                               <Button
                                 size="sm"

@@ -11,12 +11,14 @@ import {
   Plus,
   FileText,
   LogOut,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 const dentistLinks = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Mes patients", href: "/dashboard/patients", icon: Users },
   { label: "Mes commandes", href: "/dashboard/commandes", icon: Package },
   { label: "Nouvelle commande", href: "/dashboard/commandes/nouvelle", icon: Plus },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
