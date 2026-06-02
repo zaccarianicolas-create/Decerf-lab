@@ -57,9 +57,37 @@ export default async function AdminTravailPage({
       }
     : null;
 
+  const [{ data: assignations }, { data: taches }, { data: collaborateurs }] =
+    await Promise.all([
+      admin
+        .from("commande_assignations")
+        .select("id, technicien_id, role")
+        .eq("commande_id", id),
+      admin
+        .from("commande_taches")
+        .select(
+          "id, titre, description, assignee_id, statut, priorite, due_date"
+        )
+        .eq("commande_id", id)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("profiles")
+        .select("id, nom, prenom, role_labo")
+        .eq("role", "technicien")
+        .eq("actif_collaborateur", true)
+        .order("prenom", { ascending: true }),
+    ]);
+
   return (
     <TravailDetail
-      commande={{ ...commande, certificat, ortho }}
+      commande={{
+        ...commande,
+        certificat,
+        ortho,
+        assignations: assignations ?? [],
+        taches: taches ?? [],
+        collaborateurs: collaborateurs ?? [],
+      }}
       currentUserId={user.id}
     />
   );

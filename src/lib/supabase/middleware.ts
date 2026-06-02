@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Routes protégées
-  const protectedRoutes = ["/dashboard", "/admin"];
+  const protectedRoutes = ["/dashboard", "/admin", "/atelier"];
   const authRoutes = ["/login", "/register"];
   const pendingRoute = "/compte-en-attente";
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -116,7 +116,12 @@ export async function updateSession(request: NextRequest) {
     // Rediriger vers dashboard si déjà connecté et visite login/register
     if (isAuthRoute) {
       const url = request.nextUrl.clone();
-      url.pathname = profile?.role === "admin" ? "/admin" : "/dashboard";
+      url.pathname =
+        profile?.role === "admin"
+          ? "/admin"
+          : profile?.role === "technicien"
+            ? "/atelier"
+            : "/dashboard";
       return NextResponse.redirect(url);
     }
 
@@ -127,11 +132,33 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // Technicien : restreindre à /atelier
+    if (profile?.role === "technicien") {
+      if (
+        request.nextUrl.pathname.startsWith("/admin") ||
+        request.nextUrl.pathname.startsWith("/dashboard")
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/atelier";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // Non-technicien qui visite /atelier → rediriger
+    if (
+      request.nextUrl.pathname.startsWith("/atelier") &&
+      profile?.role !== "technicien"
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = profile?.role === "admin" ? "/admin" : "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
     // Vérifier l'accès admin
     if (request.nextUrl.pathname.startsWith("/admin")) {
       if (profile?.role !== "admin") {
         const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
+        url.pathname = profile?.role === "technicien" ? "/atelier" : "/dashboard";
         return NextResponse.redirect(url);
       }
     }

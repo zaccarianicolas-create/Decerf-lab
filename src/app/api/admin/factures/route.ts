@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit, extractRequestMeta } from "@/lib/audit";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -248,6 +249,24 @@ export async function POST(request: NextRequest) {
       .update({ statut_paiement: "paye" })
       .eq("id", commande.id);
   }
+
+  const meta = extractRequestMeta(request);
+  await logAudit({
+    actor_id: userId,
+    actor_role: "admin",
+    action: "facture.create",
+    entity_type: "facture",
+    entity_id: createdFacture.id,
+    metadata: {
+      commande_id: commande.id,
+      numero: createdFacture.numero,
+      montant_ttc: montantTtc,
+      solde_du: soldeDu,
+      statut: statutFacture,
+    },
+    ip: meta.ip,
+    user_agent: meta.user_agent,
+  });
 
   return NextResponse.json({
     success: true,

@@ -35,6 +35,7 @@ import {
 } from "@/lib/utils";
 import { CertificatModal } from "./certificat-modal";
 import { OrthoPanel } from "./ortho-panel";
+import { EquipePanel } from "@/components/equipe/equipe-panel";
 import { ScanPreview } from "@/components/scans/scan-preview";
 import {
   COMMANDE_FILE_ACCEPT,
@@ -993,6 +994,15 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
           </div>
         );
       })()}
+
+      <div className="mt-6">
+        <EquipePanel
+          commandeId={commande.id}
+          collaborateurs={(commande.collaborateurs as any[]) || []}
+          initialAssignations={(commande.assignations as any[]) || []}
+          initialTaches={(commande.taches as any[]) || []}
+        />
+      </div>
 
       {/* Modal certificat */}
       {showCertificat && (

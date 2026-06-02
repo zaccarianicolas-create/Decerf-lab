@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit, extractRequestMeta } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -138,6 +139,18 @@ export async function POST(request: NextRequest) {
   if (certError) {
     return NextResponse.json({ error: certError.message }, { status: 500 });
   }
+
+  const meta = extractRequestMeta(request);
+  await logAudit({
+    actor_id: user.id,
+    actor_role: "admin",
+    action: "certificat.create",
+    entity_type: "certificat",
+    entity_id: certificat?.id ?? null,
+    metadata: { commande_id, numero: certificat?.numero_certificat ?? null },
+    ip: meta.ip,
+    user_agent: meta.user_agent,
+  });
 
   return NextResponse.json(certificat);
 }

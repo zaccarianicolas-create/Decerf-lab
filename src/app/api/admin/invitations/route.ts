@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit, extractRequestMeta } from "@/lib/audit";
 
 type InvitationBody = {
   nom?: string;
@@ -124,6 +125,18 @@ export async function POST(request: NextRequest) {
   }
 
   const invitationUrl = `${request.nextUrl.origin}/register?invitation=${encodeURIComponent(data.token)}`;
+
+  const meta = extractRequestMeta(request);
+  await logAudit({
+    actor_id: userId,
+    actor_role: "admin",
+    action: "invitation.create",
+    entity_type: "invitation",
+    entity_id: data.id,
+    metadata: { email, type_compte: typeCompte, cabinet: cabinetNom },
+    ip: meta.ip,
+    user_agent: meta.user_agent,
+  });
 
   return NextResponse.json({
     success: true,

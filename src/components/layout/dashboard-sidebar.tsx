@@ -13,6 +13,7 @@ import {
   LogOut,
   Users,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +26,7 @@ const dentistLinks = [
   { label: "Finance", href: "/dashboard/finance", icon: CreditCard },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
   { label: "Mon profil", href: "/dashboard/profil", icon: User },
+  { label: "Mes données (RGPD)", href: "/dashboard/rgpd", icon: Shield },
 ];
 
 export function DashboardSidebar() {

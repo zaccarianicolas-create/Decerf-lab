@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare } from "lucide-react";
+import { MessengerDentiste } from "./messenger-dentiste";
+
+export const dynamic = "force-dynamic";
 
 export default async function MessagesPage() {
   const supabase = await createClient();
@@ -13,48 +15,46 @@ export default async function MessagesPage() {
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("*, commande:commandes(numero)")
+    .select("id, titre, commande_id, derniere_activite, commande:commandes(numero)")
     .eq("dentiste_id", user.id)
     .order("derniere_activite", { ascending: false });
 
+  const { data: unread } = await supabase
+    .from("messages")
+    .select("conversation_id, lu")
+    .eq("lu", false)
+    .neq("auteur_id", user.id);
+
+  const unreadMap: Record<string, number> = {};
+  for (const m of unread ?? []) {
+    unreadMap[(m as any).conversation_id] =
+      (unreadMap[(m as any).conversation_id] || 0) + 1;
+  }
+
+  // Charge tous les profils admin/dentiste pour afficher les noms
+  const admin = createAdminClient();
+  const { data: allProfiles } = await admin
+    .from("profiles")
+    .select("id, nom, prenom, avatar_url, role");
+
+  const authorsMap = Object.fromEntries(
+    (allProfiles ?? []).map((p: any) => [p.id, p])
+  );
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
         <p className="text-sm text-gray-500">
-          Échangez avec le laboratoire
+          Échangez en temps réel avec le laboratoire.
         </p>
       </div>
-
-      {!conversations || conversations.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">
-              Aucune conversation pour le moment. Les conversations sont
-              créées automatiquement avec vos commandes.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {conversations.map((conv) => (
-            <Card key={conv.id} className="cursor-pointer transition-shadow hover:shadow-md">
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <h3 className="font-medium text-gray-900">
-                    {conv.titre || `Conversation - ${(conv.commande as any)?.numero || "Général"}`}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Dernière activité: {new Date(conv.derniere_activite).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-                <MessageSquare className="h-5 w-5 text-gray-400" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <MessengerDentiste
+        initialConversations={(conversations as any[]) ?? []}
+        unreadMap={unreadMap}
+        currentUserId={user.id}
+        authorsMap={authorsMap}
+      />
     </div>
   );
 }
