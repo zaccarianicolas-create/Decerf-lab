@@ -34,6 +34,7 @@ import {
   formatPrice,
 } from "@/lib/utils";
 import { CertificatModal } from "./certificat-modal";
+import { OrthoPanel } from "./ortho-panel";
 import { ScanPreview } from "@/components/scans/scan-preview";
 import {
   COMMANDE_FILE_ACCEPT,
@@ -937,6 +938,61 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
           </Card>
         </div>
       </div>
+      {(() => {
+        const items = (commande.items || []) as any[];
+        const hasOrtho =
+          items.some(
+            (item: any) =>
+              item.type_travail === "orthodontie" ||
+              item.type_travail === "gouttiere" ||
+              item.mode_fabrication === "orthodontie"
+          ) || !!commande.ortho;
+
+        if (!hasOrtho) return null;
+
+        const dossier = commande.ortho || {
+          commande_id: commande.id,
+          type_traitement: "aligneurs" as const,
+          plan_traitement: null,
+          nb_aligneurs: 0,
+          etape_courante: 0,
+          date_debut: null,
+          date_fin_prevue: null,
+          date_fin_reelle: null,
+          notes: null,
+          etapes: [] as any[],
+        };
+
+        return (
+          <div className="mt-6">
+            <OrthoPanel
+              commandeId={commande.id}
+              initialDossier={{
+                id: dossier.id,
+                commande_id: commande.id,
+                commande_item_id: dossier.commande_item_id ?? null,
+                type_traitement: dossier.type_traitement,
+                plan_traitement: dossier.plan_traitement,
+                nb_aligneurs: dossier.nb_aligneurs ?? 0,
+                etape_courante: dossier.etape_courante ?? 0,
+                date_debut: dossier.date_debut,
+                date_fin_prevue: dossier.date_fin_prevue,
+                date_fin_reelle: dossier.date_fin_reelle,
+                notes: dossier.notes,
+                etapes: (dossier.etapes || []).map((e: any) => ({
+                  id: e.id,
+                  numero: e.numero,
+                  label: e.label,
+                  date_prevue: e.date_prevue,
+                  date_realisee: e.date_realisee,
+                  statut: e.statut,
+                  notes: e.notes,
+                })),
+              }}
+            />
+          </div>
+        );
+      })()}
 
       {/* Modal certificat */}
       {showCertificat && (

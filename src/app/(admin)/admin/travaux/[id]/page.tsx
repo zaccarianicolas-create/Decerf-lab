@@ -42,9 +42,24 @@ export default async function AdminTravailPage({
     ? commande.certificat[0] || null
     : commande.certificat;
 
+  const { data: orthoDossier } = await admin
+    .from("commande_ortho")
+    .select("*, etapes:commande_ortho_etapes(*)")
+    .eq("commande_id", id)
+    .maybeSingle();
+
+  const ortho = orthoDossier
+    ? {
+        ...orthoDossier,
+        etapes: ((orthoDossier as any).etapes || []).sort(
+          (a: any, b: any) => a.numero - b.numero
+        ),
+      }
+    : null;
+
   return (
     <TravailDetail
-      commande={{ ...commande, certificat }}
+      commande={{ ...commande, certificat, ortho }}
       currentUserId={user.id}
     />
   );

@@ -32,9 +32,24 @@ export default async function DashboardCommandeDetailPage({
       ? commande.certificats[0]
       : null;
 
+  const { data: orthoDossier } = await supabase
+    .from("commande_ortho")
+    .select("*, etapes:commande_ortho_etapes(*)")
+    .eq("commande_id", id)
+    .maybeSingle();
+
+  const ortho = orthoDossier
+    ? {
+        ...orthoDossier,
+        etapes: ((orthoDossier as any).etapes || []).sort(
+          (a: any, b: any) => a.numero - b.numero
+        ),
+      }
+    : null;
+
   return (
     <CommandeDetail
-      commande={{ ...commande, certificat }}
+      commande={{ ...commande, certificat, ortho }}
     />
   );
 }

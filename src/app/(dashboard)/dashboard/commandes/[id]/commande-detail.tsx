@@ -23,6 +23,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { ScanPreview } from "@/components/scans/scan-preview";
+import { OrthoReadonly } from "@/components/ortho/ortho-readonly";
 import {
   COMMANDE_FILE_ACCEPT,
   FILE_BUCKET,
@@ -438,6 +439,30 @@ export function CommandeDetail({ commande }: { commande: any }) {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {commande.ortho && (
+            <OrthoReadonly
+              data={{
+                type_traitement: commande.ortho.type_traitement,
+                plan_traitement: commande.ortho.plan_traitement,
+                nb_aligneurs: commande.ortho.nb_aligneurs ?? 0,
+                etape_courante: commande.ortho.etape_courante ?? 0,
+                date_debut: commande.ortho.date_debut,
+                date_fin_prevue: commande.ortho.date_fin_prevue,
+                date_fin_reelle: commande.ortho.date_fin_reelle,
+                notes: commande.ortho.notes,
+                etapes: (commande.ortho.etapes || []).map((e: any) => ({
+                  id: e.id,
+                  numero: e.numero,
+                  label: e.label,
+                  date_prevue: e.date_prevue,
+                  date_realisee: e.date_realisee,
+                  statut: e.statut,
+                  notes: e.notes,
+                })),
+              }}
+            />
           )}
 
           {/* Certificat */}
