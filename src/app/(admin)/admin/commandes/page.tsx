@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Plus } from "lucide-react";
 import { getStatusLabel, getStatusColor, formatDate, formatPrice } from "@/lib/utils";
 
 export default async function AdminCommandesPage() {
@@ -18,13 +20,22 @@ export default async function AdminCommandesPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Toutes les commandes
-        </h1>
-        <p className="text-sm text-gray-500">
-          Gérez et suivez toutes les commandes du laboratoire
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Toutes les commandes
+          </h1>
+          <p className="text-sm text-gray-500">
+            Gérez et suivez toutes les commandes du laboratoire
+          </p>
+        </div>
+        <Link
+          href="/admin/commandes/nouvelle"
+          className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+        >
+          <Plus className="h-4 w-4" />
+          Nouvelle commande
+        </Link>
       </div>
 
       <Card>

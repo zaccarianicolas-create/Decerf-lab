@@ -29,6 +29,7 @@ type Client = {
   role: string;
   actif: boolean;
   statut_compte: "en_attente" | "approuve" | "rejete";
+  sans_compte?: boolean;
   created_at: string;
   cabinet: { nom: string } | null;
 };
@@ -75,7 +76,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     email: "",
     telephone: "",
     cabinet_nom: "",
-    avec_compte: true,
+    mode: "sans_compte" as "compte" | "invitation" | "sans_compte",
   });
 
   const updateStatut = async (
@@ -238,14 +239,14 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input
-                    label="Email *"
+                    label={`Email ${formData.mode === "sans_compte" ? "" : "*"}`}
                     type="email"
                     placeholder="dr.dupont@cabinet.fr"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    required
+                    required={formData.mode !== "sans_compte"}
                   />
                   <Input
                     label="Téléphone"
@@ -266,46 +267,45 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   }
                 />
 
-                {/* Toggle avec/sans compte */}
+                {/* Toggle mode de création */}
                 <div className="rounded-lg border border-gray-200 p-4">
                   <p className="mb-2 text-sm font-medium text-gray-700">
-                    Type de compte
+                    Type de création
                   </p>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, avec_compte: true })
-                      }
-                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
-                        formData.avec_compte
-                          ? "border-sky-500 bg-sky-50 text-sky-700"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      <span className="font-medium">Avec compte plateforme</span>
-                      <p className="mt-0.5 text-xs opacity-70">
-                        Le client recevra un email d&apos;invitation pour se
-                        connecter
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, avec_compte: false })
-                      }
-                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
-                        !formData.avec_compte
-                          ? "border-sky-500 bg-sky-50 text-sky-700"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      <span className="font-medium">Sans compte plateforme</span>
-                      <p className="mt-0.5 text-xs opacity-70">
-                        Fiche client uniquement, pas d&apos;accès à la
-                        plateforme
-                      </p>
-                    </button>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                    {(
+                      [
+                        {
+                          v: "compte",
+                          t: "Compte direct",
+                          d: "Crée un compte plateforme actif, magic-link envoyé.",
+                        },
+                        {
+                          v: "invitation",
+                          t: "Invitation",
+                          d: "Envoie un email d'invitation. Compte créé à l'inscription.",
+                        },
+                        {
+                          v: "sans_compte",
+                          t: "Sans compte (géré par le labo)",
+                          d: "Fiche dentiste sans accès plateforme. Convertible plus tard.",
+                        },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, mode: opt.v })}
+                        className={`rounded-lg border-2 px-3 py-3 text-left text-sm transition-colors ${
+                          formData.mode === opt.v
+                            ? "border-sky-500 bg-sky-50 text-sky-700"
+                            : "border-gray-200 text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <span className="font-medium">{opt.t}</span>
+                        <p className="mt-0.5 text-xs opacity-70">{opt.d}</p>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -607,6 +607,11 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                         </td>
                         <td className="px-6 py-4">
                           {statutBadge(client.statut_compte)}
+                          {client.sans_compte && (
+                            <span className="ml-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                              Sans compte
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
                           {new Date(client.created_at).toLocaleDateString(
@@ -622,6 +627,41 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                               <Eye className="h-3.5 w-3.5" />
                               Voir
                             </Link>
+                            {client.sans_compte && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  const choice = window.prompt(
+                                    "Activer ce client : tapez 'compte' (compte direct) ou 'invitation' (email)",
+                                    "invitation"
+                                  );
+                                  if (!choice) return;
+                                  if (choice !== "compte" && choice !== "invitation") return;
+                                  const emailIn = client.email || window.prompt("Email pour l'activation ?") || "";
+                                  if (!emailIn) return;
+                                  setLoadingId(client.id);
+                                  const res = await fetch(
+                                    `/api/admin/clients/${client.id}/convertir`,
+                                    {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ mode: choice, email: emailIn }),
+                                    }
+                                  );
+                                  setLoadingId(null);
+                                  if (res.ok) window.location.reload();
+                                  else {
+                                    const j = await res.json().catch(() => ({}));
+                                    alert(j.error || "Erreur");
+                                  }
+                                }}
+                                disabled={loadingId === client.id}
+                                className="text-xs"
+                              >
+                                Convertir
+                              </Button>
+                            )}
                             {client.statut_compte === "rejete" && (
                               <Button
                                 size="sm"
