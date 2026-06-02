@@ -15,6 +15,8 @@ import {
   X,
   UserPlus,
   Eye,
+  Link2,
+  Copy,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -51,8 +53,22 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
   const [isPending, startTransition] = useTransition();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteFormData, setInviteFormData] = useState({
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    cabinet_nom: "",
+    type_compte_client: "dentiste_independant" as
+      | "dentiste_independant"
+      | "clinique",
+  });
   const [formData, setFormData] = useState({
     nom: "",
     prenom: "",
@@ -113,6 +129,46 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     }
   };
 
+  const handleCreateInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviting(true);
+    setInviteError(null);
+    setInviteUrl(null);
+
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteFormData),
+      });
+
+      const data = (await res.json()) as {
+        error?: string;
+        invitation?: { url: string };
+      };
+
+      if (!res.ok || !data.invitation?.url) {
+        setInviteError(data.error || "Erreur lors de la création de l'invitation");
+        return;
+      }
+
+      setInviteUrl(data.invitation.url);
+    } catch {
+      setInviteError("Erreur réseau");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const copyInviteUrl = async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+    } catch {
+      setInviteError("Impossible de copier le lien");
+    }
+  };
+
   const pendingClients = clients.filter((c) => c.statut_compte === "en_attente");
   const otherClients = clients.filter((c) => c.statut_compte !== "en_attente");
 
@@ -120,15 +176,25 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     <div className="space-y-8">
       {/* Bouton + Formulaire de création */}
       <div>
-        {!showCreateForm ? (
-          <Button
-            onClick={() => setShowCreateForm(true)}
-            className="gap-2 bg-sky-600 hover:bg-sky-700"
-          >
-            <Plus className="h-4 w-4" />
-            Nouveau client
-          </Button>
-        ) : (
+        {!showCreateForm && !showInviteForm ? (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="gap-2 bg-sky-600 hover:bg-sky-700"
+            >
+              <Plus className="h-4 w-4" />
+              Nouveau client
+            </Button>
+            <Button
+              onClick={() => setShowInviteForm(true)}
+              variant="outline"
+              className="gap-2"
+            >
+              <Link2 className="h-4 w-4" />
+              Créer lien d&apos;invitation
+            </Button>
+          </div>
+        ) : showCreateForm ? (
           <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -264,6 +330,165 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                     className="gap-2 bg-sky-600 hover:bg-sky-700"
                   >
                     {creating ? "Création..." : "Créer le client"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-5 w-5 text-sky-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Créer une invitation
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowInviteForm(false);
+                    setInviteError(null);
+                    setInviteUrl(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateInvitation} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Prénom"
+                    placeholder="Jean"
+                    value={inviteFormData.prenom}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, prenom: e.target.value })
+                    }
+                  />
+                  <Input
+                    label="Nom"
+                    placeholder="Dupont"
+                    value={inviteFormData.nom}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, nom: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Email *"
+                    type="email"
+                    placeholder="dr.dupont@cabinet.fr"
+                    value={inviteFormData.email}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, email: e.target.value })
+                    }
+                    required
+                  />
+                  <Input
+                    label="Téléphone"
+                    type="tel"
+                    placeholder="06 12 34 56 78"
+                    value={inviteFormData.telephone}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, telephone: e.target.value })
+                    }
+                  />
+                </div>
+
+                <Input
+                  label="Nom de la clinique/cabinet"
+                  placeholder="Clinique dentaire du centre"
+                  value={inviteFormData.cabinet_nom}
+                  onChange={(e) =>
+                    setInviteFormData({ ...inviteFormData, cabinet_nom: e.target.value })
+                  }
+                />
+
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="mb-2 text-sm font-medium text-gray-700">
+                    Type de compte
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInviteFormData({
+                          ...inviteFormData,
+                          type_compte_client: "dentiste_independant",
+                        })
+                      }
+                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                        inviteFormData.type_compte_client === "dentiste_independant"
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium">Dentiste indépendant</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInviteFormData({
+                          ...inviteFormData,
+                          type_compte_client: "clinique",
+                        })
+                      }
+                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                        inviteFormData.type_compte_client === "clinique"
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium">Clinique</span>
+                    </button>
+                  </div>
+                </div>
+
+                {inviteError && (
+                  <p className="text-sm text-red-600">{inviteError}</p>
+                )}
+
+                {inviteUrl && (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                    <p className="mb-2 text-xs font-medium text-green-700">
+                      Lien d&apos;invitation créé
+                    </p>
+                    <p className="break-all text-xs text-green-800">{inviteUrl}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={copyInviteUrl}
+                      className="mt-2 gap-1"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copier le lien
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowInviteForm(false);
+                      setInviteError(null);
+                      setInviteUrl(null);
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={inviting}
+                    className="gap-2 bg-sky-600 hover:bg-sky-700"
+                  >
+                    {inviting ? "Création..." : "Générer l'invitation"}
                   </Button>
                 </div>
               </form>

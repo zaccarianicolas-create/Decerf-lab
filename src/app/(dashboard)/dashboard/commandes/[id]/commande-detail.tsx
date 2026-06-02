@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +13,23 @@ import {
   FileCheck,
   Printer,
   Download,
+  Send,
   Monitor,
   Truck,
   Calendar,
   MapPin,
   Clock,
+  ClipboardList,
+  MessageSquare,
 } from "lucide-react";
+import { ScanPreview } from "@/components/scans/scan-preview";
+import {
+  COMMANDE_FILE_ACCEPT,
+  FILE_BUCKET,
+  detectFileKind,
+  getScanFormat,
+  isPreviewable3D,
+} from "@/lib/commande-files";
 
 const STATUT_STEPS = [
   { key: "en_attente", label: "Reçu" },
@@ -40,11 +53,25 @@ const STATUT_ORDER: Record<string, number> = {
 };
 
 export function CommandeDetail({ commande }: { commande: any }) {
+  const supabase = createClient();
   const patient = commande.patient;
   const items = commande.items || [];
   const fichiers = commande.fichiers || [];
   const certificat = commande.certificat;
+  const workflowEvents = (commande.workflow_events || []).filter(
+    (event: any) => event.visible_praticien
+  );
+  const notesTechniques = (commande.notes_techniques || []).filter(
+    (note: any) => note.visible_praticien
+  );
   const currentStep = STATUT_ORDER[commande.statut] ?? 0;
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState<{
+    url: string;
+    fileName: string;
+    format: string | null;
+  } | null>(null);
 
   const handlePrintCertificat = () => {
     if (!certificat) return;
@@ -116,6 +143,65 @@ export function CommandeDetail({ commande }: { commande: any }) {
     `);
     win.document.close();
     win.print();
+  };
+
+  const uploadAddedFiles = async () => {
+    if (uploadFiles.length === 0) return;
+
+    setUploadingFiles(true);
+    for (const file of uploadFiles) {
+      const fileName = `${commande.id}/${Date.now()}_${file.name}`;
+      const fileKind = detectFileKind(file.name, file.type);
+      const format3d = getScanFormat(file.name, file.type);
+      const { data: latestVersion } = await supabase
+        .from("fichiers")
+        .select("version")
+        .eq("commande_id", commande.id)
+        .eq("storage_bucket", FILE_BUCKET)
+        .eq("file_kind", fileKind)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const version = (latestVersion?.version || 0) + 1;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(FILE_BUCKET)
+        .upload(fileName, file);
+
+      if (!uploadError && uploadData) {
+        await supabase.from("fichiers").insert({
+          commande_id: commande.id,
+          nom_fichier: fileName,
+          nom_original: file.name,
+          type_mime: file.type,
+          taille: file.size,
+          storage_bucket: FILE_BUCKET,
+          storage_path: uploadData.path,
+          uploaded_by: commande.dentiste_id,
+          uploaded_via: "inscription_site",
+          file_kind: fileKind,
+          format_3d: format3d,
+          version,
+          apercu_disponible: Boolean(format3d && isPreviewable3D(file.name, file.type)),
+        });
+      }
+    }
+
+    setUploadFiles([]);
+    setUploadingFiles(false);
+    window.location.reload();
+  };
+
+  const openPreview = (file: any) => {
+    const { data } = supabase.storage
+      .from(file.storage_bucket || FILE_BUCKET)
+      .getPublicUrl(file.storage_path);
+
+    setPreviewTarget({
+      url: data.publicUrl,
+      fileName: file.nom_original,
+      format: file.format_3d || getScanFormat(file.nom_original, file.type_mime),
+    });
   };
 
   return (
@@ -247,11 +333,106 @@ export function CommandeDetail({ commande }: { commande: any }) {
                       <span className="text-sm">
                         {f.nom_original}
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {f.taille
-                          ? `${(f.taille / 1024 / 1024).toFixed(2)} MB`
-                          : ""}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">
+                          {f.taille
+                            ? `${(f.taille / 1024 / 1024).toFixed(2)} MB`
+                            : ""}
+                          {f.version ? ` • v${f.version}` : ""}
+                        </span>
+                        {f.apercu_disponible && isPreviewable3D(f.nom_original, f.type_mime) && (
+                          <Button size="sm" variant="outline" onClick={() => openPreview(f)}>
+                            Aperçu
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Upload fichiers */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="mb-3 flex items-center gap-2 font-semibold text-gray-900">
+                <Send className="h-4 w-4 text-sky-600" />
+                Ajouter un scan ou document
+              </h2>
+              <input
+                type="file"
+                multiple
+                accept={COMMANDE_FILE_ACCEPT}
+                onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-sky-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-sky-700 hover:file:bg-sky-100"
+              />
+              {uploadFiles.length > 0 && (
+                <div className="mt-3 space-y-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                  {uploadFiles.map((file) => (
+                    <p key={file.name}>{file.name}</p>
+                  ))}
+                </div>
+              )}
+              <Button
+                onClick={uploadAddedFiles}
+                disabled={uploadingFiles || uploadFiles.length === 0}
+                className="mt-3 w-full gap-2 bg-sky-600 hover:bg-sky-700"
+              >
+                {uploadingFiles ? "Upload..." : "Ajouter les fichiers"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Timeline partagée */}
+          {workflowEvents.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                  <ClipboardList className="h-4 w-4 text-sky-600" />
+                  Historique du travail
+                </h2>
+                <div className="space-y-3">
+                  {workflowEvents.map((event: any) => (
+                    <div key={event.id} className="rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-gray-900">
+                          {event.titre}
+                        </p>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-xs text-sky-700">
+                          {event.type}
+                        </span>
+                      </div>
+                      {event.description && (
+                        <p className="mt-1 text-sm text-gray-600">
+                          {event.description}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-gray-400">
+                        {new Date(event.created_at).toLocaleString("fr-FR")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes partagées */}
+          {notesTechniques.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                  <MessageSquare className="h-4 w-4 text-sky-600" />
+                  Notes du laboratoire
+                </h2>
+                <div className="space-y-2">
+                  {notesTechniques.map((note: any) => (
+                    <div key={note.id} className="rounded-lg border border-gray-100 p-3">
+                      <p className="text-sm text-gray-700">{note.contenu}</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {new Date(note.created_at).toLocaleDateString("fr-FR")}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -411,6 +592,16 @@ export function CommandeDetail({ commande }: { commande: any }) {
           </Card>
         </div>
       </div>
+
+      {previewTarget && (
+        <ScanPreview
+          open={Boolean(previewTarget)}
+          onClose={() => setPreviewTarget(null)}
+          url={previewTarget.url}
+          fileName={previewTarget.fileName}
+          format={previewTarget.format}
+        />
+      )}
     </div>
   );
 }

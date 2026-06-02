@@ -50,6 +50,19 @@ export type Teinte =
 export type StatutPaiement = "en_attente" | "paye" | "echoue" | "rembourse";
 export type Priorite = "normale" | "urgente" | "express";
 export type ModeReception = "envoi_numerique" | "enlevement";
+export type ModeFabrication = "manuelle" | "numerique_3d" | "orthodontie";
+export type WorkflowEventType =
+  | "reception"
+  | "information"
+  | "scan"
+  | "conception"
+  | "fabrication"
+  | "qc"
+  | "retouche"
+  | "livraison"
+  | "message"
+  | "note";
+export type QCCheckResult = "conforme" | "a_corriger" | "non_conforme";
 
 // ============================================
 // Database Row Types
@@ -113,17 +126,28 @@ export interface Commande {
   fichiers?: Fichier[];
   patient?: Patient;
   certificat?: CertificatConformite;
+  workflow_events?: WorkflowEvent[];
+  notes_techniques?: CommandeNote[];
+  qc_checks?: QCCheck[];
 }
 
 export interface CommandeItem {
   id: string;
   commande_id: string;
+  service_labo_id: string | null;
   type_travail: TypeTravail;
+  item_label: string | null;
+  position: number;
+  mode_fabrication: ModeFabrication;
   description: string | null;
   dents: string[] | null;
   materiau: Materiau | null;
   teinte: Teinte | null;
   teinte_personnalisee: string | null;
+  schema_dentaire: Record<string, unknown>;
+  teinte_details: Record<string, unknown>;
+  infos_travail: Record<string, unknown>;
+  instructions_qc: string | null;
   prix_unitaire: number | null;
   quantite: number;
   notes: string | null;
@@ -133,13 +157,62 @@ export interface CommandeItem {
 export interface Fichier {
   id: string;
   commande_id: string | null;
+  commande_item_id: string | null;
+  storage_bucket: string;
   nom_fichier: string;
   nom_original: string;
   type_mime: string | null;
   taille: number | null;
   storage_path: string;
   uploaded_by: string;
+  file_kind: string;
+  format_3d: string | null;
+  version: number;
+  parent_fichier_id: string | null;
+  visible_praticien: boolean;
+  apercu_disponible: boolean;
+  uploaded_via: string | null;
+  metadata: Record<string, unknown>;
   description: string | null;
+  created_at: string;
+}
+
+export interface WorkflowEvent {
+  id: string;
+  commande_id: string;
+  commande_item_id: string | null;
+  type: WorkflowEventType;
+  titre: string;
+  description: string | null;
+  ancien_statut: string | null;
+  nouveau_statut: string | null;
+  visible_praticien: boolean;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CommandeNote {
+  id: string;
+  commande_id: string;
+  commande_item_id: string | null;
+  auteur_id: string | null;
+  contenu: string;
+  visible_praticien: boolean;
+  type_note: string;
+  created_at: string;
+}
+
+export interface QCCheck {
+  id: string;
+  commande_id: string;
+  commande_item_id: string | null;
+  check_key: string;
+  libelle: string;
+  resultat: QCCheckResult;
+  commentaire: string | null;
+  checked_by: string | null;
+  checked_at: string | null;
   created_at: string;
 }
 

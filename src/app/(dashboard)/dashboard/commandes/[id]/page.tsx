@@ -18,7 +18,7 @@ export default async function DashboardCommandeDetailPage({
   const { data: commande } = await supabase
     .from("commandes")
     .select(
-      "*, patient:patients(*), items:commande_items(*), fichiers:fichiers(*), certificats:certificats_conformite(*)"
+      "*, patient:patients(*), items:commande_items(*), fichiers:fichiers(*), certificats:certificats_conformite(*), workflow_events:commande_workflow_events(*), notes_techniques:commande_notes(*), qc_checks:commande_qc_checks(*)"
     )
     .eq("id", id)
     .eq("dentiste_id", user.id)

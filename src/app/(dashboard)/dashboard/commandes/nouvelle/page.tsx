@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, Upload, Users, UserPlus, Truck, Monitor } from "lucide-react";
+import {
+  COMMANDE_FILE_ACCEPT,
+  FILE_BUCKET,
+  detectFileKind,
+  getScanFormat,
+  isPreviewable3D,
+} from "@/lib/commande-files";
 
 const itemSchema = z.object({
   service_labo_id: z.string().optional(),
@@ -188,8 +195,10 @@ export default function NouvelleCommandePage() {
     if (files.length > 0) {
       for (const file of files) {
         const fileName = `${commande.id}/${Date.now()}_${file.name}`;
+        const fileKind = detectFileKind(file.name, file.type);
+        const format3d = getScanFormat(file.name, file.type);
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("fichiers-stl")
+          .from(FILE_BUCKET)
           .upload(fileName, file);
 
         if (!uploadError && uploadData) {
@@ -199,8 +208,14 @@ export default function NouvelleCommandePage() {
             nom_original: file.name,
             type_mime: file.type,
             taille: file.size,
+            storage_bucket: FILE_BUCKET,
             storage_path: uploadData.path,
             uploaded_by: user.id,
+            uploaded_via: "inscription_site",
+            file_kind: fileKind,
+            format_3d: format3d,
+            version: 1,
+            apercu_disponible: Boolean(format3d && isPreviewable3D(file.name, file.type)),
           });
         }
       }
@@ -659,12 +674,12 @@ export default function NouvelleCommandePage() {
                 Glissez vos fichiers ici ou cliquez pour parcourir
               </p>
               <p className="mt-1 text-xs text-gray-400">
-                STL, PDF, JPG, PNG - Max 50MB par fichier
+                STL, OBJ, PLY, ZIP, PDF, JPG, PNG - Max 50MB par fichier
               </p>
               <input
                 type="file"
                 multiple
-                accept=".stl,.pdf,.jpg,.jpeg,.png"
+                accept={COMMANDE_FILE_ACCEPT}
                 className="mt-4"
                 onChange={(e) => {
                   if (e.target.files) {

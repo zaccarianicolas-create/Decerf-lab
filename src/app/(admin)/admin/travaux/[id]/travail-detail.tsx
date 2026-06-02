@@ -23,6 +23,9 @@ import {
   MapPin,
   CalendarDays,
   File,
+  Plus,
+  ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import {
   getStatusLabel,
@@ -31,6 +34,14 @@ import {
   formatPrice,
 } from "@/lib/utils";
 import { CertificatModal } from "./certificat-modal";
+import { ScanPreview } from "@/components/scans/scan-preview";
+import {
+  COMMANDE_FILE_ACCEPT,
+  FILE_BUCKET,
+  detectFileKind,
+  getScanFormat,
+  isPreviewable3D,
+} from "@/lib/commande-files";
 
 type TravailProps = {
   commande: any;
@@ -64,6 +75,21 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
   const [saving, setSaving] = useState(false);
   const [notesLabo, setNotesLabo] = useState(commande.notes_labo || "");
   const [showCertificat, setShowCertificat] = useState(false);
+  const [workflowType, setWorkflowType] = useState("information");
+  const [workflowTitle, setWorkflowTitle] = useState("");
+  const [workflowDescription, setWorkflowDescription] = useState("");
+  const [workflowVisible, setWorkflowVisible] = useState(true);
+  const [qcLibelle, setQcLibelle] = useState("");
+  const [qcKey, setQcKey] = useState("");
+  const [qcResult, setQcResult] = useState("conforme");
+  const [qcCommentaire, setQcCommentaire] = useState("");
+  const [scanFiles, setScanFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState<{
+    url: string;
+    fileName: string;
+    format: string | null;
+  } | null>(null);
 
   const currentIdx = STATUT_ORDER.indexOf(commande.statut);
 
@@ -83,7 +109,41 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
       .from("commandes")
       .update({ notes_labo: notesLabo })
       .eq("id", commande.id);
+
+    if (notesLabo.trim()) {
+      await supabase.from("commande_notes").insert({
+        commande_id: commande.id,
+        contenu: notesLabo.trim(),
+        visible_praticien: false,
+        type_note: "interne",
+        auteur_id: currentUserId,
+      });
+    }
+
     setSaving(false);
+  };
+
+  const logWorkflowEvent = async (event: {
+    type: string;
+    titre: string;
+    description?: string;
+    ancien_statut?: string | null;
+    nouveau_statut?: string | null;
+    visible_praticien?: boolean;
+    metadata?: Record<string, unknown>;
+  }) => {
+    await supabase.from("commande_workflow_events").insert({
+      commande_id: commande.id,
+      commande_item_id: null,
+      type: event.type,
+      titre: event.titre,
+      description: event.description || null,
+      ancien_statut: event.ancien_statut || null,
+      nouveau_statut: event.nouveau_statut || null,
+      visible_praticien: event.visible_praticien ?? true,
+      metadata: event.metadata || {},
+      created_by: currentUserId,
+    });
   };
 
   const nextStatut =
@@ -98,6 +158,118 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
   const patient = commande.patient;
   const items = commande.items || [];
   const fichiers = commande.fichiers || [];
+  const workflowEvents = commande.workflow_events || [];
+  const notesTechniques = commande.notes_techniques || [];
+  const qcChecks = commande.qc_checks || [];
+
+  const createWorkflowEvent = async () => {
+    if (!workflowTitle.trim()) return;
+    setSaving(true);
+    await logWorkflowEvent({
+      type: workflowType,
+      titre: workflowTitle.trim(),
+      description: workflowDescription.trim() || undefined,
+      visible_praticien: workflowVisible,
+    });
+    setWorkflowTitle("");
+    setWorkflowDescription("");
+    setSaving(false);
+    router.refresh();
+  };
+
+  const createQcCheck = async () => {
+    if (!qcLibelle.trim() || !qcKey.trim()) return;
+    setSaving(true);
+    await supabase.from("commande_qc_checks").insert({
+      commande_id: commande.id,
+      commande_item_id: null,
+      check_key: qcKey.trim(),
+      libelle: qcLibelle.trim(),
+      resultat: qcResult,
+      commentaire: qcCommentaire.trim() || null,
+      checked_by: currentUserId,
+      checked_at: new Date().toISOString(),
+    });
+    await logWorkflowEvent({
+      type: "qc",
+      titre: `QC: ${qcLibelle.trim()}`,
+      description: qcCommentaire.trim() || undefined,
+      visible_praticien: true,
+      metadata: { check_key: qcKey.trim(), resultat: qcResult },
+    });
+    setQcLibelle("");
+    setQcKey("");
+    setQcCommentaire("");
+    setQcResult("conforme");
+    setSaving(false);
+    router.refresh();
+  };
+
+  const uploadFiles = async () => {
+    if (scanFiles.length === 0) return;
+
+    setUploadingFiles(true);
+    for (const file of scanFiles) {
+      const fileName = `${commande.id}/${Date.now()}_${file.name}`;
+      const fileKind = detectFileKind(file.name, file.type);
+      const format3d = getScanFormat(file.name, file.type);
+      const { data: latestVersion } = await supabase
+        .from("fichiers")
+        .select("version")
+        .eq("commande_id", commande.id)
+        .eq("storage_bucket", FILE_BUCKET)
+        .eq("file_kind", fileKind)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const version = (latestVersion?.version || 0) + 1;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(FILE_BUCKET)
+        .upload(fileName, file);
+
+      if (!uploadError && uploadData) {
+        await supabase.from("fichiers").insert({
+          commande_id: commande.id,
+          nom_fichier: fileName,
+          nom_original: file.name,
+          type_mime: file.type,
+          taille: file.size,
+          storage_bucket: FILE_BUCKET,
+          storage_path: uploadData.path,
+          uploaded_by: currentUserId,
+          uploaded_via: "invitation_labo",
+          file_kind: fileKind,
+          format_3d: format3d,
+          version,
+          apercu_disponible: Boolean(format3d && isPreviewable3D(file.name, file.type)),
+        });
+      }
+    }
+
+    await logWorkflowEvent({
+      type: "scan",
+      titre: `${scanFiles.length} fichier(s) ajouté(s) par le laboratoire`,
+      visible_praticien: true,
+      metadata: { count: scanFiles.length },
+    });
+
+    setScanFiles([]);
+    setUploadingFiles(false);
+    router.refresh();
+  };
+
+  const openPreview = (file: any) => {
+    const { data } = supabase.storage
+      .from(file.storage_bucket || FILE_BUCKET)
+      .getPublicUrl(file.storage_path);
+
+    setPreviewTarget({
+      url: data.publicUrl,
+      fileName: file.nom_original,
+      format: file.format_3d || getScanFormat(file.nom_original, file.type_mime),
+    });
+  };
 
   return (
     <div>
@@ -373,7 +545,23 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
                               ? (f.taille / 1024 / 1024).toFixed(2) + " MB"
                               : ""}
                           </p>
+                          <p className="text-xs text-gray-400">
+                            {f.file_kind}
+                            {typeof f.version === "number" ? ` • v${f.version}` : ""}
+                          </p>
                         </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {f.apercu_disponible && isPreviewable3D(f.nom_original, f.type_mime) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPreview(f)}
+                          >
+                            Aperçu
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -381,6 +569,36 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Upload scans / documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ajouter un scan ou document</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <input
+                type="file"
+                multiple
+                accept={COMMANDE_FILE_ACCEPT}
+                onChange={(e) => setScanFiles(Array.from(e.target.files || []))}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-sky-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-sky-700 hover:file:bg-sky-100"
+              />
+              {scanFiles.length > 0 && (
+                <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                  {scanFiles.map((file) => (
+                    <p key={file.name}>{file.name}</p>
+                  ))}
+                </div>
+              )}
+              <Button
+                onClick={uploadFiles}
+                disabled={uploadingFiles || scanFiles.length === 0}
+                className="w-full gap-2 bg-sky-600 hover:bg-sky-700"
+              >
+                {uploadingFiles ? "Upload..." : "Ajouter les fichiers"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Colonne droite */}
@@ -423,6 +641,210 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
             </CardContent>
           </Card>
 
+
+          {/* Historique de production */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ClipboardList className="h-4 w-4 text-sky-600" />
+                Historique de production
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {workflowEvents.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  Aucun événement enregistré.
+                </p>
+              ) : (
+                workflowEvents.map((event: any) => (
+                  <div
+                    key={event.id}
+                    className={`rounded-lg border p-3 ${
+                      event.visible_praticien
+                        ? "border-sky-100 bg-sky-50/60"
+                        : "border-gray-100 bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900">
+                        {event.titre}
+                      </p>
+                      <Badge variant={event.visible_praticien ? "default" : "info"}>
+                        {event.type}
+                      </Badge>
+                    </div>
+                    {event.description && (
+                      <p className="mt-1 text-sm text-gray-600">
+                        {event.description}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formatDate(event.created_at)}
+                    </p>
+                  </div>
+                ))
+              )}
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 text-sm font-medium text-gray-900">
+                  Ajouter un événement
+                </p>
+                <div className="grid gap-2">
+                  <select
+                    value={workflowType}
+                    onChange={(e) => setWorkflowType(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="information">Information</option>
+                    <option value="scan">Scan</option>
+                    <option value="conception">Conception</option>
+                    <option value="fabrication">Fabrication</option>
+                    <option value="retouche">Retouche</option>
+                    <option value="livraison">Livraison</option>
+                    <option value="note">Note</option>
+                  </select>
+                  <input
+                    value={workflowTitle}
+                    onChange={(e) => setWorkflowTitle(e.target.value)}
+                    placeholder="Titre de l'événement"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <textarea
+                    value={workflowDescription}
+                    onChange={(e) => setWorkflowDescription(e.target.value)}
+                    placeholder="Description"
+                    rows={2}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-gray-500">
+                    <input
+                      type="checkbox"
+                      checked={workflowVisible}
+                      onChange={(e) => setWorkflowVisible(e.target.checked)}
+                    />
+                    Visible au praticien
+                  </label>
+                  <Button
+                    onClick={createWorkflowEvent}
+                    disabled={saving || !workflowTitle.trim()}
+                    size="sm"
+                    className="gap-2 bg-sky-600 hover:bg-sky-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Ajouter
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Checklist QC */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileCheck className="h-4 w-4 text-sky-600" />
+                Contrôle qualité
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {qcChecks.length === 0 ? (
+                <p className="text-sm text-gray-400">Aucun contrôle QC.</p>
+              ) : (
+                qcChecks.map((check: any) => (
+                  <div key={check.id} className="rounded-lg border border-gray-100 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900">
+                        {check.libelle}
+                      </p>
+                      <Badge
+                        variant={
+                          check.resultat === "conforme"
+                            ? "success"
+                            : check.resultat === "a_corriger"
+                              ? "warning"
+                              : "danger"
+                        }
+                      >
+                        {check.resultat}
+                      </Badge>
+                    </div>
+                    {check.commentaire && (
+                      <p className="mt-1 text-sm text-gray-600">
+                        {check.commentaire}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 text-sm font-medium text-gray-900">
+                  Ajouter un contrôle
+                </p>
+                <div className="grid gap-2">
+                  <input
+                    value={qcKey}
+                    onChange={(e) => setQcKey(e.target.value)}
+                    placeholder="Clé technique (ex: ajustement_marge)"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <input
+                    value={qcLibelle}
+                    onChange={(e) => setQcLibelle(e.target.value)}
+                    placeholder="Libellé QC"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <select
+                    value={qcResult}
+                    onChange={(e) => setQcResult(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="conforme">Conforme</option>
+                    <option value="a_corriger">À corriger</option>
+                    <option value="non_conforme">Non conforme</option>
+                  </select>
+                  <textarea
+                    value={qcCommentaire}
+                    onChange={(e) => setQcCommentaire(e.target.value)}
+                    placeholder="Commentaire QC"
+                    rows={2}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <Button
+                    onClick={createQcCheck}
+                    disabled={saving || !qcLibelle.trim() || !qcKey.trim()}
+                    size="sm"
+                    className="gap-2 bg-sky-600 hover:bg-sky-700"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Valider le contrôle
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notes partagées */}
+          {notesTechniques.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MessageSquare className="h-4 w-4 text-sky-600" />
+                  Notes techniques
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notesTechniques.map((note: any) => (
+                  <div key={note.id} className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-sm text-gray-700">{note.contenu}</p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formatDate(note.created_at)} • {note.type_note}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
           {/* Montant */}
           <Card>
             <CardContent className="p-5">
@@ -522,6 +944,16 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
             setShowCertificat(false);
             router.refresh();
           }}
+        />
+      )}
+
+      {previewTarget && (
+        <ScanPreview
+          open={Boolean(previewTarget)}
+          onClose={() => setPreviewTarget(null)}
+          url={previewTarget.url}
+          fileName={previewTarget.fileName}
+          format={previewTarget.format}
         />
       )}
     </div>

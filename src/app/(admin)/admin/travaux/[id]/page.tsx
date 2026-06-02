@@ -26,7 +26,10 @@ export default async function AdminTravailPage({
       dentiste:profiles!commandes_dentiste_id_fkey(id, nom, prenom, email, numero_inami, telephone),
       items:commande_items(*),
       fichiers:fichiers(*),
-      certificat:certificats_conformite(*)
+      certificat:certificats_conformite(*),
+      workflow_events:commande_workflow_events(*),
+      notes_techniques:commande_notes(*),
+      qc_checks:commande_qc_checks(*)
     `
     )
     .eq("id", id)
