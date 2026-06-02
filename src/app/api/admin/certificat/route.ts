@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { sendEmail, emailTemplates } from "@/lib/email";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -111,15 +113,21 @@ export async function POST(request: NextRequest) {
   }
 
   // Créer le certificat
+  const params = await getParametresLabo();
   const { data: certificat, error: certError } = await admin
     .from("certificats_conformite")
     .insert({
       commande_id,
       patient_id: commande.patient_id || null,
-      labo_nom: "DECERF LAB",
-      labo_adresse: body.labo_adresse || null,
+      labo_nom: params.nom_labo,
+      labo_adresse:
+        body.labo_adresse ||
+        [params.adresse, params.code_postal, params.ville, params.pays]
+          .filter(Boolean)
+          .join(", ") ||
+        null,
       labo_responsable: body.labo_responsable || null,
-      labo_numero_agrement: body.labo_numero_agrement || null,
+      labo_numero_agrement: body.labo_numero_agrement || params.numero_agrement || null,
       dentiste_id: commande.dentiste_id,
       dentiste_nom: dentiste
         ? `Dr ${dentiste.prenom} ${dentiste.nom}`
@@ -151,6 +159,22 @@ export async function POST(request: NextRequest) {
     ip: meta.ip,
     user_agent: meta.user_agent,
   });
+
+  if (dentiste?.email && certificat) {
+    const tpl = emailTemplates.certificat_emis({
+      prenom: dentiste.prenom ?? undefined,
+      numero: certificat.numero_certificat ?? "",
+    });
+    await sendEmail({
+      to: dentiste.email,
+      toUserId: commande.dentiste_id,
+      template: "certificat_emis",
+      subject: tpl.subject,
+      html: tpl.html,
+      prefKey: "email_certificat",
+      payload: { certificat_id: certificat.id },
+    });
+  }
 
   return NextResponse.json(certificat);
 }

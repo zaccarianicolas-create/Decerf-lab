@@ -26,9 +26,34 @@ export default async function DashboardPatientDetailPage({
 
   const { data: commandes } = await supabase
     .from("commandes")
-    .select("*, items:commande_items(*), certificats:certificats_conformite(*)")
+    .select(
+      "*, items:commande_items(*), certificats:certificats_conformite(*)"
+    )
     .eq("patient_id", id)
     .order("created_at", { ascending: false });
 
-  return <PatientDetail patient={patient} commandes={commandes ?? []} />;
+  const commandeIds = (commandes ?? []).map((c: any) => c.id);
+
+  const [{ data: factures }, { data: notes }] = await Promise.all([
+    commandeIds.length > 0
+      ? supabase
+          .from("factures")
+          .select("id, numero, montant_ttc, statut, date_emission, created_at")
+          .in("commande_id", commandeIds)
+      : Promise.resolve({ data: [] as any[] }),
+    supabase
+      .from("patient_notes_cliniques")
+      .select("*")
+      .eq("patient_id", id)
+      .order("date_note", { ascending: false }),
+  ]);
+
+  return (
+    <PatientDetail
+      patient={patient}
+      commandes={commandes ?? []}
+      factures={factures ?? []}
+      notes={(notes ?? []) as any}
+    />
+  );
 }

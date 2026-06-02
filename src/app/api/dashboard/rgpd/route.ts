@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { sendEmail, emailTemplates } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * GET : export JSON immédiat de toutes les données du praticien connecté.
@@ -16,6 +18,15 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
+
+  const rl = await rateLimit(request, {
+    key: "rgpd_export",
+    limit: 3,
+    windowMs: 60 * 60 * 1000,
+    by: "user",
+    userId: user.id,
+  });
+  if (!rl.ok) return rl.response;
 
   const admin = createAdminClient();
 
@@ -91,6 +102,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
+  const rl = await rateLimit(request, {
+    key: "rgpd_request",
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+    by: "user",
+    userId: user.id,
+  });
+  if (!rl.ok) return rl.response;
+
   const body = await request.json();
   const type = body?.type as "export" | "suppression" | "rectification" | undefined;
   const message = (body?.message as string | undefined)?.slice(0, 2000) || null;
@@ -129,6 +149,24 @@ export async function POST(request: NextRequest) {
     ip: meta.ip,
     user_agent: meta.user_agent,
   });
+
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("email, prenom")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (prof?.email) {
+    const tpl = emailTemplates.rgpd_recu({ prenom: prof.prenom ?? undefined, type });
+    await sendEmail({
+      to: prof.email,
+      toUserId: user.id,
+      template: "rgpd_recu",
+      subject: tpl.subject,
+      html: tpl.html,
+      prefKey: "email_rgpd",
+      payload: { request_id: data.id },
+    });
+  }
 
   return NextResponse.json({ success: true, request: data });
 }

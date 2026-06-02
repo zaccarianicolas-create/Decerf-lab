@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ParametresForm } from "./parametres-form";
+import { BrandingPanel } from "./branding-panel";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminParametresPage() {
   const supabase = await createClient();
@@ -33,6 +36,12 @@ export default async function AdminParametresPage() {
     .from("protocoles")
     .select("*", { count: "exact", head: true });
 
+  const { data: parametres } = await admin
+    .from("parametres_labo")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+
   return (
     <div>
       <div className="mb-8">
@@ -48,6 +57,11 @@ export default async function AdminParametresPage() {
           totalProtocoles: totalProtocoles ?? 0,
         }}
       />
+
+      <div className="mt-10">
+        <h2 className="mb-4 text-xl font-bold text-gray-900">Branding & identité labo</h2>
+        <BrandingPanel initial={parametres} />
+      </div>
     </div>
   );
 }

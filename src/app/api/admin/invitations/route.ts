@@ -2,6 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { sendEmail, emailTemplates } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 type InvitationBody = {
   nom?: string;
@@ -60,6 +62,15 @@ export async function POST(request: NextRequest) {
   if (auth.error) return auth.error;
 
   const { admin, userId } = auth;
+
+  const rl = await rateLimit(request, {
+    key: "invitation_create",
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+    by: "user",
+    userId,
+  });
+  if (!rl.ok) return rl.response;
 
   const body = (await request.json()) as InvitationBody;
   const email = body.email?.trim().toLowerCase();
@@ -136,6 +147,16 @@ export async function POST(request: NextRequest) {
     metadata: { email, type_compte: typeCompte, cabinet: cabinetNom },
     ip: meta.ip,
     user_agent: meta.user_agent,
+  });
+
+  const tpl = emailTemplates.invitation({ prenom: prenom ?? undefined, email, token: data.token });
+  await sendEmail({
+    to: email,
+    template: "invitation",
+    subject: tpl.subject,
+    html: tpl.html,
+    prefKey: "email_invitation",
+    payload: { invitation_id: data.id },
   });
 
   return NextResponse.json({

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Profile } from "@/types";
+import { NotificationsPanel } from "./notifications-panel";
 
 export default function ProfilPage() {
   const router = useRouter();
@@ -139,6 +140,8 @@ export default function ProfilPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {profile?.id && <NotificationsPanel userId={profile.id} />}
       </div>
     </div>
   );

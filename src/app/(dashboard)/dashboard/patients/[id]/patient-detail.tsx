@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,8 +14,12 @@ import {
   Save,
   X,
   FileCheck,
-  Download,
+  Archive,
+  ShieldOff,
+  Clock,
 } from "lucide-react";
+import { NotesCliniquesPanel, type ClinicalNote } from "./notes-panel";
+import { PatientTimeline } from "./timeline";
 
 const STATUT_LABELS: Record<string, { label: string; color: string }> = {
   en_attente: { label: "En attente", color: "border-amber-200 bg-amber-50 text-amber-700" },
@@ -32,9 +35,13 @@ const STATUT_LABELS: Record<string, { label: string; color: string }> = {
 export function PatientDetail({
   patient: initialPatient,
   commandes,
+  factures,
+  notes,
 }: {
   patient: any;
   commandes: any[];
+  factures: any[];
+  notes: ClinicalNote[];
 }) {
   const supabase = createClient();
   const [patient, setPatient] = useState(initialPatient);
@@ -46,6 +53,13 @@ export function PatientDetail({
     date_naissance: patient.date_naissance || "",
     sexe: patient.sexe || "",
     notes: patient.notes || "",
+    telephone: patient.telephone || "",
+    email: patient.email || "",
+    allergies: patient.allergies || "",
+    antecedents: patient.antecedents || "",
+    traitements_en_cours: patient.traitements_en_cours || "",
+    contre_indications: patient.contre_indications || "",
+    medecin_traitant: patient.medecin_traitant || "",
   });
 
   const handleSave = async () => {
@@ -57,6 +71,13 @@ export function PatientDetail({
         date_naissance: form.date_naissance || null,
         sexe: form.sexe || null,
         notes: form.notes || null,
+        telephone: form.telephone || null,
+        email: form.email || null,
+        allergies: form.allergies || null,
+        antecedents: form.antecedents || null,
+        traitements_en_cours: form.traitements_en_cours || null,
+        contre_indications: form.contre_indications || null,
+        medecin_traitant: form.medecin_traitant || null,
       })
       .eq("id", patient.id);
 
@@ -66,6 +87,24 @@ export function PatientDetail({
     }
     setSaving(false);
   };
+
+  const runAction = async (action: "archive" | "restore" | "anonymize") => {
+    const labels: Record<typeof action, string> = {
+      archive: "Archiver ce patient ?",
+      restore: "Réactiver ce patient ?",
+      anonymize:
+        "Anonymiser définitivement ce patient ? Cette action est irréversible.",
+    };
+    if (!confirm(labels[action])) return;
+    const res = await fetch(`/api/dashboard/patients/${patient.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) window.location.reload();
+  };
+
+  const certificats = commandes.flatMap((c: any) => c.certificats || []);
 
   return (
     <div className="space-y-6">
@@ -83,7 +122,37 @@ export function PatientDetail({
           </h1>
           <p className="font-mono text-sm text-sky-600">{patient.reference}</p>
         </div>
+        <div className="flex gap-2">
+          {patient.archived_at ? (
+            <Button size="sm" variant="outline" onClick={() => runAction("restore")}>
+              Réactiver
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => runAction("archive")}>
+              <Archive className="mr-1 h-4 w-4" />
+              Archiver
+            </Button>
+          )}
+          {!patient.anonymized_at && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => runAction("anonymize")}
+            >
+              <ShieldOff className="mr-1 h-4 w-4" />
+              Anonymiser
+            </Button>
+          )}
+        </div>
       </div>
+
+      {(patient.archived_at || patient.anonymized_at) && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          {patient.anonymized_at
+            ? `Patient anonymisé le ${new Date(patient.anonymized_at).toLocaleDateString("fr-FR")}.`
+            : `Patient archivé le ${new Date(patient.archived_at).toLocaleDateString("fr-FR")}.`}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Patient info */}
@@ -119,6 +188,13 @@ export function PatientDetail({
                         date_naissance: patient.date_naissance || "",
                         sexe: patient.sexe || "",
                         notes: patient.notes || "",
+                        telephone: patient.telephone || "",
+                        email: patient.email || "",
+                        allergies: patient.allergies || "",
+                        antecedents: patient.antecedents || "",
+                        traitements_en_cours: patient.traitements_en_cours || "",
+                        contre_indications: patient.contre_indications || "",
+                        medecin_traitant: patient.medecin_traitant || "",
                       });
                     }}
                     className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
@@ -168,20 +244,51 @@ export function PatientDetail({
                     <option value="X">Autre</option>
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Notes
-                  </label>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                    rows={3}
-                    placeholder="Allergies, remarques..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
+                <Input
+                  label="Téléphone"
+                  value={form.telephone}
+                  onChange={(e) =>
+                    setForm({ ...form, telephone: e.target.value })
+                  }
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                />
+                <Input
+                  label="Médecin traitant"
+                  value={form.medecin_traitant}
+                  onChange={(e) =>
+                    setForm({ ...form, medecin_traitant: e.target.value })
+                  }
+                />
+                {(
+                  [
+                    ["allergies", "Allergies"],
+                    ["antecedents", "Antécédents"],
+                    ["traitements_en_cours", "Traitements en cours"],
+                    ["contre_indications", "Contre-indications"],
+                    ["notes", "Notes générales"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <div key={k}>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      {label}
+                    </label>
+                    <textarea
+                      value={(form as Record<string, string>)[k]}
+                      onChange={(e) =>
+                        setForm({ ...form, [k]: e.target.value })
+                      }
+                      rows={2}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="space-y-3 text-sm">
@@ -207,6 +314,52 @@ export function PatientDetail({
                           : "Non renseigné"}
                   </p>
                 </div>
+                {patient.telephone && (
+                  <div>
+                    <p className="text-xs text-gray-400">Téléphone</p>
+                    <p className="font-medium">{patient.telephone}</p>
+                  </div>
+                )}
+                {patient.email && (
+                  <div>
+                    <p className="text-xs text-gray-400">Email</p>
+                    <p className="font-medium">{patient.email}</p>
+                  </div>
+                )}
+                {patient.medecin_traitant && (
+                  <div>
+                    <p className="text-xs text-gray-400">Médecin traitant</p>
+                    <p className="font-medium">{patient.medecin_traitant}</p>
+                  </div>
+                )}
+                {patient.allergies && (
+                  <div>
+                    <p className="text-xs text-red-500">Allergies</p>
+                    <p className="text-gray-700">{patient.allergies}</p>
+                  </div>
+                )}
+                {patient.antecedents && (
+                  <div>
+                    <p className="text-xs text-gray-400">Antécédents</p>
+                    <p className="text-gray-700">{patient.antecedents}</p>
+                  </div>
+                )}
+                {patient.traitements_en_cours && (
+                  <div>
+                    <p className="text-xs text-gray-400">Traitements en cours</p>
+                    <p className="text-gray-700">
+                      {patient.traitements_en_cours}
+                    </p>
+                  </div>
+                )}
+                {patient.contre_indications && (
+                  <div>
+                    <p className="text-xs text-amber-600">Contre-indications</p>
+                    <p className="text-gray-700">
+                      {patient.contre_indications}
+                    </p>
+                  </div>
+                )}
                 {patient.notes && (
                   <div>
                     <p className="text-xs text-gray-400">Notes</p>
@@ -299,6 +452,23 @@ export function PatientDetail({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+            <Clock className="h-4 w-4 text-sky-600" />
+            Historique complét
+          </h2>
+          <PatientTimeline
+            commandes={commandes}
+            certificats={certificats}
+            factures={factures}
+            notes={notes}
+          />
+        </CardContent>
+      </Card>
+
+      <NotesCliniquesPanel patientId={patient.id} initialNotes={notes} />
     </div>
   );
 }

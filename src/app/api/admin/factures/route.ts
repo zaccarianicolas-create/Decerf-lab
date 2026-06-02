@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { sendEmail, emailTemplates } from "@/lib/email";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -267,6 +268,28 @@ export async function POST(request: NextRequest) {
     ip: meta.ip,
     user_agent: meta.user_agent,
   });
+
+  const { data: dent } = await admin
+    .from("profiles")
+    .select("email, prenom")
+    .eq("id", commande.dentiste_id)
+    .maybeSingle();
+  if (dent?.email) {
+    const tpl = emailTemplates.facture_emise({
+      prenom: dent.prenom ?? undefined,
+      numero: createdFacture.numero,
+      montant: montantTtc,
+    });
+    await sendEmail({
+      to: dent.email,
+      toUserId: commande.dentiste_id,
+      template: "facture_emise",
+      subject: tpl.subject,
+      html: tpl.html,
+      prefKey: "email_facture",
+      payload: { facture_id: createdFacture.id },
+    });
+  }
 
   return NextResponse.json({
     success: true,

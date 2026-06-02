@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { sendEmail, emailTemplates } from "@/lib/email";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -66,6 +67,33 @@ export async function POST(
     ip: meta.ip,
     user_agent: meta.user_agent,
   });
+
+  const { data: tech } = await admin
+    .from("profiles")
+    .select("email, prenom")
+    .eq("id", technicienId)
+    .maybeSingle();
+  const { data: cmd } = await admin
+    .from("commandes")
+    .select("numero")
+    .eq("id", commandeId)
+    .maybeSingle();
+  if (tech?.email) {
+    const tpl = emailTemplates.assignation_tache({
+      prenom: tech.prenom ?? undefined,
+      titre: `Rôle ${role}`,
+      commande: cmd?.numero ?? "",
+    });
+    await sendEmail({
+      to: tech.email,
+      toUserId: technicienId,
+      template: "assignation_tache",
+      subject: tpl.subject,
+      html: tpl.html,
+      prefKey: "email_assignation",
+      payload: { commande_id: commandeId, assignation_id: data.id },
+    });
+  }
 
   return NextResponse.json({ success: true, assignation: data });
 }

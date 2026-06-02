@@ -1,7 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const rl = await rateLimit(request, {
+    key: "invitation_lookup",
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (!rl.ok) return rl.response;
+
   const token = request.nextUrl.searchParams.get("token")?.trim();
 
   if (!token) {
