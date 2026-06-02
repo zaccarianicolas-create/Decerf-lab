@@ -873,6 +873,9 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
                     <p className="text-sm font-medium text-green-700">
                       {commande.certificat.numero_certificat}
                     </p>
+                    <p className="text-xs text-green-700">
+                      Statut: {commande.certificat.statut || "brouillon"}
+                    </p>
                     <p className="text-xs text-green-600">
                       Émis le{" "}
                       {new Date(
@@ -940,6 +943,7 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
         <CertificatModal
           commande={commande}
           certificat={commande.certificat}
+          currentUserId={currentUserId}
           onClose={() => {
             setShowCertificat(false);
             router.refresh();

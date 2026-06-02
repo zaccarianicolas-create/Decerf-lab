@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { commande_id } = body;
 
+  const normalize = (value: string | null | undefined) =>
+    value?.replace(/_/g, " ") || "";
+
   if (!commande_id) {
     return NextResponse.json(
       { error: "commande_id requis" },
@@ -31,7 +34,8 @@ export async function POST(request: NextRequest) {
       *,
       patient:patients(*),
       dentiste:profiles!commandes_dentiste_id_fkey(nom, prenom, email, numero_inami),
-      items:commande_items(*)
+      items:commande_items(*),
+      fichiers:fichiers(nom_original, file_kind, metadata)
     `
     )
     .eq("id", commande_id)
@@ -47,19 +51,45 @@ export async function POST(request: NextRequest) {
   // Construire la description du travail
   const items = (commande.items || []) as any[];
   const descriptionParts = items.map((item: any) => {
-    const parts = [item.type_travail?.replace(/_/g, " ")];
+    const parts = [normalize(item.item_label) || normalize(item.type_travail)];
     if (item.dents && item.dents.length > 0) {
       parts.push(`dents: ${item.dents.join(", ")}`);
     }
-    if (item.materiau) parts.push(item.materiau.replace(/_/g, " "));
+    if (item.materiau) parts.push(normalize(item.materiau));
     if (item.teinte) parts.push(`teinte ${item.teinte}`);
+    if (item.mode_fabrication) {
+      parts.push(`mode: ${normalize(item.mode_fabrication)}`);
+    }
     return parts.join(" — ");
   });
 
-  const materiauxList = items
-    .map((item: any) => item.materiau?.replace(/_/g, " "))
-    .filter(Boolean)
-    .join(", ");
+  const materiauxSet = new Set<string>();
+  const lotsSet = new Set<string>();
+
+  items.forEach((item: any) => {
+    if (item.materiau) materiauxSet.add(normalize(item.materiau));
+
+    const infosTravail = item.infos_travail || {};
+    const lotInfo =
+      infosTravail.lot_materiaux ||
+      infosTravail.lot ||
+      infosTravail.batch;
+    if (typeof lotInfo === "string" && lotInfo.trim()) {
+      lotsSet.add(lotInfo.trim());
+    }
+  });
+
+  const fichiers = (commande.fichiers || []) as any[];
+  fichiers.forEach((file) => {
+    const metadata = file.metadata || {};
+    const lotFromMeta = metadata.lot_materiaux || metadata.lot || metadata.batch;
+    if (typeof lotFromMeta === "string" && lotFromMeta.trim()) {
+      lotsSet.add(lotFromMeta.trim());
+    }
+  });
+
+  const materiauxList = Array.from(materiauxSet).join(", ");
+  const lotsMateriaux = Array.from(lotsSet).join(", ");
 
   const dentsList = items
     .flatMap((item: any) => item.dents || [])
@@ -98,7 +128,9 @@ export async function POST(request: NextRequest) {
       description_travail: descriptionParts.join("\n") || "À compléter",
       materiaux_utilises: materiauxList || null,
       dents: dentsList || null,
+      lot_materiaux: body.lot_materiaux || lotsMateriaux || null,
       signe_par: body.signe_par || null,
+      statut: "brouillon",
     })
     .select()
     .single();

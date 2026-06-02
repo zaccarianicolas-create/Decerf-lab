@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   X,
   Printer,
@@ -17,17 +18,18 @@ import {
 type CertificatModalProps = {
   commande: any;
   certificat: any | null;
+  currentUserId: string;
   onClose: () => void;
 };
 
 export function CertificatModal({
   commande,
   certificat: initialCert,
+  currentUserId,
   onClose,
 }: CertificatModalProps) {
   const supabase = createClient();
   const printRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(false);
   const [cert, setCert] = useState(initialCert);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
@@ -83,6 +85,14 @@ export function CertificatModal({
       cert?.date_emission || new Date().toISOString().split("T")[0],
   });
 
+  const certStatut = cert?.statut || "brouillon";
+  const statutLabel: Record<string, string> = {
+    brouillon: "Brouillon",
+    valide: "Validé",
+    emis: "Émis",
+    envoye: "Envoyé",
+  };
+
   const generateOrUpdate = async () => {
     setSaving(true);
 
@@ -120,12 +130,82 @@ export function CertificatModal({
           // Update with any form edits
           await supabase
             .from("certificats_conformite")
-            .update(form)
+            .update({ ...form, statut: created.statut || "brouillon" })
             .eq("id", created.id);
-          setCert({ ...created, ...form });
+          setCert({ ...created, ...form, statut: created.statut || "brouillon" });
         } else if (!data.exists) {
           setCert(data);
         }
+      }
+    }
+
+    setSaving(false);
+  };
+
+  const logCertEvent = async (title: string, description?: string) => {
+    await supabase.from("commande_workflow_events").insert({
+      commande_id: commande.id,
+      type: "information",
+      titre: title,
+      description: description || null,
+      visible_praticien: true,
+      created_by: currentUserId,
+      metadata: { source: "certificat" },
+    });
+  };
+
+  const transitionCertificat = async (target: "valide" | "emis" | "envoye") => {
+    if (!cert) return;
+    setSaving(true);
+
+    const now = new Date().toISOString();
+    const payload: Record<string, unknown> = { statut: target };
+
+    if (target === "valide") {
+      payload.valide_par = currentUserId;
+      payload.date_validation = now;
+    }
+    if (target === "emis") {
+      payload.emis_par = currentUserId;
+      payload.date_emission = form.date_emission;
+      if (!payload.valide_par && !cert.valide_par) {
+        payload.valide_par = currentUserId;
+        payload.date_validation = now;
+      }
+    }
+    if (target === "envoye") {
+      payload.envoye_au_praticien = true;
+      payload.date_envoi = now;
+      payload.envoye_par = currentUserId;
+      if (!payload.emis_par && !cert.emis_par) {
+        payload.emis_par = currentUserId;
+      }
+      if (!payload.valide_par && !cert.valide_par) {
+        payload.valide_par = currentUserId;
+        payload.date_validation = now;
+      }
+    }
+
+    const { error } = await supabase
+      .from("certificats_conformite")
+      .update(payload)
+      .eq("id", cert.id);
+
+    if (!error) {
+      const updated = { ...cert, ...payload };
+      setCert(updated);
+      if (target === "envoye") {
+        setSent(true);
+      }
+
+      if (target === "valide") {
+        await logCertEvent("Certificat validé", cert.numero_certificat);
+      }
+      if (target === "emis") {
+        await logCertEvent("Certificat émis", cert.numero_certificat);
+      }
+      if (target === "envoye") {
+        await logCertEvent("Certificat envoyé au praticien", cert.numero_certificat);
       }
     }
 
@@ -200,10 +280,45 @@ export function CertificatModal({
                 </span>
               )}
             </h2>
+            {cert && (
+              <Badge
+                variant={
+                  certStatut === "envoye"
+                    ? "success"
+                    : certStatut === "emis"
+                      ? "info"
+                      : certStatut === "valide"
+                        ? "warning"
+                        : "default"
+                }
+              >
+                {statutLabel[certStatut] || certStatut}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {cert && (
               <>
+                {certStatut === "brouillon" && (
+                  <Button
+                    onClick={() => transitionCertificat("valide")}
+                    disabled={saving}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Valider
+                  </Button>
+                )}
+                {(certStatut === "brouillon" || certStatut === "valide") && (
+                  <Button
+                    onClick={() => transitionCertificat("emis")}
+                    disabled={saving}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Émettre
+                  </Button>
+                )}
                 <Button
                   onClick={handlePrint}
                   variant="outline"
@@ -223,13 +338,13 @@ export function CertificatModal({
                   Exporter
                 </Button>
                 <Button
-                  onClick={handleSendToPraticien}
-                  disabled={saving || cert.envoye_au_praticien}
+                  onClick={() => transitionCertificat("envoye")}
+                  disabled={saving || certStatut === "envoye"}
                   size="sm"
                   className="gap-2 bg-green-600 hover:bg-green-700"
                 >
                   <Send className="h-4 w-4" />
-                  {cert.envoye_au_praticien || sent
+                  {certStatut === "envoye" || sent
                     ? "Envoyé ✓"
                     : "Envoyer au praticien"}
                 </Button>

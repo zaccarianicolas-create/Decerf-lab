@@ -12,6 +12,7 @@ import {
   FileText,
   LogOut,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ const dentistLinks = [
   { label: "Mes patients", href: "/dashboard/patients", icon: Users },
   { label: "Mes commandes", href: "/dashboard/commandes", icon: Package },
   { label: "Nouvelle commande", href: "/dashboard/commandes/nouvelle", icon: Plus },
+  { label: "Finance", href: "/dashboard/finance", icon: CreditCard },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
   { label: "Mon profil", href: "/dashboard/profil", icon: User },
 ];

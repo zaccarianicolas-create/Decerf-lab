@@ -453,6 +453,9 @@ export function CommandeDetail({ commande }: { commande: any }) {
                     <strong>N° :</strong> {certificat.numero_certificat}
                   </p>
                   <p>
+                    <strong>Statut :</strong> {certificat.statut || "brouillon"}
+                  </p>
+                  <p>
                     <strong>Date :</strong>{" "}
                     {new Date(certificat.date_emission).toLocaleDateString("fr-FR")}
                   </p>
