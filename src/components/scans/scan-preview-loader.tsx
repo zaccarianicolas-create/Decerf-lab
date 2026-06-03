@@ -1,21 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
-
-type ScanPreviewProps = {
-  open: boolean;
-  onClose: () => void;
-  url: string;
-  fileName: string;
-  format: string | null;
-};
+import type { ComponentProps } from "react";
 
 const Inner = dynamic(
   () => import("./scan-preview-impl").then((m) => m.ScanPreviewImpl),
   { ssr: false }
 );
 
-export function ScanPreview(props: ScanPreviewProps) {
+export function ScanPreview(
+  props: ComponentProps<typeof import("./scan-preview-impl").ScanPreviewImpl>
+) {
   if (!props.open) return null;
   return <Inner {...props} />;
 }
