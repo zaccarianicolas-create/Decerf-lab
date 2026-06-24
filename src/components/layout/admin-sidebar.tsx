@@ -17,6 +17,7 @@ import {
   Wrench,
   Shield,
   ClipboardList,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +27,7 @@ const adminLinks = [
   { label: "Clients", href: "/admin/clients", icon: Users },
   { label: "Patients", href: "/admin/patients", icon: Users },
   { label: "Travaux", href: "/admin/travaux", icon: Briefcase },
+  { label: "Stock", href: "/admin/stock", icon: Archive },
   { label: "Fiches manuelles", href: "/admin/fiches-manuelles", icon: ClipboardList },
   { label: "Commandes", href: "/admin/commandes", icon: Package },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },

@@ -63,6 +63,7 @@ export default async function AdminTravailPage({
     { data: collaborateurs },
     { data: protocoles },
     { data: protocoleInstances },
+    { data: stockArticles },
   ] = await Promise.all([
       admin
         .from("commande_assignations")
@@ -91,6 +92,11 @@ export default async function AdminTravailPage({
         .select("id, titre, type_protocole, type_travail, version, statut, sections, created_at")
         .eq("commande_id", id)
         .order("created_at", { ascending: false }),
+      admin
+        .from("stock_articles")
+        .select("id, nom, unite, quantite_stock, seuil_alerte")
+        .eq("actif", true)
+        .order("nom", { ascending: true }),
     ]);
 
   return (
@@ -106,6 +112,7 @@ export default async function AdminTravailPage({
       currentUserId={user.id}
       protocoles={protocoles ?? []}
       protocoleInstances={protocoleInstances ?? []}
+      stockArticles={stockArticles ?? []}
     />
   );
 }

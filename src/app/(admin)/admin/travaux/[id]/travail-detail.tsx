@@ -38,6 +38,7 @@ import { OrthoPanel } from "./ortho-panel";
 import { EquipePanel } from "@/components/equipe/equipe-panel";
 import { ScanPreview } from "@/components/scans/scan-preview";
 import { ProtocoleInstancePanel } from "@/components/protocoles/protocole-instance-panel";
+import { StockMovementPanel } from "@/components/stock/stock-movement-panel";
 import {
   COMMANDE_FILE_ACCEPT,
   FILE_BUCKET,
@@ -51,6 +52,7 @@ type TravailProps = {
   currentUserId: string;
   protocoles?: any[];
   protocoleInstances?: any[];
+  stockArticles?: any[];
 };
 
 const STATUT_STEPS = [
@@ -74,7 +76,7 @@ const STATUT_ORDER = [
   "livree",
 ];
 
-export function TravailDetail({ commande, currentUserId, protocoles = [], protocoleInstances = [] }: TravailProps) {
+export function TravailDetail({ commande, currentUserId, protocoles = [], protocoleInstances = [], stockArticles = [] }: TravailProps) {
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -1015,6 +1017,14 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
           items={(commande.items as any[]) || []}
           protocoles={protocoles}
           instances={protocoleInstances}
+        />
+      </div>
+
+      <div className="mt-6">
+        <StockMovementPanel
+          articles={stockArticles}
+          fixedCommandeId={commande.id}
+          title="Consommer du stock pour ce travail"
         />
       </div>
 
