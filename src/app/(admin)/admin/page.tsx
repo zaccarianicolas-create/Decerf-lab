@@ -6,13 +6,21 @@ import {
   Users,
   Package,
   MessageSquare,
-  CreditCard,
   TrendingUp,
   Clock,
   AlertCircle,
+  Bell,
+  TriangleAlert,
+  ShieldAlert,
+  Mail,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+
+const ACTIVE_STATUSES = ["en_attente", "acceptee", "en_cours", "controle_qualite"];
+const CLOSED_STATUSES = ["terminee", "expediee", "livree", "annulee"];
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -51,7 +59,58 @@ export default async function AdminPage() {
   const { count: commandesEnCours } = await admin
     .from("commandes")
     .select("id", { count: "exact", head: true })
-    .in("statut", ["en_attente", "acceptee", "en_cours", "controle_qualite"]);
+    .in("statut", ACTIVE_STATUSES);
+
+  const { count: commandesUrgentes } = await admin
+    .from("commandes")
+    .select("id", { count: "exact", head: true })
+    .in("statut", ACTIVE_STATUSES)
+    .in("priorite", ["urgente", "express"]);
+
+  const { count: paiementsEnAttente } = await admin
+    .from("paiements")
+    .select("id", { count: "exact", head: true })
+    .eq("statut", "en_attente");
+
+  const { count: messagesNonLus } = await admin
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("lu", false)
+    .neq("auteur_id", user.id);
+
+  const { count: contactsNonTraites } = await admin
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("traite", false);
+
+  const { count: rgpdEnAttente } = await admin
+    .from("rgpd_requests")
+    .select("id", { count: "exact", head: true })
+    .neq("statut", "traitee");
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const { count: lotsPerimes } = await admin
+    .from("stock_lots")
+    .select("id", { count: "exact", head: true })
+    .gt("quantite_restante", 0)
+    .lt("date_peremption", todayIso);
+
+  const { data: stockRows } = await admin
+    .from("stock_articles")
+    .select("id, quantite_stock, seuil_alerte")
+    .eq("actif", true);
+
+  const stockSousSeuil =
+    stockRows?.filter((row: any) => Number(row.quantite_stock) <= Number(row.seuil_alerte)).length || 0;
+
+  const { data: commandesRetardData } = await admin
+    .from("commandes")
+    .select("id, date_livraison, statut")
+    .not("statut", "in", `(${CLOSED_STATUSES.join(",")})`)
+    .lt("date_livraison", todayIso);
+
+  const commandesEnRetard = commandesRetardData?.length || 0;
 
   const { data: recentCommandes } = await admin
     .from("commandes")
@@ -65,6 +124,53 @@ export default async function AdminPage() {
     .select("montant")
     .eq("statut", "paye");
   const ca = paiements?.reduce((sum, p) => sum + Number(p.montant), 0) || 0;
+
+  const alertes = [
+    {
+      label: "Messages non lus",
+      value: messagesNonLus || 0,
+      href: "/admin/messages",
+      icon: MessageSquare,
+      tone: "text-sky-700 bg-sky-50 border-sky-200",
+    },
+    {
+      label: "Contacts non traités",
+      value: contactsNonTraites || 0,
+      href: "/admin/messages",
+      icon: Mail,
+      tone: "text-indigo-700 bg-indigo-50 border-indigo-200",
+    },
+    {
+      label: "Commandes en retard",
+      value: commandesEnRetard,
+      href: "/admin/commandes",
+      icon: TriangleAlert,
+      tone: "text-rose-700 bg-rose-50 border-rose-200",
+    },
+    {
+      label: "Lots périmés avec stock",
+      value: lotsPerimes || 0,
+      href: "/admin/stock",
+      icon: ShieldAlert,
+      tone: "text-red-700 bg-red-50 border-red-200",
+    },
+    {
+      label: "Articles sous seuil",
+      value: stockSousSeuil,
+      href: "/admin/stock",
+      icon: Package,
+      tone: "text-amber-700 bg-amber-50 border-amber-200",
+    },
+    {
+      label: "Demandes RGPD à traiter",
+      value: rgpdEnAttente || 0,
+      href: "/admin/journal",
+      icon: Bell,
+      tone: "text-violet-700 bg-violet-50 border-violet-200",
+    },
+  ];
+
+  const totalNotifications = alertes.reduce((sum, a) => sum + a.value, 0);
 
   return (
     <div>
@@ -88,7 +194,7 @@ export default async function AdminPage() {
       )}
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
@@ -133,7 +239,100 @@ export default async function AdminPage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100">
+              <TriangleAlert className="h-6 w-6 text-rose-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Retards</p>
+              <p className="text-2xl font-bold">{commandesEnRetard}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+              <AlertCircle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Urgentes/Express</p>
+              <p className="text-2xl font-bold">{commandesUrgentes || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
+              <ShieldAlert className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Lots périmés</p>
+              <p className="text-2xl font-bold">{lotsPerimes || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+              <Package className="h-6 w-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Stock sous seuil</p>
+              <p className="text-2xl font-bold">{stockSousSeuil}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100">
+              <MessageSquare className="h-6 w-6 text-cyan-700" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Messages non lus</p>
+              <p className="text-2xl font-bold">{messagesNonLus || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <Bell className="h-6 w-6 text-emerald-700" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Paiements en attente</p>
+              <p className="text-2xl font-bold">{paiementsEnAttente || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="mb-8">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5 text-sky-600" />
+            Centre de notifications opérationnelles
+          </CardTitle>
+          <BadgePill count={totalNotifications} />
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {alertes.map((alerte) => (
+              <Link
+                key={alerte.label}
+                href={alerte.href}
+                className={`rounded-lg border p-4 transition-colors hover:bg-gray-50 ${alerte.tone}`}
+              >
+                <div className="mb-1 flex items-center gap-2">
+                  <alerte.icon className="h-4 w-4" />
+                  <p className="text-sm font-medium">{alerte.label}</p>
+                </div>
+                <p className="text-2xl font-bold">{alerte.value}</p>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dernières commandes */}
       <Card>
@@ -182,5 +381,13 @@ export default async function AdminPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function BadgePill({ count }: { count: number }) {
+  return (
+    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+      {count} action{count > 1 ? "s" : ""}
+    </span>
   );
 }
