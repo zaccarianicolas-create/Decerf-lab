@@ -57,8 +57,13 @@ export default async function AdminTravailPage({
       }
     : null;
 
-  const [{ data: assignations }, { data: taches }, { data: collaborateurs }] =
-    await Promise.all([
+  const [
+    { data: assignations },
+    { data: taches },
+    { data: collaborateurs },
+    { data: protocoles },
+    { data: protocoleInstances },
+  ] = await Promise.all([
       admin
         .from("commande_assignations")
         .select("id, technicien_id, role")
@@ -76,6 +81,16 @@ export default async function AdminTravailPage({
         .eq("role", "technicien")
         .eq("actif_collaborateur", true)
         .order("prenom", { ascending: true }),
+      admin
+        .from("protocoles")
+        .select("id, titre, type_protocole, type_travail, version, template_sections")
+        .eq("actif", true)
+        .order("ordre", { ascending: true }),
+      admin
+        .from("protocole_instances")
+        .select("id, titre, type_protocole, type_travail, version, statut, sections, created_at")
+        .eq("commande_id", id)
+        .order("created_at", { ascending: false }),
     ]);
 
   return (
@@ -89,6 +104,8 @@ export default async function AdminTravailPage({
         collaborateurs: collaborateurs ?? [],
       }}
       currentUserId={user.id}
+      protocoles={protocoles ?? []}
+      protocoleInstances={protocoleInstances ?? []}
     />
   );
 }

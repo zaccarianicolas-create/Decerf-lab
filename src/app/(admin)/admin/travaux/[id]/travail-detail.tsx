@@ -37,6 +37,7 @@ import { CertificatModal } from "./certificat-modal";
 import { OrthoPanel } from "./ortho-panel";
 import { EquipePanel } from "@/components/equipe/equipe-panel";
 import { ScanPreview } from "@/components/scans/scan-preview";
+import { ProtocoleInstancePanel } from "@/components/protocoles/protocole-instance-panel";
 import {
   COMMANDE_FILE_ACCEPT,
   FILE_BUCKET,
@@ -48,6 +49,8 @@ import {
 type TravailProps = {
   commande: any;
   currentUserId: string;
+  protocoles?: any[];
+  protocoleInstances?: any[];
 };
 
 const STATUT_STEPS = [
@@ -71,7 +74,7 @@ const STATUT_ORDER = [
   "livree",
 ];
 
-export function TravailDetail({ commande, currentUserId }: TravailProps) {
+export function TravailDetail({ commande, currentUserId, protocoles = [], protocoleInstances = [] }: TravailProps) {
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -1001,6 +1004,17 @@ export function TravailDetail({ commande, currentUserId }: TravailProps) {
           collaborateurs={(commande.collaborateurs as any[]) || []}
           initialAssignations={(commande.assignations as any[]) || []}
           initialTaches={(commande.taches as any[]) || []}
+        />
+      </div>
+
+      <div className="mt-6">
+        <ProtocoleInstancePanel
+          commandeId={commande.id}
+          patientId={commande.patient?.id ?? commande.patient_id ?? null}
+          dentisteId={commande.dentiste?.id ?? commande.dentiste_id ?? null}
+          items={(commande.items as any[]) || []}
+          protocoles={protocoles}
+          instances={protocoleInstances}
         />
       </div>
 
