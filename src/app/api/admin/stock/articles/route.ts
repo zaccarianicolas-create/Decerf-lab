@@ -31,7 +31,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("stock_articles")
     .select(
-      "id, nom, categorie, unite, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at"
+      "id, nom, categorie, unite, gestion_lots, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at"
     )
     .order("actif", { ascending: false })
     .order("nom", { ascending: true });
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     nom?: string;
     categorie?: string;
     unite?: string;
+    gestion_lots?: boolean;
     seuil_alerte?: number | string;
     emplacement?: string | null;
     notes?: string | null;
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
     nom: body.nom.trim(),
     categorie: body.categorie || "autre",
     unite: body.unite || "piece",
+    gestion_lots: body.gestion_lots ?? false,
     seuil_alerte: body.seuil_alerte ? Number(body.seuil_alerte) : 0,
     emplacement: body.emplacement?.trim() || null,
     notes: body.notes?.trim() || null,
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await admin
     .from("stock_articles")
     .insert(payload)
-    .select("id, nom, categorie, unite, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
+    .select("id, nom, categorie, unite, gestion_lots, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
     .single();
 
   if (error) {

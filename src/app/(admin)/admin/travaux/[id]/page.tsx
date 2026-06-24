@@ -64,6 +64,8 @@ export default async function AdminTravailPage({
     { data: protocoles },
     { data: protocoleInstances },
     { data: stockArticles },
+    { data: stockLots },
+    { data: parametres },
   ] = await Promise.all([
       admin
         .from("commande_assignations")
@@ -94,10 +96,18 @@ export default async function AdminTravailPage({
         .order("created_at", { ascending: false }),
       admin
         .from("stock_articles")
-        .select("id, nom, unite, quantite_stock, seuil_alerte")
+        .select("id, nom, unite, gestion_lots, quantite_stock, seuil_alerte")
         .eq("actif", true)
         .order("nom", { ascending: true }),
+      admin
+        .from("stock_lots")
+        .select("id, article_id, numero_lot, date_peremption, quantite_restante")
+        .gt("quantite_restante", 0)
+        .order("date_peremption", { ascending: true, nullsFirst: false }),
+        admin.from("parametres_labo").select("gestion_lots_stock_active").limit(1).maybeSingle(),
     ]);
+
+      const lotsFeatureEnabled = parametres?.gestion_lots_stock_active ?? true;
 
   return (
     <TravailDetail
@@ -113,6 +123,8 @@ export default async function AdminTravailPage({
       protocoles={protocoles ?? []}
       protocoleInstances={protocoleInstances ?? []}
       stockArticles={stockArticles ?? []}
+      stockLots={stockLots ?? []}
+      lotsFeatureEnabled={lotsFeatureEnabled}
     />
   );
 }

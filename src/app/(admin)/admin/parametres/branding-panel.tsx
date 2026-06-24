@@ -213,6 +213,28 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Fonctionnalités stock</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <label className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Activer la gestion des lots stock</p>
+              <p className="text-xs text-gray-500">
+                Si désactivé, la sélection de lot est masquée dans les mouvements de stock.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={Boolean(form.gestion_lots_stock_active ?? true)}
+              onChange={(e) => setField("gestion_lots_stock_active", e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button onClick={save} isLoading={saving}>
           <Save className="mr-1 h-4 w-4" /> Enregistrer

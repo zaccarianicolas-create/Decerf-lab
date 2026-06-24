@@ -64,6 +64,7 @@ const ALLOWED_KEYS = [
   "max_upload_scan_mb",
   "retention_scans_annees",
   "gestion_avoirs_active",
+  "gestion_lots_stock_active",
 ];
 
 export async function PATCH(request: NextRequest) {

@@ -17,7 +17,7 @@ export default async function FicheManuelleDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: fiche }, { data: patients }, { data: collaborateurs }] =
+  const [{ data: fiche }, { data: patients }, { data: collaborateurs }, { data: stockArticles }, { data: stockLots }, { data: parametres }] =
     await Promise.all([
       admin
         .from("fiches_manuelles")
@@ -40,7 +40,20 @@ export default async function FicheManuelleDetailPage({
         .from("profiles")
         .select("id, nom, prenom, role_labo")
         .order("nom"),
+      admin
+        .from("stock_articles")
+        .select("id, nom, unite, gestion_lots, quantite_stock, seuil_alerte")
+        .eq("actif", true)
+        .order("nom", { ascending: true }),
+      admin
+        .from("stock_lots")
+        .select("id, article_id, numero_lot, date_peremption, quantite_restante")
+        .gt("quantite_restante", 0)
+        .order("date_peremption", { ascending: true, nullsFirst: false }),
+        admin.from("parametres_labo").select("gestion_lots_stock_active").limit(1).maybeSingle(),
     ]);
+
+      const lotsFeatureEnabled = parametres?.gestion_lots_stock_active ?? true;
 
   if (!fiche) notFound();
 
@@ -49,6 +62,9 @@ export default async function FicheManuelleDetailPage({
       fiche={fiche as any}
       patients={(patients ?? []) as any}
       collaborateurs={(collaborateurs ?? []) as any}
+      stockArticles={(stockArticles ?? []) as any}
+      stockLots={(stockLots ?? []) as any}
+      lotsFeatureEnabled={lotsFeatureEnabled}
     />
   );
 }

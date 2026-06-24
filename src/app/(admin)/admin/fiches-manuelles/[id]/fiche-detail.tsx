@@ -23,6 +23,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StockMovementPanel } from "../../../../../components/stock/stock-movement-panel";
 
 type FicheItem = {
   type_travail?: string;
@@ -61,6 +62,21 @@ type Fiche = {
 
 type Patient = { id: string; reference: string; nom: string; prenom: string };
 type Collab = { id: string; nom: string; prenom: string; role_labo?: string | null };
+type StockArticle = {
+  id: string;
+  nom: string;
+  unite: string;
+  gestion_lots?: boolean | null;
+  quantite_stock?: number | null;
+  seuil_alerte?: number | null;
+};
+type StockLot = {
+  id: string;
+  article_id: string;
+  numero_lot: string;
+  date_peremption?: string | null;
+  quantite_restante: number;
+};
 
 const STATUT_LABELS: Record<string, string> = {
   brouillon: "Brouillon",
@@ -91,10 +107,16 @@ export function FicheManuelleDetail({
   fiche,
   patients,
   collaborateurs,
+  stockArticles,
+  stockLots,
+  lotsFeatureEnabled,
 }: {
   fiche: Fiche;
   patients: Patient[];
   collaborateurs: Collab[];
+  stockArticles: StockArticle[];
+  stockLots: StockLot[];
+  lotsFeatureEnabled: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -546,6 +568,16 @@ export function FicheManuelleDetail({
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <StockMovementPanel
+          articles={stockArticles}
+          lots={lotsFeatureEnabled ? stockLots : []}
+          lotsEnabled={lotsFeatureEnabled}
+          fixedFicheId={fiche.id}
+          title="Consommer du stock pour cette fiche"
+        />
       </div>
     </div>
   );

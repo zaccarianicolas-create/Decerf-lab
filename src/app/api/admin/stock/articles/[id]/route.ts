@@ -34,7 +34,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from("stock_articles")
-    .select("id, nom, categorie, unite, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
+    .select("id, nom, categorie, unite, gestion_lots, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
     .eq("id", id)
     .single();
 
@@ -55,7 +55,7 @@ export async function PUT(
   const { id } = await params;
   const body = (await request.json()) as Record<string, unknown>;
 
-  const allowed = ["nom", "categorie", "unite", "seuil_alerte", "emplacement", "notes", "actif"];
+  const allowed = ["nom", "categorie", "unite", "gestion_lots", "seuil_alerte", "emplacement", "notes", "actif"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
@@ -76,7 +76,7 @@ export async function PUT(
     .from("stock_articles")
     .update(updates)
     .eq("id", id)
-    .select("id, nom, categorie, unite, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
+    .select("id, nom, categorie, unite, gestion_lots, quantite_stock, seuil_alerte, emplacement, actif, notes, created_at, updated_at")
     .single();
 
   if (error) {

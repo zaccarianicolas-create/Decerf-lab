@@ -14,6 +14,7 @@ type Article = {
   nom: string;
   categorie: string;
   unite: string;
+  gestion_lots: boolean;
   quantite_stock: number;
   seuil_alerte: number;
   emplacement: string | null;
@@ -25,6 +26,8 @@ type Article = {
 
 type Commande = { id: string; numero: string };
 type Fiche = { id: string; numero: string; titre: string };
+type Lot = { id: string; article_id: string; numero_lot: string; date_peremption?: string | null; quantite_restante: number };
+type StockFilter = "all" | "expired" | "expiring" | "under" | "with-lots";
 
 const CATEGORIES: Record<string, string> = {
   materiau: "Matériau",
@@ -36,10 +39,14 @@ const CATEGORIES: Record<string, string> = {
 
 export function StockList({
   initialArticles,
+  lots,
+  lotsFeatureEnabled,
   commandes,
   fiches,
 }: {
   initialArticles: Article[];
+  lots: Lot[];
+  lotsFeatureEnabled: boolean;
   commandes: Commande[];
   fiches: Fiche[];
 }) {
@@ -48,6 +55,7 @@ export function StockList({
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
 
   const [nom, setNom] = useState("");
   const [categorie, setCategorie] = useState("materiau");
@@ -55,20 +63,80 @@ export function StockList({
   const [seuilAlerte, setSeuilAlerte] = useState("0");
   const [emplacement, setEmplacement] = useState("");
   const [notes, setNotes] = useState("");
+  const [gestionLots, setGestionLots] = useState(false);
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const soonDate = new Date(today);
+  soonDate.setDate(soonDate.getDate() + 30);
+
+  const articleLotStats = useMemo(() => {
+    const stats = new Map<string, { expired: number; expiring: number; activeLots: number }>();
+    if (!lotsFeatureEnabled) return stats;
+
+    for (const lot of lots) {
+      if (lot.quantite_restante <= 0) continue;
+      const current = stats.get(lot.article_id) || { expired: 0, expiring: 0, activeLots: 0 };
+      current.activeLots += 1;
+      if (lot.date_peremption) {
+        const exp = new Date(lot.date_peremption);
+        if (exp < today) {
+          current.expired += 1;
+        } else if (exp <= soonDate) {
+          current.expiring += 1;
+        }
+      }
+      stats.set(lot.article_id, current);
+    }
+
+    return stats;
+  }, [lots, lotsFeatureEnabled, today.getTime(), soonDate.getTime()]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return articles.filter((article) => {
-      if (!q) return true;
-      return (
+      const textMatch = !q ||
         article.nom.toLowerCase().includes(q) ||
         article.categorie.toLowerCase().includes(q) ||
-        (article.emplacement || "").toLowerCase().includes(q)
-      );
+        (article.emplacement || "").toLowerCase().includes(q);
+
+      if (!textMatch) return false;
+
+      const lotStats = articleLotStats.get(article.id) || { expired: 0, expiring: 0, activeLots: 0 };
+      const under = article.quantite_stock <= article.seuil_alerte;
+
+      switch (stockFilter) {
+        case "expired":
+          return lotsFeatureEnabled && lotStats.expired > 0;
+        case "expiring":
+          return lotsFeatureEnabled && lotStats.expiring > 0;
+        case "under":
+          return under;
+        case "with-lots":
+          return lotsFeatureEnabled && article.gestion_lots;
+        default:
+          return true;
+      }
     });
-  }, [articles, search]);
+  }, [articles, search, stockFilter, articleLotStats, lotsFeatureEnabled]);
 
   const lowStock = articles.filter((article) => article.quantite_stock <= article.seuil_alerte).length;
+
+  const expiredLotsCount = lotsFeatureEnabled
+    ? lots.filter((lot) => {
+        if (!lot.date_peremption) return false;
+        const exp = new Date(lot.date_peremption);
+        return exp < today && lot.quantite_restante > 0;
+      }).length
+    : 0;
+
+  const expiringSoonLotsCount = lotsFeatureEnabled
+    ? lots.filter((lot) => {
+        if (!lot.date_peremption) return false;
+        const exp = new Date(lot.date_peremption);
+        return exp >= today && exp <= soonDate && lot.quantite_restante > 0;
+      }).length
+    : 0;
 
   const resetForm = () => {
     setNom("");
@@ -77,6 +145,7 @@ export function StockList({
     setSeuilAlerte("0");
     setEmplacement("");
     setNotes("");
+    setGestionLots(false);
   };
 
   const createArticle = async () => {
@@ -90,6 +159,7 @@ export function StockList({
         nom: nom.trim(),
         categorie,
         unite,
+        gestion_lots: lotsFeatureEnabled ? gestionLots : false,
         seuil_alerte: Number(seuilAlerte || 0),
         emplacement: emplacement || null,
         notes: notes || null,
@@ -123,7 +193,7 @@ export function StockList({
         </Button>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-5">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs uppercase tracking-wide text-gray-400">Articles actifs</p>
@@ -142,7 +212,28 @@ export function StockList({
             <p className="mt-1 text-2xl font-bold text-gray-900">{articles.length}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-400">Lots périmés</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">{expiredLotsCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-400">Péremption ≤ 30j</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">{expiringSoonLotsCount}</p>
+          </CardContent>
+        </Card>
       </div>
+
+      {lotsFeatureEnabled && expiredLotsCount > 0 && (
+        <Card className="mb-4 border-red-200 bg-red-50/60">
+          <CardContent className="p-4 text-sm text-red-700">
+            <p className="font-semibold">Attention: {expiredLotsCount} lot(s) périmé(s) avec stock restant.</p>
+            <p className="mt-1">Ouvre les articles concernés pour décider: isolation, destruction, ou dérogation interne.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {showCreate && (
         <Card className="mb-6 border-sky-200 bg-sky-50/40">
@@ -165,6 +256,17 @@ export function StockList({
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Unité</label>
                 <Input value={unite} onChange={(e) => setUnite(e.target.value)} placeholder="piece" />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={gestionLots}
+                    onChange={(e) => setGestionLots(e.target.checked)}
+                    disabled={!lotsFeatureEnabled}
+                  />
+                  Traçabilité par lot
+                </label>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Seuil d’alerte</label>
@@ -194,9 +296,54 @@ export function StockList({
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un article, une catégorie ou un emplacement" className="pl-9" />
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button
+          variant={stockFilter === "all" ? "default" : "outline"}
+          onClick={() => setStockFilter("all")}
+          className={stockFilter === "all" ? "bg-sky-600 hover:bg-sky-700" : ""}
+        >
+          Tous
+        </Button>
+        {lotsFeatureEnabled && (
+          <>
+            <Button
+              variant={stockFilter === "expired" ? "default" : "outline"}
+              onClick={() => setStockFilter("expired")}
+              className={stockFilter === "expired" ? "bg-red-600 hover:bg-red-700" : ""}
+            >
+              Lots périmés
+            </Button>
+            <Button
+              variant={stockFilter === "expiring" ? "default" : "outline"}
+              onClick={() => setStockFilter("expiring")}
+              className={stockFilter === "expiring" ? "bg-amber-600 hover:bg-amber-700" : ""}
+            >
+              Péremption ≤ 30j
+            </Button>
+            <Button
+              variant={stockFilter === "with-lots" ? "default" : "outline"}
+              onClick={() => setStockFilter("with-lots")}
+              className={stockFilter === "with-lots" ? "bg-amber-700 hover:bg-amber-800" : ""}
+            >
+              Avec lots
+            </Button>
+          </>
+        )}
+        <Button
+          variant={stockFilter === "under" ? "default" : "outline"}
+          onClick={() => setStockFilter("under")}
+          className={stockFilter === "under" ? "bg-red-700 hover:bg-red-800" : ""}
+        >
+          Sous seuil
+        </Button>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-2">
         {filtered.map((article) => {
           const under = article.quantite_stock <= article.seuil_alerte;
+          const lotStats = articleLotStats.get(article.id) || { expired: 0, expiring: 0, activeLots: 0 };
+          const articleExpired = lotStats.expired;
+          const articleSoon = lotStats.expiring;
           return (
             <Link key={article.id} href={`/admin/stock/${article.id}`}>
               <Card className="group cursor-pointer transition-shadow hover:shadow-md">
@@ -205,6 +352,19 @@ export function StockList({
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <Badge className="border-gray-200 bg-gray-50 text-gray-700">{CATEGORIES[article.categorie] || article.categorie}</Badge>
+                        {article.gestion_lots && (
+                          <Badge className="border-amber-200 bg-amber-50 text-amber-700">Lot</Badge>
+                        )}
+                        {lotsFeatureEnabled && articleExpired > 0 && (
+                          <Badge className="border-red-200 bg-red-50 text-red-700">
+                            {articleExpired} lot(s) périmé(s)
+                          </Badge>
+                        )}
+                        {lotsFeatureEnabled && articleExpired === 0 && articleSoon > 0 && (
+                          <Badge className="border-amber-200 bg-amber-50 text-amber-700">
+                            {articleSoon} lot(s) ≤ 30j
+                          </Badge>
+                        )}
                         {under && (
                           <Badge className="border-red-200 bg-red-50 text-red-700 gap-1">
                             <AlertTriangle className="h-3 w-3" />
@@ -233,7 +393,7 @@ export function StockList({
         <Card>
           <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
             <Box className="h-10 w-10 text-gray-300" />
-            <p className="text-gray-500">Aucun article trouvé.</p>
+            <p className="text-gray-500">Aucun article trouvé pour ce filtre.</p>
           </CardContent>
         </Card>
       )}
@@ -241,6 +401,8 @@ export function StockList({
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
         <StockMovementPanel
           articles={articles}
+          lots={lotsFeatureEnabled ? lots : []}
+          lotsEnabled={lotsFeatureEnabled}
           commandes={commandes}
           fiches={fiches}
           title="Enregistrer un mouvement rapide"

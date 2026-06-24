@@ -35,10 +35,12 @@ export async function GET(request: NextRequest) {
   let query = admin
     .from("stock_mouvements")
     .select(
-      `id, article_id, type_mouvement, quantite, quantite_avant, quantite_apres, motif, commande_id, fiche_manuelle_id, metadata, created_at,
+      `id, article_id, lot_id, protocole_instance_id, type_mouvement, quantite, quantite_avant, quantite_apres, motif, commande_id, fiche_manuelle_id, metadata, created_at,
        article:stock_articles(id, nom, categorie, unite),
+       lot:stock_lots(id, numero_lot, date_peremption),
        commande:commandes(id, numero),
-       fiche_manuelle:fiches_manuelles(id, numero, titre)`
+       fiche_manuelle:fiches_manuelles(id, numero, titre),
+       protocole_instance:protocole_instances(id, titre)`
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -67,6 +69,8 @@ export async function POST(request: NextRequest) {
     motif?: string | null;
     commande_id?: string | null;
     fiche_manuelle_id?: string | null;
+    lot_id?: string | null;
+    protocole_instance_id?: string | null;
     metadata?: Record<string, unknown>;
   };
 
@@ -100,11 +104,13 @@ export async function POST(request: NextRequest) {
       motif: body.motif?.trim() || null,
       commande_id: body.commande_id || null,
       fiche_manuelle_id: body.fiche_manuelle_id || null,
+      lot_id: body.lot_id || null,
+      protocole_instance_id: body.protocole_instance_id || null,
       metadata: body.metadata || {},
       created_by: userId,
     })
     .select(
-      `id, article_id, type_mouvement, quantite, quantite_avant, quantite_apres, motif, commande_id, fiche_manuelle_id, metadata, created_at`
+      `id, article_id, lot_id, protocole_instance_id, type_mouvement, quantite, quantite_avant, quantite_apres, motif, commande_id, fiche_manuelle_id, metadata, created_at`
     )
     .single();
 
@@ -125,6 +131,8 @@ export async function POST(request: NextRequest) {
       motif: body.motif || null,
       commande_id: body.commande_id || null,
       fiche_manuelle_id: body.fiche_manuelle_id || null,
+      lot_id: body.lot_id || null,
+      protocole_instance_id: body.protocole_instance_id || null,
     },
     ip: meta.ip,
     user_agent: meta.user_agent,
