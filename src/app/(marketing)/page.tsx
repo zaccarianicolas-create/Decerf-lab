@@ -450,7 +450,7 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-slate-600 px-8 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  className="border-sky-200/70 bg-slate-900/30 px-8 text-sky-100 hover:border-sky-100 hover:bg-slate-800/70 hover:text-white"
                 >
                   Nous contacter
                 </Button>
