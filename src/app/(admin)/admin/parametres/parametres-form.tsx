@@ -230,7 +230,7 @@ export function ParametresForm({
                     email_labo: e.target.value,
                   })
                 }
-                placeholder="contact@decerflab.fr"
+                placeholder="contact@decerf-lab.be"
               />
               <Input
                 label="Horaires d'ouverture"

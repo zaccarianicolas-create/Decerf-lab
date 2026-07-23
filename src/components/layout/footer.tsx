@@ -81,7 +81,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-500">
                 <Mail className="h-4 w-4 text-slate-400" />
-                <span>contact@decerflab.fr</span>
+                <span>contact@decerf-lab.be</span>
               </li>
               <li className="flex items-start gap-2 text-sm text-slate-500">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />

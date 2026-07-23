@@ -7,8 +7,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || "DECERF LAB <noreply@decerf-lab.fr>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://decerf-lab.fr";
+const EMAIL_FROM = process.env.EMAIL_FROM || "DECERF LAB <noreply@decerf-lab.be>";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.decerf-lab.be";
 
 export type EmailTemplate =
   | "invitation"

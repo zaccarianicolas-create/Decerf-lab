@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   const to =
     process.env.CONTACT_INBOX_EMAIL ||
     process.env.EMAIL_FROM?.match(/<(.+)>/)?.[1] ||
-    "contact@decerf-lab.fr";
+    "contact@decerf-lab.be";
 
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:600px">

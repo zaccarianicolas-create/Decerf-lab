@@ -105,7 +105,7 @@ export function ContactDialog() {
           <div className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-3">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-sky-600" />
-              contact@decerf-lab.fr
+              contact@decerf-lab.be
             </div>
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-sky-600" />
