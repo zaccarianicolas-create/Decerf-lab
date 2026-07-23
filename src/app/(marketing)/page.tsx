@@ -164,7 +164,7 @@ export default function HomePage() {
                 <div className="h-10 w-px bg-slate-200" />
                 <div>
                   <div className="text-2xl font-bold text-slate-900">24h</div>
-                  <div className="text-sm text-slate-500">délai moyen</div>
+                  <div className="text-sm text-slate-500">délai de réponse</div>
                 </div>
               </div>
             </div>
