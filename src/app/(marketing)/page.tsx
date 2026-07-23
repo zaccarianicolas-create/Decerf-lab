@@ -446,7 +446,7 @@ export default function HomePage() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="#contact" scroll={false}>
+              <Link href="/contact">
                 <Button
                   variant="outline"
                   size="lg"

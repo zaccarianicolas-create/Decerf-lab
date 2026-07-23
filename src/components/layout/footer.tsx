@@ -60,7 +60,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#contact"
+                  href="/contact"
                   className="text-sm text-slate-500 transition-colors hover:text-sky-600"
                 >
                   Contact
@@ -85,7 +85,7 @@ export function Footer() {
               </li>
               <li className="flex items-start gap-2 text-sm text-slate-500">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <span>123 Rue de la Prothèse, 75001 Paris</span>
+                <span>Rue des Claveaux 1, 4560 Clavier</span>
               </li>
             </ul>
           </div>
