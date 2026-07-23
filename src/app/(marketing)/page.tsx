@@ -158,8 +158,8 @@ export default function HomePage() {
                 </div>
                 <div className="h-10 w-px bg-slate-200" />
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">20+</div>
-                  <div className="text-sm text-slate-500">praticiens</div>
+                  <div className="text-2xl font-bold text-slate-900">6000+</div>
+                  <div className="text-sm text-slate-500">travaux réalisés</div>
                 </div>
                 <div className="h-10 w-px bg-slate-200" />
                 <div>
