@@ -114,97 +114,92 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-white">
-        <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Text */}
-            <div className="animate-fade-in-up">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-1.5 text-sm font-medium text-sky-700">
-                <Microscope className="h-4 w-4" />
-                Laboratoire dentaire &amp; orthodontique
-              </div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                La précision au service de{" "}
-                <span className="bg-gradient-to-r from-sky-600 to-teal-500 bg-clip-text text-transparent">
-                  votre pratique
-                </span>
-              </h1>
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-600">
-                DECERF LAB allie savoir-faire artisanal et technologie de pointe.
-                Commandez, suivez et échangez depuis votre espace dédié — tout
-                est pensé pour simplifier votre quotidien.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/register">
-                  <Button
-                    size="lg"
-                    className="gap-2 bg-sky-600 px-6 hover:bg-sky-700"
-                  >
-                    Créer mon espace praticien
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/#services">
-                  <Button variant="outline" size="lg" className="px-6">
-                    Découvrir nos services
-                  </Button>
-                </Link>
-              </div>
-              {/* Trust indicators */}
-              <div className="mt-10 flex items-center gap-8 border-t border-slate-100 pt-8">
-                <div>
-                  <div className="text-2xl font-bold text-slate-900">15+</div>
-                  <div className="text-sm text-slate-500">ans d&apos;expérience</div>
-                </div>
-                <div className="h-10 w-px bg-slate-200" />
-                <div>
-                  <div className="text-2xl font-bold text-slate-900">6000+</div>
-                  <div className="text-sm text-slate-500">travaux réalisés</div>
-                </div>
-                <div className="h-10 w-px bg-slate-200" />
-                <div>
-                  <div className="text-2xl font-bold text-slate-900">24h</div>
-                  <div className="text-sm text-slate-500">délai de réponse</div>
-                </div>
-              </div>
+      <section className="relative min-h-[65vh] overflow-hidden">
+        {/* Background image + overlay */}
+        <Image
+          src="/images/hero-lab.jpg"
+          alt="Laboratoire dentaire DECERF LAB"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-sky-900/50" />
+
+        {/* Content */}
+        <div className="relative z-10 mx-auto flex min-h-[65vh] max-w-4xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
+          <div className="animate-fade-in-up">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-900/40 px-4 py-1.5 text-sm font-medium text-sky-200 backdrop-blur-sm">
+              <Microscope className="h-4 w-4" />
+              Laboratoire dentaire &amp; orthodontique
+            </div>
+            <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              La précision au service de{" "}
+              <span className="bg-gradient-to-r from-sky-300 to-teal-300 bg-clip-text text-transparent">
+                votre pratique
+              </span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
+              DECERF LAB allie savoir-faire artisanal et technologie de pointe.
+              Commandez, suivez et échangez depuis votre espace dédié — tout
+              est pensé pour simplifier votre quotidien.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  className="gap-2 bg-sky-600 px-6 hover:bg-sky-500"
+                >
+                  Créer mon espace praticien
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/#services">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/30 bg-white/10 px-6 text-white backdrop-blur-sm hover:bg-white/20"
+                >
+                  Découvrir nos services
+                </Button>
+              </Link>
             </div>
 
-            {/* Image */}
-            <div className="animate-fade-in-up-delay relative">
-              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-                <Image
-                  src="/images/hero-lab.jpg"
-                  alt="Laboratoire dentaire - prothèses et moulages"
-                  width={800}
-                  height={600}
-                  className="h-auto w-full object-cover"
-                  priority
-                />
-                <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10" />
+            {/* Trust indicators */}
+            <div className="mt-12 flex items-center justify-center gap-8 border-t border-white/10 pt-10">
+              <div>
+                <div className="text-2xl font-bold text-white">15+</div>
+                <div className="text-sm text-slate-400">ans d&apos;expérience</div>
               </div>
-              {/* Floating card */}
-              <div className="absolute -bottom-6 -left-6 rounded-xl border border-white/60 bg-white/90 p-4 shadow-lg backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100">
-                    <CheckCircle2 className="h-5 w-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">
-                      Qualité certifiée
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Matériaux traçables &amp; CE
-                    </div>
-                  </div>
-                </div>
+              <div className="h-10 w-px bg-white/20" />
+              <div>
+                <div className="text-2xl font-bold text-white">6000+</div>
+                <div className="text-sm text-slate-400">travaux réalisés</div>
+              </div>
+              <div className="h-10 w-px bg-white/20" />
+              <div>
+                <div className="text-2xl font-bold text-white">24h</div>
+                <div className="text-sm text-slate-400">délai de réponse</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Background decoration */}
-        <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-sky-50 opacity-60 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-teal-50 opacity-60 blur-3xl" />
+        {/* Floating quality card */}
+        <div className="absolute bottom-8 right-6 z-10 rounded-xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md sm:right-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/20">
+              <CheckCircle2 className="h-5 w-5 text-teal-300" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white">
+                Qualité certifiée
+              </div>
+              <div className="text-xs text-slate-300">
+                Matériaux traçables &amp; CE
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Services */}
@@ -214,7 +209,7 @@ export default function HomePage() {
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
               Nos services
             </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               Tout pour vos travaux prothétiques
             </h2>
             <p className="mt-4 text-lg text-slate-600">
@@ -227,7 +222,7 @@ export default function HomePage() {
             {services.map((service) => (
               <Card
                 key={service.title}
-                className="group border-0 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                className="stagger-item group border-0 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 <CardContent className="p-6">
                   <div
@@ -271,7 +266,7 @@ export default function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
                 Comment ça marche
               </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
                 Simple, rapide, transparent
               </h2>
               <p className="mt-4 text-lg text-slate-600">
@@ -313,7 +308,7 @@ export default function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
                 À propos
               </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
                 Un laboratoire à la croisée de l&apos;artisanat et de
                 l&apos;innovation
               </h2>
@@ -360,13 +355,10 @@ export default function HomePage() {
             {/* Image + stats */}
             <div className="relative">
               <div className="overflow-hidden rounded-2xl">
-                <Image
-                  src="/images/about-lab.jpg"
-                  alt="Équipement et moulages dentaires"
-                  width={800}
-                  height={600}
-                  className="h-auto w-full object-cover"
-                />
+                {/* Remplacer par : src="/images/julie-decerf.jpg" */}
+                <div className="flex aspect-[4/3] w-full items-center justify-center rounded-2xl bg-slate-200">
+                  <span className="text-sm text-slate-400">Photo de Julie Decerf</span>
+                </div>
               </div>
               <div className="absolute -bottom-8 left-4 right-4 grid grid-cols-2 gap-3 sm:left-8 sm:right-8">
                 <div className="rounded-xl border border-white/60 bg-white/90 p-4 text-center shadow-lg backdrop-blur-sm">
@@ -392,7 +384,7 @@ export default function HomePage() {
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
               Témoignages
             </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               La confiance de nos praticiens
             </h2>
           </div>
@@ -436,7 +428,7 @@ export default function HomePage() {
       <section id="contact" className="relative overflow-hidden bg-slate-900 py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="relative z-10 mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h2 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Prêt à travailler avec un labo qui vous comprend ?
             </h2>
             <p className="mt-6 text-lg text-slate-300">

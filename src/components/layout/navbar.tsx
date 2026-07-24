@@ -57,11 +57,7 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-md"
-          : "bg-transparent"
-      }`}
+      className={`fixed top-0 z-50 w-full transition-all duration-300 border-b border-slate-200/80 bg-white shadow-sm`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         {/* Logo */}
