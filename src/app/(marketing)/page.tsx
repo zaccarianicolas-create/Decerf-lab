@@ -332,11 +332,11 @@ export default function HomePage() {
               </p>
               <ul className="mt-8 space-y-4">
                 {[
-                  "Équipe de prothésistes qualifiés et expérimentés",
-                  "Technologie CFAO et impression 3D de pointe",
+                  "Prothésiste qualifiée, plus de 15 ans d'expérience terrain",
+                  "Impression 3D et scan numérique intégrés au workflow",
                   "Matériaux certifiés CE avec traçabilité complète",
                   "Délais respectés et contrôle qualité rigoureux",
-                  "Support dédié et communication en temps réel",
+                  "Interlocutrice unique — vous savez toujours à qui vous parlez",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
