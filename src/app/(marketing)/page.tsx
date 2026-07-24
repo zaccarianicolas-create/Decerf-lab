@@ -318,10 +318,17 @@ export default function HomePage() {
                 l&apos;innovation
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-slate-600">
-                Depuis plus de 15 ans, DECERF LAB s&apos;engage à fournir des
-                prothèses dentaires et orthodontiques de la plus haute qualité.
-                Notre équipe combine expertise traditionnelle et technologies
-                numériques de dernière génération.
+                DECERF LAB est né de la passion et du savoir-faire de Julie
+                Decerf, prothésiste dentaire forte de plus de 15 ans
+                d&apos;expérience en laboratoire. Un projet personnel, pensé
+                pour offrir aux praticiens un partenaire fiable, réactif et
+                techniquement exigeant.
+              </p>
+              <p className="mt-4 text-base leading-relaxed text-slate-500">
+                Ici, chaque travail est suivi de A à Z avec soin. Pas de
+                production de masse — une équipe à taille humaine qui connaît
+                vos habitudes, respecte vos délais et vous répond en moins de
+                24h.
               </p>
               <ul className="mt-8 space-y-4">
                 {[
@@ -363,7 +370,7 @@ export default function HomePage() {
               </div>
               <div className="absolute -bottom-8 left-4 right-4 grid grid-cols-2 gap-3 sm:left-8 sm:right-8">
                 <div className="rounded-xl border border-white/60 bg-white/90 p-4 text-center shadow-lg backdrop-blur-sm">
-                  <div className="text-2xl font-bold text-sky-600">10k+</div>
+                  <div className="text-2xl font-bold text-sky-600">6000+</div>
                   <div className="text-xs text-slate-500">
                     Prothèses réalisées
                   </div>
