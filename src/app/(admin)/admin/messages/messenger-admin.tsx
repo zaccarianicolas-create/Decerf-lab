@@ -54,6 +54,13 @@ export function MessengerAdmin({
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => undefined);
+    }
+  }, []);
+
   // Realtime sur nouvelles convs + activité
   useEffect(() => {
     const channel = supabase
@@ -63,6 +70,25 @@ export function MessengerAdmin({
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const m = payload.new as { conversation_id: string; auteur_id: string };
+          const isIncoming = m.auteur_id !== currentUserId;
+          const isInactiveConversation = m.conversation_id !== activeId;
+
+          if (
+            isIncoming &&
+            isInactiveConversation &&
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const conv = conversations.find((c) => c.id === m.conversation_id);
+            const convLabel = conv?.dentiste
+              ? `Dr ${conv.dentiste.prenom ?? ""} ${conv.dentiste.nom ?? ""}`.trim()
+              : "une conversation";
+            new Notification("Nouveau message", {
+              body: `${convLabel} vous a écrit`,
+            });
+          }
+
           if (m.auteur_id !== currentUserId && m.conversation_id !== activeId) {
             setUnread((u) => ({
               ...u,
@@ -125,6 +151,7 @@ export function MessengerAdmin({
   });
 
   const activeConv = conversations.find((c) => c.id === activeId);
+  const hasSearch = search.trim().length > 0;
 
   return (
     <Card className="overflow-hidden">
@@ -151,24 +178,30 @@ export function MessengerAdmin({
             </div>
             {showNew && (
               <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
-                {dentistes.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => createConv(d.id)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-                  >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
-                      {d.prenom?.[0]}
-                      {d.nom?.[0]}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        Dr {d.prenom} {d.nom}
-                      </p>
-                      <p className="text-xs text-gray-500">{d.email}</p>
-                    </div>
-                  </button>
-                ))}
+                {dentistes.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500">
+                    Aucun praticien trouvé pour ouvrir une nouvelle conversation.
+                  </p>
+                ) : (
+                  dentistes.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => createConv(d.id)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
+                        {d.prenom?.[0]}
+                        {d.nom?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Dr {d.prenom} {d.nom}
+                        </p>
+                        <p className="text-xs text-gray-500">{d.email}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -176,7 +209,11 @@ export function MessengerAdmin({
             {filtered.length === 0 ? (
               <div className="py-12 text-center">
                 <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
-                <p className="mt-2 text-sm text-gray-500">Aucune conversation</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {hasSearch
+                    ? `Aucun résultat pour "${search}"`
+                    : "Aucune conversation"}
+                </p>
               </div>
             ) : (
               filtered.map((c) => (

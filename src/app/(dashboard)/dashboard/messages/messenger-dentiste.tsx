@@ -41,6 +41,13 @@ export function MessengerDentiste({
   const [conversations, setConversations] = useState(initialConversations);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => undefined);
+    }
+  }, []);
+
+  useEffect(() => {
     const channel = supabase
       .channel("dentiste-conv-list")
       .on(
@@ -48,6 +55,23 @@ export function MessengerDentiste({
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const m = payload.new as { conversation_id: string; auteur_id: string };
+          const isIncoming = m.auteur_id !== currentUserId;
+          const isInactiveConversation = m.conversation_id !== activeId;
+
+          if (
+            isIncoming &&
+            isInactiveConversation &&
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            const conv = conversations.find((c) => c.id === m.conversation_id);
+            const convLabel = conv?.titre || "DECERF LAB";
+            new Notification("Nouveau message", {
+              body: `${convLabel} vous a écrit`,
+            });
+          }
+
           if (m.auteur_id !== currentUserId && m.conversation_id !== activeId) {
             setUnread((u) => ({
               ...u,
