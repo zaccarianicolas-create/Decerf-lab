@@ -91,8 +91,37 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-slate-200 pt-8 text-center text-sm text-slate-400">
-          <p>
+        <div className="mt-8 border-t border-slate-200 pt-8">
+          <div className="flex flex-col items-center justify-center gap-4 text-center text-xs text-slate-400 sm:flex-row">
+            <Link
+              href="/mentions-legales"
+              className="hover:text-sky-600 transition-colors"
+            >
+              Mentions légales
+            </Link>
+            <span>•</span>
+            <Link
+              href="/conditions-generales"
+              className="hover:text-sky-600 transition-colors"
+            >
+              CGU
+            </Link>
+            <span>•</span>
+            <Link
+              href="/politique-confidentialite"
+              className="hover:text-sky-600 transition-colors"
+            >
+              Confidentialité
+            </Link>
+            <span>•</span>
+            <Link
+              href="/politique-cookies"
+              className="hover:text-sky-600 transition-colors"
+            >
+              Cookies
+            </Link>
+          </div>
+          <p className="mt-6 text-center text-sm text-slate-400">
             &copy; {new Date().getFullYear()} DECERF LAB. Tous droits réservés.
           </p>
         </div>

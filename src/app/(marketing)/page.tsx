@@ -203,7 +203,7 @@ export default function HomePage() {
       </section>
 
       {/* Services */}
-      <section id="services" className="bg-slate-50 py-24 sm:py-32">
+      <section id="services" className="bg-slate-50 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
@@ -218,7 +218,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => (
               <Card
                 key={service.title}
@@ -244,7 +244,7 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-24 sm:py-32">
+      <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
             {/* Image */}
@@ -273,7 +273,7 @@ export default function HomePage() {
                 De la commande à la réception, un processus fluide en 4 étapes.
               </p>
 
-              <div className="mt-10 space-y-8">
+              <div className="mt-8 space-y-6">
                 {steps.map((step, index) => (
                   <div key={step.step} className="flex gap-4">
                     <div className="flex flex-col items-center">
@@ -284,7 +284,7 @@ export default function HomePage() {
                         <div className="mt-2 h-full w-px bg-sky-200" />
                       )}
                     </div>
-                    <div className="pb-8">
+                    <div className={index < steps.length - 1 ? "pb-8" : "pb-0"}>
                       <h3 className="text-lg font-semibold text-slate-900">
                         {step.title}
                       </h3>
@@ -301,7 +301,7 @@ export default function HomePage() {
       </section>
 
       {/* About */}
-      <section id="about" className="bg-slate-50 py-24 sm:py-32">
+      <section id="about" className="bg-slate-50 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
             <div>
@@ -378,7 +378,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section className="bg-white py-24 sm:py-32">
+      <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
@@ -389,7 +389,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
             {testimonials.map((testimonial) => (
               <Card
                 key={testimonial.name}
@@ -425,7 +425,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section id="contact" className="relative overflow-hidden bg-slate-900 py-24 sm:py-32">
+      <section id="contact" className="relative overflow-hidden bg-slate-900 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="relative z-10 mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">

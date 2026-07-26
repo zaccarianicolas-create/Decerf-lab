@@ -22,6 +22,9 @@ const registerSchema = z
     cabinet_nom: z.string().optional(),
     password: z.string().min(6, "Minimum 6 caractères"),
     confirmPassword: z.string(),
+    acceptCGU: z.boolean().refine((val) => val === true, {
+      message: "Vous devez accepter les conditions générales",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Les mots de passe ne correspondent pas",
@@ -266,7 +269,7 @@ function RegisterForm() {
           <Input
             label="Téléphone"
             type="tel"
-            placeholder="06 12 34 56 78"
+            placeholder="+32 (0)4 xx xx xx xx"
             error={errors.telephone?.message}
             {...register("telephone")}
           />
@@ -290,6 +293,39 @@ function RegisterForm() {
             error={errors.confirmPassword?.message}
             {...register("confirmPassword")}
           />
+
+          <div className="flex items-start gap-3 rounded-lg border border-gray-200 p-3">
+            <input
+              type="checkbox"
+              id="acceptCGU"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-sky-600"
+              {...register("acceptCGU")}
+            />
+            <label htmlFor="acceptCGU" className="flex-1 text-sm text-gray-700">
+              J'accepte les{" "}
+              <a
+                href="/conditions-generales"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-sky-600 hover:underline"
+              >
+                conditions générales
+              </a>
+              {" "}et la{" "}
+              <a
+                href="/politique-confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-sky-600 hover:underline"
+              >
+                politique de confidentialité
+              </a>
+            </label>
+            {errors.acceptCGU && (
+              <span className="text-xs text-red-600">{errors.acceptCGU.message}</span>
+            )}
+          </div>
+
           <Button type="submit" className="w-full" isLoading={isSubmitting}>
             Créer mon compte
           </Button>

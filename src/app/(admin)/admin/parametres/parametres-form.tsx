@@ -171,12 +171,12 @@ export function ParametresForm({
                 }
               />
               <Input
-                label="SIRET"
+                label="Numéro BCE (optionnel)"
                 value={laboSettings.siret}
                 onChange={(e) =>
                   setLaboSettings({ ...laboSettings, siret: e.target.value })
                 }
-                placeholder="123 456 789 00012"
+                placeholder="0123456789"
               />
             </div>
             <Input
@@ -185,7 +185,7 @@ export function ParametresForm({
               onChange={(e) =>
                 setLaboSettings({ ...laboSettings, adresse: e.target.value })
               }
-              placeholder="12 rue de la Prothèse"
+              placeholder="Rue des Claveaux 1"
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input
@@ -197,7 +197,7 @@ export function ParametresForm({
                     code_postal: e.target.value,
                   })
                 }
-                placeholder="75001"
+                placeholder="4560"
               />
               <Input
                 label="Ville"
@@ -205,7 +205,7 @@ export function ParametresForm({
                 onChange={(e) =>
                   setLaboSettings({ ...laboSettings, ville: e.target.value })
                 }
-                placeholder="Paris"
+                placeholder="Clavier"
               />
               <Input
                 label="Téléphone"
@@ -216,7 +216,7 @@ export function ParametresForm({
                     telephone_labo: e.target.value,
                   })
                 }
-                placeholder="01 23 45 67 89"
+                placeholder="+32 (0)4 xx xx xx xx"
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
