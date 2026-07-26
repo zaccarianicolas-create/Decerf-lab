@@ -52,11 +52,6 @@ export function Navbar() {
               setUserRole(null);
             }
             setIsLoadingRole(false);
-          })
-          .catch((err) => {
-            console.warn("Error fetching user role:", err?.message || err);
-            setUserRole(null);
-            setIsLoadingRole(false);
           });
       } else {
         setIsLoadingRole(false);
