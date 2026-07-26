@@ -44,6 +44,8 @@ export function ParametresForm({
   const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [laboSaving, setLaboSaving] = useState(false);
+  const [laboSaved, setLaboSaved] = useState(false);
   const [formData, setFormData] = useState({
     nom: profile?.nom || "",
     prenom: profile?.prenom || "",
@@ -56,7 +58,7 @@ export function ParametresForm({
     ville: "",
     telephone_labo: "",
     email_labo: "",
-    siret: "",
+    siret: "", // BCE number
     horaires: "Lundi - Vendredi : 8h00 - 18h00",
   });
 
@@ -77,6 +79,39 @@ export function ParametresForm({
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleSaveLaboSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLaboSaving(true);
+    setLaboSaved(false);
+
+    // Upsert into labo_parametres table
+    const { error } = await supabase
+      .from("labo_parametres")
+      .upsert(
+        {
+          id: 1, // Single record per labo
+          nom_labo: laboSettings.nom_labo,
+          adresse: laboSettings.adresse,
+          code_postal: laboSettings.code_postal,
+          ville: laboSettings.ville,
+          telephone_labo: laboSettings.telephone_labo,
+          email_labo: laboSettings.email_labo,
+          siret: laboSettings.siret || null, // BCE number
+          horaires: laboSettings.horaires,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (error) {
+      console.error("Erreur sauvegarde:", error);
+    }
+
+    setLaboSaving(false);
+    setLaboSaved(true);
+    setTimeout(() => setLaboSaved(false), 3000);
   };
 
   return (
@@ -158,7 +193,7 @@ export function ParametresForm({
             </h2>
           </div>
 
-          <div className="space-y-4">
+          <form onSubmit={handleSaveLaboSettings} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Nom du laboratoire"
@@ -171,7 +206,7 @@ export function ParametresForm({
                 }
               />
               <Input
-                label="Numéro BCE (optionnel)"
+                label="Numéro BCE"
                 value={laboSettings.siret}
                 onChange={(e) =>
                   setLaboSettings({ ...laboSettings, siret: e.target.value })
@@ -248,7 +283,19 @@ export function ParametresForm({
               Ces informations apparaîtront sur les documents et factures
               envoyés aux clients.
             </p>
-          </div>
+
+            <div className="flex gap-3 border-t border-gray-200 pt-4">
+              <Button type="submit" isLoading={laboSaving}>
+                <Save className="mr-2 h-4 w-4" />
+                Enregistrer
+              </Button>
+              {laboSaved && (
+                <span className="text-sm text-green-600">
+                  ✓ Modifications enregistrées
+                </span>
+              )}
+            </div>
+          </form>
         </CardContent>
       </Card>
 
