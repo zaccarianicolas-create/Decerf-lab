@@ -38,6 +38,7 @@ export function MessengerAdmin({
   dentistes,
   authorsMap,
   initialOpenNew,
+  isEmbed,
 }: {
   initialConversations: Conversation[];
   unreadMap: Record<string, number>;
@@ -45,6 +46,7 @@ export function MessengerAdmin({
   dentistes: Dentiste[];
   authorsMap: Record<string, Author>;
   initialOpenNew?: boolean;
+  isEmbed?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] =
@@ -156,9 +158,9 @@ export function MessengerAdmin({
   const hasSearch = search.trim().length > 0;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex h-[calc(100vh-200px)] min-h-[520px]">
-        <aside className="flex w-80 flex-col border-r border-gray-200">
+    <Card className={`overflow-hidden ${isEmbed ? "h-full rounded-none border-0 shadow-none" : ""}`}>
+      <div className={`flex ${isEmbed ? "h-full min-h-0" : "h-[calc(100vh-200px)] min-h-[520px]"}`}>
+        <aside className={`flex flex-col border-r border-gray-200 ${isEmbed ? "w-[45%] min-w-[170px] max-w-[230px]" : "w-80"}`}>
           <div className="border-b border-gray-100 p-3">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -265,7 +267,7 @@ export function MessengerAdmin({
           </div>
         </aside>
 
-        <section className="flex flex-1 flex-col">
+        <section className="flex min-w-0 flex-1 flex-col">
           {!activeConv ? (
             <div className="flex flex-1 flex-col items-center justify-center text-gray-400">
               <MessageSquare className="h-16 w-16" />

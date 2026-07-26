@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Minimize2, Plus } from "lucide-react";
+import { X, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface ChatModalProps {
@@ -25,7 +25,8 @@ export function ChatModalWindow({
   const [iframeFailed, setIframeFailed] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
-  const [chatUrl, setChatUrl] = useState(chatPath);
+
+  const chatUrl = `${chatPath}${chatPath.includes("?") ? "&" : "?"}embed=1`;
 
   const getModalDimensions = () => {
     const width = Math.min(420, window.innerWidth - 24);
@@ -42,7 +43,6 @@ export function ChatModalWindow({
     });
     setIframeLoaded(false);
     setIframeFailed(false);
-    setChatUrl(chatPath);
   }, [isOpen]);
 
   useEffect(() => {
@@ -152,28 +152,13 @@ export function ChatModalWindow({
         </div>
 
         <div className="flex gap-2">
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              const separator = chatPath.includes("?") ? "&" : "?";
-              setChatUrl(`${chatPath}${separator}new=1`);
-              setIframeLoaded(false);
-              setIframeFailed(false);
-            }}
-            className="rounded p-1 hover:bg-sky-500"
-            aria-label="Nouvelle conversation"
-            title="Nouvelle conversation"
-          >
-            <Plus className="h-4 w-4" />
-          </a>
           <button
             onClick={onClose}
             className="rounded p-1 hover:bg-sky-500"
             aria-label="Rabaisser"
             title="Rabaisser"
           >
-            <Minimize2 className="h-4 w-4" />
+            <Minus className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}
@@ -235,7 +220,7 @@ export function ChatModalWindow({
             />
             <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
               <p>
-                Si c&apos;est vide, utilisez le bouton <strong>+</strong> en haut de cette fenêtre.
+                Si c&apos;est vide, utilisez le bouton <strong>+</strong> dans la liste des conversations.
               </p>
               <a href={chatPath} className="mt-1 inline-block text-sky-700 hover:underline">
                 Ouvrir la page complète

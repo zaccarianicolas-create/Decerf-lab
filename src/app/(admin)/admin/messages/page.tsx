@@ -15,6 +15,10 @@ export default async function AdminMessagesPage({
     resolvedSearchParams?.new === "1" ||
     (Array.isArray(resolvedSearchParams?.new) &&
       resolvedSearchParams?.new?.includes("1"));
+  const isEmbed =
+    resolvedSearchParams?.embed === "1" ||
+    (Array.isArray(resolvedSearchParams?.embed) &&
+      resolvedSearchParams?.embed?.includes("1"));
 
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -64,13 +68,15 @@ export default async function AdminMessagesPage({
   );
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
-        <p className="text-sm text-gray-500">
-          Conversations en temps réel avec les praticiens.
-        </p>
-      </div>
+    <div className={isEmbed ? "h-full" : ""}>
+      {!isEmbed && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
+          <p className="text-sm text-gray-500">
+            Conversations en temps réel avec les praticiens.
+          </p>
+        </div>
+      )}
       <MessengerAdmin
         initialConversations={(conversations as any[]) ?? []}
         unreadMap={unreadMap}
@@ -78,6 +84,7 @@ export default async function AdminMessagesPage({
         dentistes={(dentistes as any[]) ?? []}
         authorsMap={authorsMap}
         initialOpenNew={Boolean(initialOpenNew)}
+        isEmbed={Boolean(isEmbed)}
       />
     </div>
   );
