@@ -393,7 +393,7 @@ CREATE POLICY "Admin peut tout modifier sur profiles"
   ON profiles FOR ALL
   TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    (auth.jwt() ->> 'app_metadata')::jsonb ->> 'role' = 'admin'
   );
 
 -- ---- CABINETS ----
@@ -406,7 +406,7 @@ CREATE POLICY "Admin gère les cabinets"
   ON cabinets FOR ALL
   TO authenticated
   USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    (auth.jwt() ->> 'app_metadata')::jsonb ->> 'role' = 'admin'
   );
 
 -- Le dentiste peut modifier son cabinet
