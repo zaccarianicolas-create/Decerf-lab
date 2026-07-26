@@ -23,6 +23,7 @@ export function ChatModalWindow({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeFailed, setIframeFailed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
 
@@ -41,7 +42,7 @@ export function ChatModalWindow({
       x: Math.max(8, Math.round((window.innerWidth - width) / 2)),
       y: Math.max(8, Math.round((window.innerHeight - height) / 2)),
     });
-    setIframeLoaded(false);
+    // Reset only failure state on reopen; keep iframe loaded state for fast toggles.
     setIframeFailed(false);
   }, [isOpen]);
 
@@ -53,19 +54,18 @@ export function ChatModalWindow({
     return () => window.clearTimeout(t);
   }, [isOpen, isAuthenticated, iframeLoaded]);
 
-  // Check authentication on mount
+  // Check authentication once; keep result for subsequent opens.
   useEffect(() => {
     const checkAuth = async () => {
       const {
         data: { user },
       } = await supabase.current.auth.getUser();
       setIsAuthenticated(!!user);
+      setAuthChecked(true);
     };
 
-    if (isOpen) {
-      void checkAuth();
-    }
-  }, [isOpen]);
+    void checkAuth();
+  }, []);
 
   // Mouse down on header - start dragging
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -113,8 +113,6 @@ export function ChatModalWindow({
     };
   }, [isDragging, dragOffset]);
 
-  if (!isOpen) return null;
-
   const modalDimensions =
     typeof window !== "undefined"
       ? getModalDimensions()
@@ -132,7 +130,13 @@ export function ChatModalWindow({
         height: `${modalDimensions.height}px`,
         maxWidth: "calc(100vw - 16px)",
         maxHeight: "calc(100vh - 16px)",
+        opacity: isOpen ? 1 : 0,
+        pointerEvents: isOpen ? "auto" : "none",
+        transform: isOpen ? "translateY(0)" : "translateY(8px)",
+        visibility: isOpen ? "visible" : "hidden",
+        transition: "opacity 120ms ease, transform 120ms ease",
       }}
+      aria-hidden={!isOpen}
       className="pointer-events-auto flex flex-col rounded-lg border border-gray-200 bg-white shadow-2xl"
     >
       {/* Header - Draggable */}
@@ -143,7 +147,7 @@ export function ChatModalWindow({
         }`}
       >
         <div className="flex items-center gap-3">
-          <h3 className="text-xl font-semibold">Messages</h3>
+          <h3 className="text-lg font-semibold">Messages</h3>
           {unreadCount > 0 && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -171,7 +175,14 @@ export function ChatModalWindow({
       </div>
 
       <div className="flex-1 overflow-hidden bg-white">
-        {!isAuthenticated ? (
+        {!authChecked ? (
+          <div className="flex h-full items-center justify-center p-4 text-center">
+            <div>
+              <div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
+              <p className="mt-3 text-sm text-gray-600">Préparation de la messagerie...</p>
+            </div>
+          </div>
+        ) : !isAuthenticated ? (
           <div className="flex h-full items-center justify-center p-4 text-center">
             <div>
               <p className="text-sm text-gray-600">
@@ -204,19 +215,29 @@ export function ChatModalWindow({
             </div>
           </div>
         ) : (
-          <iframe
-            src={chatUrl}
-            title="Chat"
-            className="h-full w-full border-none"
-            onLoad={() => {
-              setIframeLoaded(true);
-              setIframeFailed(false);
-            }}
-            onError={() => {
-              setIframeFailed(true);
-            }}
-            style={{ pointerEvents: isDragging ? "none" : "auto" }}
-          />
+          <div className="relative h-full">
+            {!iframeLoaded && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/95">
+                <div className="text-center">
+                  <div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
+                  <p className="mt-3 text-sm text-gray-600">Chargement des conversations...</p>
+                </div>
+              </div>
+            )}
+            <iframe
+              src={chatUrl}
+              title="Chat"
+              className="h-full w-full border-none"
+              onLoad={() => {
+                setIframeLoaded(true);
+                setIframeFailed(false);
+              }}
+              onError={() => {
+                setIframeFailed(true);
+              }}
+              style={{ pointerEvents: isDragging ? "none" : "auto" }}
+            />
+          </div>
         )}
       </div>
     </div>
