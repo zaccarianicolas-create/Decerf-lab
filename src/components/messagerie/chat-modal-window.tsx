@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Minimize2, Maximize2 } from "lucide-react";
+import { X, Minimize2, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface ChatModalProps {
@@ -17,7 +17,6 @@ export function ChatModalWindow({
   unreadCount,
   chatPath,
 }: ChatModalProps) {
-  const [isMinimized, setIsMinimized] = useState(false);
   const [position, setPosition] = useState({ x: 24, y: 24 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -40,18 +39,17 @@ export function ChatModalWindow({
       x: Math.max(8, Math.round((window.innerWidth - width) / 2)),
       y: Math.max(8, Math.round((window.innerHeight - height) / 2)),
     });
-    setIsMinimized(false);
     setIframeLoaded(false);
     setIframeFailed(false);
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || !isAuthenticated || isMinimized) return;
+    if (!isOpen || !isAuthenticated) return;
     const t = window.setTimeout(() => {
       if (!iframeLoaded) setIframeFailed(true);
     }, 2500);
     return () => window.clearTimeout(t);
-  }, [isOpen, isAuthenticated, isMinimized, iframeLoaded]);
+  }, [isOpen, isAuthenticated, iframeLoaded]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -69,7 +67,7 @@ export function ChatModalWindow({
 
   // Mouse down on header - start dragging
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isMinimized || !modalRef.current) return;
+    if (!modalRef.current) return;
 
     const rect = modalRef.current.getBoundingClientRect();
     setIsDragging(true);
@@ -92,7 +90,7 @@ export function ChatModalWindow({
 
       // Keep within viewport
       const maxX = window.innerWidth - width;
-      const maxY = window.innerHeight - (isMinimized ? 56 : height);
+      const maxY = window.innerHeight - height;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -111,7 +109,7 @@ export function ChatModalWindow({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragOffset, isMinimized]);
+  }, [isDragging, dragOffset]);
 
   if (!isOpen) return null;
 
@@ -129,7 +127,7 @@ export function ChatModalWindow({
         top: `${position.y}px`,
         zIndex: 9999,
         width: `${modalDimensions.width}px`,
-        height: isMinimized ? "auto" : `${modalDimensions.height}px`,
+        height: `${modalDimensions.height}px`,
         maxWidth: "calc(100vw - 16px)",
         maxHeight: "calc(100vh - 16px)",
       }}
@@ -152,16 +150,21 @@ export function ChatModalWindow({
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => setIsMinimized(!isMinimized)}
+          <a
+            href={chatPath}
             className="rounded p-1 hover:bg-sky-500"
-            aria-label={isMinimized ? "Maximiser" : "Minimiser"}
+            aria-label="Nouvelle conversation"
+            title="Nouvelle conversation"
           >
-            {isMinimized ? (
-              <Maximize2 className="h-4 w-4" />
-            ) : (
-              <Minimize2 className="h-4 w-4" />
-            )}
+            <Plus className="h-4 w-4" />
+          </a>
+          <button
+            onClick={onClose}
+            className="rounded p-1 hover:bg-sky-500"
+            aria-label="Rabaisser"
+            title="Rabaisser"
+          >
+            <Minimize2 className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}
@@ -173,69 +176,65 @@ export function ChatModalWindow({
         </div>
       </div>
 
-      {/* Content - Hidden when minimized */}
-      {!isMinimized && (
-        <div className="flex-1 overflow-hidden bg-white">
-          {!isAuthenticated ? (
-            <div className="flex h-full items-center justify-center p-4 text-center">
-              <div>
-                <p className="text-sm text-gray-600">
-                  Connectez-vous pour accéder à la messagerie
-                </p>
-                <a
-                  href="/login"
-                  className="mt-3 inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
-                >
-                  Se connecter
-                </a>
-              </div>
+      <div className="flex-1 overflow-hidden bg-white">
+        {!isAuthenticated ? (
+          <div className="flex h-full items-center justify-center p-4 text-center">
+            <div>
+              <p className="text-sm text-gray-600">
+                Connectez-vous pour accéder à la messagerie
+              </p>
+              <a
+                href="/login"
+                className="mt-3 inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+              >
+                Se connecter
+              </a>
             </div>
-          ) : iframeFailed ? (
-            <div className="flex h-full items-center justify-center p-6 text-center">
-              <div className="max-w-xs space-y-3">
-                <p className="text-sm font-semibold text-gray-900">
-                  Messagerie indisponible dans la bulle
-                </p>
-                <p className="text-sm text-gray-600">
-                  Aucune conversation pour le moment, ou affichage bloqué ici.
-                  Vous pouvez ouvrir la page complète pour voir les détails.
-                </p>
-                <a
-                  href={chatPath}
-                  className="inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
-                >
-                  Ouvrir la messagerie complète
-                </a>
-              </div>
+          </div>
+        ) : iframeFailed ? (
+          <div className="flex h-full items-center justify-center p-6 text-center">
+            <div className="max-w-xs space-y-3">
+              <p className="text-sm font-semibold text-gray-900">
+                Messagerie indisponible dans la bulle
+              </p>
+              <p className="text-sm text-gray-600">
+                Aucune conversation pour le moment, ou affichage bloqué ici.
+                Utilisez le bouton + ci-dessus pour ouvrir la page complète.
+              </p>
+              <a
+                href={chatPath}
+                className="inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+              >
+                Ouvrir la messagerie complète
+              </a>
             </div>
-          ) : (
-            <div className="flex h-full flex-col">
-              <iframe
-                src={chatPath}
-                title="Chat"
-                className="h-full w-full border-none"
-                onLoad={() => {
-                  setIframeLoaded(true);
-                  setIframeFailed(false);
-                }}
-                onError={() => {
-                  setIframeFailed(true);
-                }}
-                style={{ pointerEvents: isDragging ? "none" : "auto" }}
-              />
-              <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                <p>
-                  Si la conversation est vide, utilisez le bouton <strong>+</strong> dans la messagerie
-                  pour démarrer un échange.
-                </p>
-                <a href={chatPath} className="mt-1 inline-block text-sky-700 hover:underline">
-                  Ouvrir la page complète
-                </a>
-              </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col">
+            <iframe
+              src={chatPath}
+              title="Chat"
+              className="h-full w-full border-none"
+              onLoad={() => {
+                setIframeLoaded(true);
+                setIframeFailed(false);
+              }}
+              onError={() => {
+                setIframeFailed(true);
+              }}
+              style={{ pointerEvents: isDragging ? "none" : "auto" }}
+            />
+            <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              <p>
+                Si c&apos;est vide, utilisez le bouton <strong>+</strong> en haut de cette fenêtre.
+              </p>
+              <a href={chatPath} className="mt-1 inline-block text-sky-700 hover:underline">
+                Ouvrir la page complète
+              </a>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -320,6 +320,15 @@ function RegisterForm() {
               >
                 politique de confidentialité
               </a>
+              {" "}et l{"'"}annexe{" "}
+              <a
+                href="/dpa-annexe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-sky-600 hover:underline"
+              >
+                DPA (RGPD)
+              </a>
             </label>
             {errors.acceptCGU && (
               <span className="text-xs text-red-600">{errors.acceptCGU.message}</span>
