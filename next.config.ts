@@ -14,7 +14,7 @@ const csp = [
   `font-src 'self' data:`,
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.resend.com https://api.stripe.com`,
   `media-src 'self' blob: https://${supabaseHost}`,
-  `frame-src https://js.stripe.com https://hooks.stripe.com`,
+  `frame-src 'self' https://js.stripe.com https://hooks.stripe.com`,
   `worker-src 'self' blob:`,
   `object-src 'none'`,
   `base-uri 'self'`,
