@@ -27,11 +27,13 @@ export function MessengerDentiste({
   unreadMap: initialUnread,
   currentUserId,
   authorsMap,
+  isEmbed,
 }: {
   initialConversations: Conversation[];
   unreadMap: Record<string, number>;
   currentUserId: string;
   authorsMap: Record<string, Author>;
+  isEmbed?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [activeId, setActiveId] = useState<string | null>(
@@ -106,7 +108,7 @@ export function MessengerDentiste({
 
   if (conversations.length === 0) {
     return (
-      <Card>
+      <Card className={isEmbed ? "h-full rounded-none border-0 shadow-none" : ""}>
         <div className="py-12 text-center">
           <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-4 text-sm text-gray-500">
@@ -119,9 +121,21 @@ export function MessengerDentiste({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex h-[calc(100vh-200px)] min-h-[520px]">
-        <aside className="w-72 border-r border-gray-200 overflow-y-auto">
+    <Card className={`overflow-hidden ${isEmbed ? "h-full rounded-none border-0 shadow-none" : ""}`}>
+      <div
+        className={`${
+          isEmbed
+            ? "flex h-full min-h-0 flex-col"
+            : "flex h-[calc(100vh-200px)] min-h-[520px]"
+        }`}
+      >
+        <aside
+          className={`${
+            isEmbed
+              ? "h-1/2 overflow-y-auto border-b border-gray-200"
+              : "w-72 overflow-y-auto border-r border-gray-200"
+          }`}
+        >
           {conversations.map((c) => (
             <button
               key={c.id}
@@ -153,7 +167,7 @@ export function MessengerDentiste({
             </button>
           ))}
         </aside>
-        <section className="flex flex-1 flex-col">
+        <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {active && (
             <ChatThread
               conversationId={active.id}

@@ -5,7 +5,17 @@ import { MessengerDentiste } from "./messenger-dentiste";
 
 export const dynamic = "force-dynamic";
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const isEmbed =
+    resolvedSearchParams?.embed === "1" ||
+    (Array.isArray(resolvedSearchParams?.embed) &&
+      resolvedSearchParams?.embed?.includes("1"));
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,18 +52,21 @@ export default async function MessagesPage() {
   );
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
-        <p className="text-sm text-gray-500">
-          Échangez en temps réel avec le laboratoire.
-        </p>
-      </div>
+    <div className={isEmbed ? "h-full" : ""}>
+      {!isEmbed && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
+          <p className="text-sm text-gray-500">
+            Échangez en temps réel avec le laboratoire.
+          </p>
+        </div>
+      )}
       <MessengerDentiste
         initialConversations={(conversations as any[]) ?? []}
         unreadMap={unreadMap}
         currentUserId={user.id}
         authorsMap={authorsMap}
+        isEmbed={Boolean(isEmbed)}
       />
     </div>
   );

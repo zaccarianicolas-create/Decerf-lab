@@ -204,29 +204,19 @@ export function ChatModalWindow({
             </div>
           </div>
         ) : (
-          <div className="flex h-full flex-col">
-            <iframe
-              src={chatUrl}
-              title="Chat"
-              className="h-full w-full border-none"
-              onLoad={() => {
-                setIframeLoaded(true);
-                setIframeFailed(false);
-              }}
-              onError={() => {
-                setIframeFailed(true);
-              }}
-              style={{ pointerEvents: isDragging ? "none" : "auto" }}
-            />
-            <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              <p>
-                Si c&apos;est vide, utilisez le bouton <strong>+</strong> dans la liste des conversations.
-              </p>
-              <a href={chatPath} className="mt-1 inline-block text-sky-700 hover:underline">
-                Ouvrir la page complète
-              </a>
-            </div>
-          </div>
+          <iframe
+            src={chatUrl}
+            title="Chat"
+            className="h-full w-full border-none"
+            onLoad={() => {
+              setIframeLoaded(true);
+              setIframeFailed(false);
+            }}
+            onError={() => {
+              setIframeFailed(true);
+            }}
+            style={{ pointerEvents: isDragging ? "none" : "auto" }}
+          />
         )}
       </div>
     </div>
