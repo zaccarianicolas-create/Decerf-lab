@@ -3,23 +3,43 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Minimize2, Maximize2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { usePathname } from "next/navigation";
 
 interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   unreadCount: number;
+  chatPath: string;
 }
 
-export function ChatModalWindow({ isOpen, onClose, unreadCount }: ChatModalProps) {
+export function ChatModalWindow({
+  isOpen,
+  onClose,
+  unreadCount,
+  chatPath,
+}: ChatModalProps) {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 24, y: 24 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
+
+  const getModalDimensions = () => {
+    const width = Math.min(420, window.innerWidth - 24);
+    const height = Math.min(680, window.innerHeight - 24);
+    return { width, height };
+  };
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    const { width, height } = getModalDimensions();
+    setPosition({
+      x: Math.max(8, Math.round((window.innerWidth - width) / 2)),
+      y: Math.max(8, Math.round((window.innerHeight - height) / 2)),
+    });
+    setIsMinimized(false);
+  }, [isOpen]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -56,10 +76,11 @@ export function ChatModalWindow({ isOpen, onClose, unreadCount }: ChatModalProps
 
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
+      const { width, height } = getModalDimensions();
 
       // Keep within viewport
-      const maxX = window.innerWidth - 380; // 380px = width of modal
-      const maxY = window.innerHeight - 120; // 120px = header height
+      const maxX = window.innerWidth - width;
+      const maxY = window.innerHeight - (isMinimized ? 56 : height);
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -78,9 +99,14 @@ export function ChatModalWindow({ isOpen, onClose, unreadCount }: ChatModalProps
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, isMinimized]);
 
   if (!isOpen) return null;
+
+  const modalDimensions =
+    typeof window !== "undefined"
+      ? getModalDimensions()
+      : { width: 420, height: 680 };
 
   return (
     <div
@@ -90,14 +116,15 @@ export function ChatModalWindow({ isOpen, onClose, unreadCount }: ChatModalProps
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: 9999,
-        width: "380px",
-        height: isMinimized ? "auto" : "600px",
+        width: `${modalDimensions.width}px`,
+        height: isMinimized ? "auto" : `${modalDimensions.height}px`,
+        maxWidth: "calc(100vw - 16px)",
+        maxHeight: "calc(100vh - 16px)",
       }}
       className="pointer-events-auto flex flex-col rounded-lg border border-gray-200 bg-white shadow-2xl"
     >
       {/* Header - Draggable */}
       <div
-        ref={headerRef}
         onMouseDown={handleMouseDown}
         className={`flex cursor-move items-center justify-between border-b border-gray-200 bg-gradient-to-r from-sky-600 to-sky-700 px-4 py-3 text-white ${
           isDragging ? "select-none" : ""
@@ -153,7 +180,7 @@ export function ChatModalWindow({ isOpen, onClose, unreadCount }: ChatModalProps
             </div>
           ) : (
             <iframe
-              src="/dashboard/messages"
+              src={chatPath}
               title="Chat"
               className="h-full w-full border-none"
               style={{ pointerEvents: isDragging ? "none" : "auto" }}

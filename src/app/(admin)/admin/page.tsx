@@ -194,114 +194,114 @@ export default async function AdminPage() {
       )}
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
               <Users className="h-6 w-6 text-blue-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Clients</p>
-              <p className="text-2xl font-bold">{totalClients || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Clients</p>
+              <p className="truncate text-2xl font-bold">{totalClients || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
               <Package className="h-6 w-6 text-green-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Commandes totales</p>
-              <p className="text-2xl font-bold">{totalCommandes || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Commandes totales</p>
+              <p className="truncate text-2xl font-bold">{totalCommandes || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-100">
               <Clock className="h-6 w-6 text-yellow-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">En cours</p>
-              <p className="text-2xl font-bold">{commandesEnCours || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">En cours</p>
+              <p className="truncate text-2xl font-bold">{commandesEnCours || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
               <TrendingUp className="h-6 w-6 text-purple-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Chiffre d&apos;affaires</p>
-              <p className="text-2xl font-bold">{formatPrice(ca)}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Chiffre d&apos;affaires</p>
+              <p className="truncate text-2xl font-bold">{formatPrice(ca)}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100">
               <TriangleAlert className="h-6 w-6 text-rose-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Retards</p>
-              <p className="text-2xl font-bold">{commandesEnRetard}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Retards</p>
+              <p className="truncate text-2xl font-bold">{commandesEnRetard}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
               <AlertCircle className="h-6 w-6 text-orange-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Urgentes/Express</p>
-              <p className="text-2xl font-bold">{commandesUrgentes || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Urgentes/Express</p>
+              <p className="truncate text-2xl font-bold">{commandesUrgentes || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
               <ShieldAlert className="h-6 w-6 text-red-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Lots périmés</p>
-              <p className="text-2xl font-bold">{lotsPerimes || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Lots périmés</p>
+              <p className="truncate text-2xl font-bold">{lotsPerimes || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
               <Package className="h-6 w-6 text-amber-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Stock sous seuil</p>
-              <p className="text-2xl font-bold">{stockSousSeuil}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Stock sous seuil</p>
+              <p className="truncate text-2xl font-bold">{stockSousSeuil}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100">
               <MessageSquare className="h-6 w-6 text-cyan-700" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Messages non lus</p>
-              <p className="text-2xl font-bold">{messagesNonLus || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Messages non lus</p>
+              <p className="truncate text-2xl font-bold">{messagesNonLus || 0}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="flex min-w-0 items-center gap-3 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
               <Bell className="h-6 w-6 text-emerald-700" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Paiements en attente</p>
-              <p className="text-2xl font-bold">{paiementsEnAttente || 0}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm text-gray-500">Paiements en attente</p>
+              <p className="truncate text-2xl font-bold">{paiementsEnAttente || 0}</p>
             </div>
           </CardContent>
         </Card>

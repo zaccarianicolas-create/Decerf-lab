@@ -80,6 +80,7 @@ export function ChatFab({ href }: { href: string }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         unreadCount={unreadCount}
+        chatPath={href}
       />
     </>
   );

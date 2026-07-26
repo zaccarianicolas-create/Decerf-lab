@@ -57,6 +57,16 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      {
+        source: "/(admin|dashboard)/messages",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'"),
+          },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
+      },
     ];
   },
 };
