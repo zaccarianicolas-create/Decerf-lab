@@ -11,6 +11,8 @@ interface ChatModalProps {
   chatPath: string;
 }
 
+const DEFAULT_MODAL_DIMENSIONS = { width: 420, height: 680 };
+
 export function ChatModalWindow({
   isOpen,
   onClose,
@@ -18,6 +20,9 @@ export function ChatModalWindow({
   chatPath,
 }: ChatModalProps) {
   const [position, setPosition] = useState({ x: 24, y: 24 });
+  const [modalDimensions, setModalDimensions] = useState(
+    DEFAULT_MODAL_DIMENSIONS
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,10 +42,11 @@ export function ChatModalWindow({
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
-    const { width, height } = getModalDimensions();
+    const dims = getModalDimensions();
+    setModalDimensions(dims);
     setPosition({
-      x: Math.max(8, Math.round((window.innerWidth - width) / 2)),
-      y: Math.max(8, Math.round((window.innerHeight - height) / 2)),
+      x: Math.max(8, Math.round((window.innerWidth - dims.width) / 2)),
+      y: Math.max(8, Math.round((window.innerHeight - dims.height) / 2)),
     });
     // Reset only failure state on reopen; keep iframe loaded state for fast toggles.
     setIframeFailed(false);
@@ -88,11 +94,12 @@ export function ChatModalWindow({
 
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-      const { width, height } = getModalDimensions();
+      const dims = getModalDimensions();
+      setModalDimensions(dims);
 
       // Keep within viewport
-      const maxX = window.innerWidth - width;
-      const maxY = window.innerHeight - height;
+      const maxX = window.innerWidth - dims.width;
+      const maxY = window.innerHeight - dims.height;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -112,11 +119,6 @@ export function ChatModalWindow({
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, dragOffset]);
-
-  const modalDimensions =
-    typeof window !== "undefined"
-      ? getModalDimensions()
-      : { width: 420, height: 680 };
 
   return (
     <div
