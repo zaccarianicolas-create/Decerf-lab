@@ -19,6 +19,7 @@ export function ChatModalWindow({
   unreadCount,
   chatPath,
 }: ChatModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState({ x: 24, y: 24 });
   const [modalDimensions, setModalDimensions] = useState(
     DEFAULT_MODAL_DIMENSIONS
@@ -41,7 +42,11 @@ export function ChatModalWindow({
   };
 
   useEffect(() => {
-    if (!isOpen || typeof window === "undefined") return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !isOpen || typeof window === "undefined") return;
     const dims = getModalDimensions();
     setModalDimensions(dims);
     setPosition({
@@ -50,7 +55,7 @@ export function ChatModalWindow({
     });
     // Reset only failure state on reopen; keep iframe loaded state for fast toggles.
     setIframeFailed(false);
-  }, [isOpen]);
+  }, [mounted, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
@@ -119,6 +124,8 @@ export function ChatModalWindow({
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, dragOffset]);
+
+  if (!mounted) return null;
 
   return (
     <div
