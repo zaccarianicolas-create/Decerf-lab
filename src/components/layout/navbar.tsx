@@ -21,6 +21,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export function Navbar() {
 
   useEffect(() => {
     const supabase = createClient();
+    setIsLoadingRole(true);
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       if (user) {
@@ -39,8 +41,27 @@ export function Navbar() {
           .select("role")
           .eq("id", user.id)
           .single()
-          .then(({ data }) => setUserRole(data?.role ?? null));
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("Failed to fetch user role:", error);
+              setUserRole(null);
+            } else {
+              setUserRole(data?.role ?? null);
+            }
+            setIsLoadingRole(false);
+          })
+          .catch((err) => {
+            console.error("Error fetching user role:", err);
+            setUserRole(null);
+            setIsLoadingRole(false);
+          });
+      } else {
+        setIsLoadingRole(false);
       }
+    }).catch((err) => {
+      console.error("Error fetching user:", err);
+      setUser(null);
+      setIsLoadingRole(false);
     });
   }, []);
 
@@ -90,7 +111,7 @@ export function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden items-center gap-3 md:flex">
-          {user ? (
+          {user && !isLoadingRole ? (
             <>
               <Link href={dashboardHref}>
                 <Button size="sm" className="bg-sky-600 hover:bg-sky-700">
@@ -148,7 +169,7 @@ export function Navbar() {
               </Link>
             ))}
             <hr className="my-2 border-slate-100" />
-            {user ? (
+            {user && !isLoadingRole ? (
               <>
                 <Link href={dashboardHref} onClick={() => setIsOpen(false)}>
                   <Button className="w-full bg-sky-600 hover:bg-sky-700">Mon espace</Button>
