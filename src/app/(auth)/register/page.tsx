@@ -227,7 +227,7 @@ function RegisterForm() {
           <Input
             label="Email professionnel"
             type="email"
-            placeholder="docteur@cabinet.fr"
+            placeholder="docteur@cabinet.be"
             error={errors.email?.message}
             disabled={hasValidInvitation}
             {...register("email")}

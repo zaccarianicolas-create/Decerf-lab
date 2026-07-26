@@ -94,7 +94,7 @@ function LoginForm() {
           <Input
             label="Email"
             type="email"
-            placeholder="docteur@cabinet.fr"
+            placeholder="docteur@cabinet.be"
             error={errors.email?.message}
             {...register("email")}
           />

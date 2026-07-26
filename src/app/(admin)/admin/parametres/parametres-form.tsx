@@ -160,7 +160,7 @@ export function ParametresForm({
                 onChange={(e) =>
                   setFormData({ ...formData, telephone: e.target.value })
                 }
-                placeholder="06 12 34 56 78"
+                placeholder="+32 (0)4 xx xx xx xx"
               />
             </div>
 

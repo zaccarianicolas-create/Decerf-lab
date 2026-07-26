@@ -241,7 +241,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   <Input
                     label={`Email ${formData.mode === "sans_compte" ? "" : "*"}`}
                     type="email"
-                    placeholder="dr.dupont@cabinet.fr"
+                    placeholder="dr.dupont@cabinet.be"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -251,7 +251,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   <Input
                     label="Téléphone"
                     type="tel"
-                    placeholder="06 12 34 56 78"
+                    placeholder="+32 4 xx xx xx xx"
                     value={formData.telephone}
                     onChange={(e) =>
                       setFormData({ ...formData, telephone: e.target.value })
@@ -381,7 +381,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   <Input
                     label="Email *"
                     type="email"
-                    placeholder="dr.dupont@cabinet.fr"
+                    placeholder="dr.dupont@cabinet.be"
                     value={inviteFormData.email}
                     onChange={(e) =>
                       setInviteFormData({ ...inviteFormData, email: e.target.value })
@@ -391,7 +391,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   <Input
                     label="Téléphone"
                     type="tel"
-                    placeholder="06 12 34 56 78"
+                    placeholder="+32 4 xx xx xx xx"
                     value={inviteFormData.telephone}
                     onChange={(e) =>
                       setInviteFormData({ ...inviteFormData, telephone: e.target.value })
