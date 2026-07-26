@@ -40,18 +40,21 @@ export function Navbar() {
           .from("profiles")
           .select("role")
           .eq("id", user.id)
-          .single()
+          .maybeSingle()
           .then(({ data, error }) => {
             if (error) {
-              console.error("Failed to fetch user role:", error);
+              console.warn("Failed to fetch user role:", error?.message || "Erreur lors de la récupération du profil");
               setUserRole(null);
+            } else if (data) {
+              setUserRole(data.role ?? null);
             } else {
-              setUserRole(data?.role ?? null);
+              console.warn("Profile not found for user");
+              setUserRole(null);
             }
             setIsLoadingRole(false);
           })
           .catch((err) => {
-            console.error("Error fetching user role:", err);
+            console.warn("Error fetching user role:", err?.message || err);
             setUserRole(null);
             setIsLoadingRole(false);
           });
