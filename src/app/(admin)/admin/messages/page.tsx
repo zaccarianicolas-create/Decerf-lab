@@ -5,7 +5,17 @@ import { MessengerAdmin } from "./messenger-admin";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminMessagesPage() {
+export default async function AdminMessagesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const initialOpenNew =
+    resolvedSearchParams?.new === "1" ||
+    (Array.isArray(resolvedSearchParams?.new) &&
+      resolvedSearchParams?.new?.includes("1"));
+
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -67,6 +77,7 @@ export default async function AdminMessagesPage() {
         currentUserId={user.id}
         dentistes={(dentistes as any[]) ?? []}
         authorsMap={authorsMap}
+        initialOpenNew={Boolean(initialOpenNew)}
       />
     </div>
   );

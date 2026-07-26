@@ -37,12 +37,14 @@ export function MessengerAdmin({
   currentUserId,
   dentistes,
   authorsMap,
+  initialOpenNew,
 }: {
   initialConversations: Conversation[];
   unreadMap: Record<string, number>;
   currentUserId: string;
   dentistes: Dentiste[];
   authorsMap: Record<string, Author>;
+  initialOpenNew?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] =
@@ -52,7 +54,7 @@ export function MessengerAdmin({
   );
   const [unread, setUnread] = useState(initialUnread);
   const [search, setSearch] = useState("");
-  const [showNew, setShowNew] = useState(false);
+  const [showNew, setShowNew] = useState(Boolean(initialOpenNew));
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;

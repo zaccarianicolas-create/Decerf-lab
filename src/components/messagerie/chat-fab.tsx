@@ -62,10 +62,12 @@ export function ChatFab({ href }: { href: string }) {
     <>
       <button
         type="button"
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => setIsModalOpen((open) => !open)}
         aria-label="Ouvrir la messagerie"
         title="Messagerie"
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-3 text-white shadow-lg transition hover:bg-sky-700"
+        className={`fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full px-4 py-3 text-white shadow-lg transition ${
+          isModalOpen ? "bg-sky-700" : "bg-sky-600 hover:bg-sky-700"
+        }`}
       >
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">

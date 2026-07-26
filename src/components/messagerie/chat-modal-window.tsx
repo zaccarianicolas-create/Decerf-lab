@@ -25,6 +25,7 @@ export function ChatModalWindow({
   const [iframeFailed, setIframeFailed] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
+  const [chatUrl, setChatUrl] = useState(chatPath);
 
   const getModalDimensions = () => {
     const width = Math.min(420, window.innerWidth - 24);
@@ -41,6 +42,7 @@ export function ChatModalWindow({
     });
     setIframeLoaded(false);
     setIframeFailed(false);
+    setChatUrl(chatPath);
   }, [isOpen]);
 
   useEffect(() => {
@@ -151,7 +153,14 @@ export function ChatModalWindow({
 
         <div className="flex gap-2">
           <a
-            href={chatPath}
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              const separator = chatPath.includes("?") ? "&" : "?";
+              setChatUrl(`${chatPath}${separator}new=1`);
+              setIframeLoaded(false);
+              setIframeFailed(false);
+            }}
             className="rounded p-1 hover:bg-sky-500"
             aria-label="Nouvelle conversation"
             title="Nouvelle conversation"
@@ -212,7 +221,7 @@ export function ChatModalWindow({
         ) : (
           <div className="flex h-full flex-col">
             <iframe
-              src={chatPath}
+              src={chatUrl}
               title="Chat"
               className="h-full w-full border-none"
               onLoad={() => {
