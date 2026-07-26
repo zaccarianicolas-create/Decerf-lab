@@ -22,6 +22,8 @@ export function ChatModalWindow({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeFailed, setIframeFailed] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
 
@@ -39,7 +41,17 @@ export function ChatModalWindow({
       y: Math.max(8, Math.round((window.innerHeight - height) / 2)),
     });
     setIsMinimized(false);
+    setIframeLoaded(false);
+    setIframeFailed(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !isAuthenticated || isMinimized) return;
+    const t = window.setTimeout(() => {
+      if (!iframeLoaded) setIframeFailed(true);
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [isOpen, isAuthenticated, isMinimized, iframeLoaded]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -178,13 +190,49 @@ export function ChatModalWindow({
                 </a>
               </div>
             </div>
+          ) : iframeFailed ? (
+            <div className="flex h-full items-center justify-center p-6 text-center">
+              <div className="max-w-xs space-y-3">
+                <p className="text-sm font-semibold text-gray-900">
+                  Messagerie indisponible dans la bulle
+                </p>
+                <p className="text-sm text-gray-600">
+                  Aucune conversation pour le moment, ou affichage bloqué ici.
+                  Vous pouvez ouvrir la page complète pour voir les détails.
+                </p>
+                <a
+                  href={chatPath}
+                  className="inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700"
+                >
+                  Ouvrir la messagerie complète
+                </a>
+              </div>
+            </div>
           ) : (
-            <iframe
-              src={chatPath}
-              title="Chat"
-              className="h-full w-full border-none"
-              style={{ pointerEvents: isDragging ? "none" : "auto" }}
-            />
+            <div className="flex h-full flex-col">
+              <iframe
+                src={chatPath}
+                title="Chat"
+                className="h-full w-full border-none"
+                onLoad={() => {
+                  setIframeLoaded(true);
+                  setIframeFailed(false);
+                }}
+                onError={() => {
+                  setIframeFailed(true);
+                }}
+                style={{ pointerEvents: isDragging ? "none" : "auto" }}
+              />
+              <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                <p>
+                  Si la conversation est vide, utilisez le bouton <strong>+</strong> dans la messagerie
+                  pour démarrer un échange.
+                </p>
+                <a href={chatPath} className="mt-1 inline-block text-sky-700 hover:underline">
+                  Ouvrir la page complète
+                </a>
+              </div>
+            </div>
           )}
         </div>
       )}

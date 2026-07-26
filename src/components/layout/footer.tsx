@@ -120,6 +120,13 @@ export function Footer() {
             >
               Cookies
             </Link>
+            <span>•</span>
+            <Link
+              href="/dpa-annexe"
+              className="hover:text-sky-600 transition-colors"
+            >
+              Annexe DPA
+            </Link>
           </div>
           <p className="mt-6 text-center text-sm text-slate-400">
             &copy; {new Date().getFullYear()} DECERF LAB. Tous droits réservés.

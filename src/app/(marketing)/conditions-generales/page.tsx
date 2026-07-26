@@ -164,6 +164,21 @@ export default function ConditionsGenerales() {
               Pour toute question: <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
             </p>
           </section>
+
+          <section>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              14. Annexe DPA (RGPD)
+            </h2>
+            <p>
+              L&apos;annexe de traitement des données personnelles (DPA), applicable
+              aux prestations numériques et à la gestion des données,
+              est disponible ici: {" "}
+              <a href="/dpa-annexe" className="text-sky-600 hover:underline">
+                Annexe DPA
+              </a>
+              .
+            </p>
+          </section>
         </div>
       </div>
     </main>
