@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Search } from "lucide-react";
 import { ChatThread } from "@/components/messagerie/chat-thread";
 
 type Author = {
@@ -41,6 +41,7 @@ export function MessengerDentiste({
   );
   const [unread, setUnread] = useState(initialUnread);
   const [conversations, setConversations] = useState(initialConversations);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -105,16 +106,39 @@ export function MessengerDentiste({
   };
 
   const active = conversations.find((c) => c.id === activeId);
+  const filtered = conversations.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      c.titre?.toLowerCase().includes(q) ||
+      c.commande?.numero?.toLowerCase().includes(q)
+    );
+  });
 
   if (conversations.length === 0) {
     return (
       <Card className={isEmbed ? "h-full rounded-none border-0 shadow-none" : ""}>
-        <div className="py-12 text-center">
+        <div className="flex h-full flex-col">
+          {isEmbed && (
+            <div className="border-b border-gray-100 p-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
           <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-4 text-sm text-gray-500">
             Aucune conversation pour le moment. Une conversation peut être ouverte
             par le laboratoire ou attachée à une commande.
           </p>
+          </div>
         </div>
       </Card>
     );
@@ -136,7 +160,7 @@ export function MessengerDentiste({
               : "w-72 overflow-y-auto border-r border-gray-200"
           }`}
         >
-          {conversations.map((c) => (
+          {filtered.map((c) => (
             <button
               key={c.id}
               onClick={() => open(c.id)}

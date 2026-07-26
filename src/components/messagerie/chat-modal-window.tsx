@@ -29,8 +29,8 @@ export function ChatModalWindow({
   const chatUrl = `${chatPath}${chatPath.includes("?") ? "&" : "?"}embed=1`;
 
   const getModalDimensions = () => {
-    const width = Math.min(420, window.innerWidth - 24);
-    const height = Math.min(680, window.innerHeight - 24);
+    const width = Math.min(440, window.innerWidth - 20);
+    const height = Math.min(700, window.innerHeight - 20);
     return { width, height };
   };
 
@@ -143,7 +143,7 @@ export function ChatModalWindow({
         }`}
       >
         <div className="flex items-center gap-3">
-          <h3 className="font-semibold">Messages</h3>
+          <h3 className="text-xl font-semibold">Messages</h3>
           {unreadCount > 0 && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold">
               {unreadCount > 9 ? "9+" : unreadCount}

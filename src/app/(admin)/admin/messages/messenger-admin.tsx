@@ -156,6 +156,72 @@ export function MessengerAdmin({
 
   const activeConv = conversations.find((c) => c.id === activeId);
   const hasSearch = search.trim().length > 0;
+  const isEmbedEmpty = Boolean(isEmbed) && conversations.length === 0;
+
+  if (isEmbedEmpty) {
+    return (
+      <Card className="h-full overflow-hidden rounded-none border-0 shadow-none">
+        <div className="flex h-full flex-col">
+          <div className="border-b border-gray-100 p-3">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher..."
+                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+              <button
+                onClick={() => setShowNew(!showNew)}
+                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
+                title="Nouvelle conversation"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            {showNew && (
+              <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
+                {dentistes.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500">
+                    Aucun praticien trouvé pour ouvrir une nouvelle conversation.
+                  </p>
+                ) : (
+                  dentistes.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => createConv(d.id)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
+                        {d.prenom?.[0]}
+                        {d.nom?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Dr {d.prenom} {d.nom}
+                        </p>
+                        <p className="text-xs text-gray-500">{d.email}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center text-gray-500">
+            <MessageSquare className="h-12 w-12 text-gray-300" />
+            <p className="mt-3 text-base font-medium text-gray-700">Aucune conversation</p>
+            <p className="mt-1 text-sm">
+              Cliquez sur + pour démarrer un nouvel échange avec un praticien.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`overflow-hidden ${isEmbed ? "h-full rounded-none border-0 shadow-none" : ""}`}>
