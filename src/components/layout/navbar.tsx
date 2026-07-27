@@ -186,27 +186,6 @@ export function Navbar() {
         </details>
       </nav>
 
-      {/* Always-visible fallback nav for hostile browser/extension environments */}
-      <div className="border-t border-slate-100 bg-white/95 px-4 py-2">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs font-medium text-slate-600 sm:text-sm">
-          <Link href="/" className="hover:text-sky-600">
-            Accueil
-          </Link>
-          <Link href="/#services" className="hover:text-sky-600">
-            Services
-          </Link>
-          <Link href="/contact" className="hover:text-sky-600">
-            Contact
-          </Link>
-          <span className="hidden text-slate-300 sm:inline">|</span>
-          <Link href="/login" className="hover:text-sky-600">
-            Connexion
-          </Link>
-          <Link href="/register" className="hover:text-sky-600">
-            Inscription
-          </Link>
-        </div>
-      </div>
     </header>
   );
 }
