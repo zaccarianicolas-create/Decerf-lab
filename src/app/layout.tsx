@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     "implant",
     "DECERF LAB",
   ],
+  icons: {
+    icon: "/images/favicon.png",
+    shortcut: "/images/favicon.png",
+    apple: "/images/favicon.png",
+  },
 };
 
 export default function RootLayout({
