@@ -17,6 +17,7 @@ const navLinks = [
 ];
 
 export function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -137,54 +138,66 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Mobile menu button (native toggle, works without JS) */}
-        <details className="group relative md:hidden">
-          <summary className="list-none rounded-md p-1 text-slate-700 cursor-pointer" aria-label="Menu">
-            <Menu className="h-6 w-6 group-open:hidden" />
-            <X className="hidden h-6 w-6 group-open:block" />
-          </summary>
-
-          <div className="absolute right-0 top-11 w-[min(92vw,360px)] rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-            <div className="flex flex-col gap-3">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <hr className="my-2 border-slate-100" />
-              {user && !isLoadingRole ? (
-                <>
-                  <Link href={dashboardHref}>
-                    <Button className="w-full bg-sky-600 hover:bg-sky-700">Mon espace</Button>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Déconnexion
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="outline" className="w-full">
-                      Connexion
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button className="w-full bg-sky-600 hover:bg-sky-700">S&apos;inscrire</Button>
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </details>
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Menu"
+        >
+          {isOpen ? (
+            <X className="h-6 w-6 text-slate-700" />
+          ) : (
+            <Menu className="h-6 w-6 text-slate-700" />
+          )}
+        </button>
       </nav>
+
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="border-t border-slate-100 bg-white px-4 py-4 md:hidden">
+          <div className="flex flex-col gap-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                onClick={() => setIsOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <hr className="my-2 border-slate-100" />
+            {user && !isLoadingRole ? (
+              <>
+                <Link href={dashboardHref} onClick={() => setIsOpen(false)}>
+                  <Button className="w-full bg-sky-600 hover:bg-sky-700">Mon espace</Button>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setIsOpen(false)}>
+                  <Button variant="outline" className="w-full">
+                    Connexion
+                  </Button>
+                </Link>
+                <Link href="/register" onClick={() => setIsOpen(false)}>
+                  <Button className="w-full bg-sky-600 hover:bg-sky-700">S&apos;inscrire</Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </header>
   );
