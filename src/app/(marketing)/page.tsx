@@ -117,7 +117,7 @@ export default function HomePage() {
       <section className="relative min-h-[65vh] overflow-hidden">
         {/* Background image + overlay */}
         <Image
-          src="/images/hero-lab.jpg"
+          src="/images/bann.png"
           alt="Laboratoire dentaire DECERF LAB"
           fill
           className="object-cover object-center"
