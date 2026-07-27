@@ -110,41 +110,7 @@ const testimonials = [
   },
 ];
 
-type MarketingStyle = "tech" | "human";
-
-const howItWorksVisualByStyle: Record<
-  MarketingStyle,
-  {
-    src: string;
-    alt: string;
-    objectPosition: string;
-    accentClass: string;
-  }
-> = {
-  tech: {
-    src: "/images/process-lab.jpg",
-    alt: "Outils de précision en laboratoire dentaire",
-    objectPosition: "object-center",
-    accentClass: "bg-sky-100",
-  },
-  human: {
-    src: "/images/about-lab.jpg",
-    alt: "Dentiste présentant un cas à sa patiente",
-    objectPosition: "object-center",
-    accentClass: "bg-teal-100",
-  },
-};
-
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ style?: string }>;
-}) {
-  const params = await searchParams;
-  const styleFromUrl = (params.style || "").toLowerCase();
-  const style: MarketingStyle = styleFromUrl === "human" ? "human" : "tech";
-  const howItWorksVisual = howItWorksVisualByStyle[style];
-
+export default function HomePage() {
   return (
     <>
       {/* Hero */}
@@ -285,16 +251,14 @@ export default async function HomePage({
             <div className="relative">
               <div className="overflow-hidden rounded-2xl border border-slate-200/70">
                 <Image
-                  src={howItWorksVisual.src}
-                  alt={howItWorksVisual.alt}
+                  src="/images/process-lab.jpg"
+                  alt="Confection de prothèses en laboratoire dentaire"
                   width={800}
                   height={600}
-                  className={`h-auto w-full object-cover ${howItWorksVisual.objectPosition}`}
+                  className="h-auto w-full object-cover object-center"
                 />
               </div>
-              <div
-                className={`absolute -bottom-4 -right-4 -z-10 h-64 w-64 rounded-2xl ${howItWorksVisual.accentClass}`}
-              />
+              <div className="absolute -bottom-4 -right-4 -z-10 h-64 w-64 rounded-2xl bg-sky-100" />
             </div>
 
             {/* Steps */}
@@ -308,34 +272,6 @@ export default async function HomePage({
               <p className="mt-4 text-lg text-slate-600">
                 De la commande à la réception, un processus fluide en 4 étapes.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Link href="/?style=tech#comment-ca-marche">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={
-                      style === "tech"
-                        ? "border-sky-200 bg-sky-50 text-sky-700"
-                        : "border-slate-200 text-slate-600"
-                    }
-                  >
-                    Style tech premium
-                  </Button>
-                </Link>
-                <Link href="/?style=human#comment-ca-marche">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={
-                      style === "human"
-                        ? "border-teal-200 bg-teal-50 text-teal-700"
-                        : "border-slate-200 text-slate-600"
-                    }
-                  >
-                    Style humain confiance
-                  </Button>
-                </Link>
-              </div>
 
               <div className="mt-8 space-y-6">
                 {steps.map((step, index) => (
