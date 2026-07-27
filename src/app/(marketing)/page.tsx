@@ -110,7 +110,41 @@ const testimonials = [
   },
 ];
 
-export default function HomePage() {
+type MarketingStyle = "tech" | "human";
+
+const howItWorksVisualByStyle: Record<
+  MarketingStyle,
+  {
+    src: string;
+    alt: string;
+    objectPosition: string;
+    accentClass: string;
+  }
+> = {
+  tech: {
+    src: "/images/process-lab.jpg",
+    alt: "Outils de précision en laboratoire dentaire",
+    objectPosition: "object-center",
+    accentClass: "bg-sky-100",
+  },
+  human: {
+    src: "/images/about-lab.jpg",
+    alt: "Dentiste présentant un cas à sa patiente",
+    objectPosition: "object-center",
+    accentClass: "bg-teal-100",
+  },
+};
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ style?: string }>;
+}) {
+  const params = await searchParams;
+  const styleFromUrl = (params.style || "").toLowerCase();
+  const style: MarketingStyle = styleFromUrl === "human" ? "human" : "tech";
+  const howItWorksVisual = howItWorksVisualByStyle[style];
+
   return (
     <>
       {/* Hero */}
@@ -244,21 +278,23 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white py-16 sm:py-20">
+      <section id="comment-ca-marche" className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
             {/* Image */}
             <div className="relative">
-              <div className="overflow-hidden rounded-2xl">
+              <div className="overflow-hidden rounded-2xl border border-slate-200/70">
                 <Image
-                  src="/images/process-lab.jpg"
-                  alt="Confection de prothèses en laboratoire dentaire"
+                  src={howItWorksVisual.src}
+                  alt={howItWorksVisual.alt}
                   width={800}
                   height={600}
-                  className="h-auto w-full object-cover"
+                  className={`h-auto w-full object-cover ${howItWorksVisual.objectPosition}`}
                 />
               </div>
-              <div className="absolute -bottom-4 -right-4 -z-10 h-64 w-64 rounded-2xl bg-sky-100" />
+              <div
+                className={`absolute -bottom-4 -right-4 -z-10 h-64 w-64 rounded-2xl ${howItWorksVisual.accentClass}`}
+              />
             </div>
 
             {/* Steps */}
@@ -272,6 +308,34 @@ export default function HomePage() {
               <p className="mt-4 text-lg text-slate-600">
                 De la commande à la réception, un processus fluide en 4 étapes.
               </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link href="/?style=tech#comment-ca-marche">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={
+                      style === "tech"
+                        ? "border-sky-200 bg-sky-50 text-sky-700"
+                        : "border-slate-200 text-slate-600"
+                    }
+                  >
+                    Style tech premium
+                  </Button>
+                </Link>
+                <Link href="/?style=human#comment-ca-marche">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={
+                      style === "human"
+                        ? "border-teal-200 bg-teal-50 text-teal-700"
+                        : "border-slate-200 text-slate-600"
+                    }
+                  >
+                    Style humain confiance
+                  </Button>
+                </Link>
+              </div>
 
               <div className="mt-8 space-y-6">
                 {steps.map((step, index) => (
