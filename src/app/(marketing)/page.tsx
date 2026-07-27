@@ -151,7 +151,7 @@ export default async function HomePage({
       <section className="relative min-h-[65vh] overflow-hidden">
         {/* Background image + overlay */}
         <Image
-          src="/images/bann.png"
+          src="/images/hero-lab.jpg"
           alt="Laboratoire dentaire DECERF LAB"
           fill
           className="object-cover object-center"
