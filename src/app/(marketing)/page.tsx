@@ -432,8 +432,8 @@ export default function HomePage() {
               Prêt à travailler avec un labo qui vous comprend ?
             </h2>
             <p className="mt-6 text-lg text-slate-300">
-              Rejoignez les centaines de praticiens qui font confiance à DECERF
-              LAB. Inscription gratuite, sans engagement.
+              Rejoignez les praticiens qui font confiance à DECERF LAB.
+              Inscription gratuite, sans engagement.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/register">
