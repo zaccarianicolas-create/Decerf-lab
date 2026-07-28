@@ -52,17 +52,28 @@ export function ClientDetail({
     prenom: client.prenom,
     telephone: client.telephone || "",
     numero_inami: client.numero_inami || "",
+    mode_travail_prefere: client.mode_travail_prefere || "",
+    modele_scanner: client.modele_scanner || "",
   });
 
   const handleSave = async () => {
     setSaving(true);
+    const payload = {
+      ...form,
+      mode_travail_prefere:
+        form.mode_travail_prefere === "" ? null : form.mode_travail_prefere,
+      modele_scanner:
+        form.mode_travail_prefere === "empreinte"
+          ? null
+          : form.modele_scanner || null,
+    };
     const { error } = await supabase
       .from("profiles")
-      .update(form)
+      .update(payload)
       .eq("id", client.id);
 
     if (!error) {
-      setClient({ ...client, ...form });
+      setClient({ ...client, ...payload });
       setEditing(false);
     }
     setSaving(false);
@@ -192,6 +203,8 @@ export function ClientDetail({
                         prenom: client.prenom,
                         telephone: client.telephone || "",
                         numero_inami: client.numero_inami || "",
+                        mode_travail_prefere: client.mode_travail_prefere || "",
+                        modele_scanner: client.modele_scanner || "",
                       });
                     }}
                     className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
@@ -226,6 +239,30 @@ export function ClientDetail({
                     setForm({ ...form, numero_inami: e.target.value })
                   }
                 />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Mode de travail préféré
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    value={form.mode_travail_prefere}
+                    onChange={(e) =>
+                      setForm({ ...form, mode_travail_prefere: e.target.value })
+                    }
+                  >
+                    <option value="">Non renseigné</option>
+                    <option value="scan">Scanner intra-oral</option>
+                    <option value="empreinte">Empreinte classique</option>
+                    <option value="hybride">Les deux</option>
+                  </select>
+                </div>
+                <Input
+                  label="Modèle de scanner"
+                  value={form.modele_scanner}
+                  onChange={(e) =>
+                    setForm({ ...form, modele_scanner: e.target.value })
+                  }
+                />
               </div>
             ) : (
               <div className="space-y-3">
@@ -240,6 +277,18 @@ export function ClientDetail({
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-gray-400" />
                   <span>INAMI : {client.numero_inami || "Non renseigné"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Shield className="h-4 w-4 text-gray-400" />
+                  <span>
+                    Mode de travail : {client.mode_travail_prefere || "Non renseigné"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Shield className="h-4 w-4 text-gray-400" />
+                  <span>
+                    Scanner : {client.modele_scanner || "Non renseigné"}
+                  </span>
                 </div>
                 {client.cabinet && (
                   <div className="flex items-center gap-2 text-sm">

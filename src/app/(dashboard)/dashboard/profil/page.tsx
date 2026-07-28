@@ -53,6 +53,11 @@ export default function ProfilPage() {
         nom: data.nom,
         prenom: data.prenom,
         telephone: data.telephone,
+        mode_travail_prefere: data.mode_travail_prefere,
+        modele_scanner:
+          data.mode_travail_prefere === "empreinte"
+            ? null
+            : data.modele_scanner || null,
       })
       .eq("id", profile!.id);
 
@@ -116,6 +121,25 @@ export default function ProfilPage() {
                 label="Téléphone"
                 type="tel"
                 {...register("telephone")}
+              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Mode de travail préféré
+                </label>
+                <select
+                  className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  {...register("mode_travail_prefere")}
+                >
+                  <option value="">Non renseigné</option>
+                  <option value="scan">Scanner intra-oral</option>
+                  <option value="empreinte">Empreinte classique</option>
+                  <option value="hybride">Les deux</option>
+                </select>
+              </div>
+              <Input
+                label="Modèle de scanner"
+                placeholder="ex: 3Shape TRIOS, iTero, Medit"
+                {...register("modele_scanner")}
               />
               <Input
                 label="Rôle"

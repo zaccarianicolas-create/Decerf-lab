@@ -74,6 +74,8 @@ export interface Profile {
   nom: string;
   prenom: string;
   telephone: string | null;
+  mode_travail_prefere: "scan" | "empreinte" | "hybride" | null;
+  modele_scanner: string | null;
   role: UserRole;
   avatar_url: string | null;
   cabinet_id: string | null;

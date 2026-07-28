@@ -20,6 +20,8 @@ const registerSchema = z
     telephone: z.string().optional(),
     type_compte_client: z.enum(["dentiste_independant", "clinique"]),
     cabinet_nom: z.string().optional(),
+    mode_travail_prefere: z.enum(["scan", "empreinte", "hybride"]),
+    modele_scanner: z.string().optional(),
     password: z.string().min(6, "Minimum 6 caractères"),
     confirmPassword: z.string(),
     acceptCGU: z.boolean().refine((val) => val === true, {
@@ -29,6 +31,15 @@ const registerSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Les mots de passe ne correspondent pas",
     path: ["confirmPassword"],
+  })
+  .refine(
+    (data) =>
+      data.mode_travail_prefere === "empreinte" ||
+      Boolean(data.modele_scanner?.trim()),
+    {
+      message: "Précisez le modèle de scanner",
+      path: ["modele_scanner"],
+    }
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -54,10 +65,12 @@ function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       type_compte_client: "dentiste_independant",
+      mode_travail_prefere: "scan",
     },
   });
 
   const typeCompte = watch("type_compte_client");
+  const modeTravail = watch("mode_travail_prefere");
 
   useEffect(() => {
     if (!invitationToken) return;
@@ -122,6 +135,11 @@ function RegisterForm() {
             : "inscription_site",
           invitation_token: hasValidInvitation ? invitationToken : null,
           role: "dentiste",
+          mode_travail_prefere: data.mode_travail_prefere,
+          modele_scanner:
+            data.mode_travail_prefere === "empreinte"
+              ? null
+              : data.modele_scanner?.trim() || null,
         },
       },
     });
@@ -279,6 +297,65 @@ function RegisterForm() {
             error={errors.cabinet_nom?.message}
             {...register("cabinet_nom")}
           />
+
+          <div className="rounded-lg border border-gray-200 p-4">
+            <p className="mb-2 text-sm font-medium text-gray-700">
+              Mode de travail préféré
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {(
+                [
+                  {
+                    value: "scan",
+                    label: "Scanner intra-oral",
+                    description: "Flux 100% numérique",
+                  },
+                  {
+                    value: "empreinte",
+                    label: "Empreinte classique",
+                    description: "Empreintes et plâtres acceptés",
+                  },
+                  {
+                    value: "hybride",
+                    label: "Les deux",
+                    description: "Scan et empreintes selon les cas",
+                  },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setValue("mode_travail_prefere", option.value)}
+                  className={`rounded-lg border-2 px-3 py-3 text-left text-sm transition-colors ${
+                    modeTravail === option.value
+                      ? "border-sky-500 bg-sky-50 text-sky-700"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="font-medium">{option.label}</span>
+                  <p className="mt-0.5 text-xs opacity-75">{option.description}</p>
+                </button>
+              ))}
+            </div>
+            <input type="hidden" {...register("mode_travail_prefere")} />
+          </div>
+
+          {modeTravail !== "empreinte" && (
+            <Input
+              label="Modèle de scanner"
+              placeholder="ex: 3Shape TRIOS, iTero, Medit, Carestream"
+              error={errors.modele_scanner?.message}
+              {...register("modele_scanner")}
+            />
+          )}
+
+          {modeTravail === "empreinte" && (
+            <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              Pas de scanner ? Aucun souci. Le laboratoire accepte les empreintes
+              et modèles en plâtre traditionnels.
+            </div>
+          )}
+
           <Input
             label="Mot de passe"
             type="password"

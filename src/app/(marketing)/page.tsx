@@ -273,6 +273,27 @@ export default function HomePage() {
                 De la commande à la réception, un processus fluide en 4 étapes.
               </p>
 
+              <div className="mt-6 rounded-xl border border-sky-100 bg-sky-50 p-4">
+                <p className="text-sm font-semibold text-sky-900">
+                  Vous n&apos;avez pas de scanner intra-oral ?
+                </p>
+                <p className="mt-1 text-sm text-sky-800">
+                  Aucun souci: le laboratoire travaille aussi avec les empreintes
+                  et modèles en plâtre traditionnels.
+                </p>
+                <div className="mt-3">
+                  <Link href="/contact">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-sky-200 bg-white text-sky-700 hover:bg-sky-100"
+                    >
+                      Parler à un technicien
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
               <div className="mt-8 space-y-6">
                 {steps.map((step, index) => (
                   <div key={step.step} className="flex gap-4">
