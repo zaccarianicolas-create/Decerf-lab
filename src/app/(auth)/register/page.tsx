@@ -28,17 +28,24 @@ const registerSchema = z
       message: "Vous devez accepter les conditions générales",
     }),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Les mots de passe ne correspondent pas",
-    path: ["confirmPassword"],
-  })
-  .refine(
-    (data) =>
-      data.mode_travail_prefere === "empreinte" ||
-      Boolean(data.modele_scanner?.trim()),
-    {
-      message: "Précisez le modèle de scanner",
-      path: ["modele_scanner"],
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Les mots de passe ne correspondent pas",
+        path: ["confirmPassword"],
+      });
+    }
+
+    if (
+      data.mode_travail_prefere !== "empreinte" &&
+      !data.modele_scanner?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Précisez le modèle de scanner",
+        path: ["modele_scanner"],
+      });
     }
   });
 
