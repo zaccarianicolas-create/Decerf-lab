@@ -1,0 +1,21 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^node --env-file=\\.env\\.local -e \"\nconst \\{ createClient \\} = require\\('@supabase/supabase-js'\\);\nconst supabase = createClient\\(process\\.env\\.NEXT_PUBLIC_SUPABASE_URL, process\\.env\\.SUPABASE_SERVICE_ROLE_KEY\\);\n\nasync function checkSchema\\(\\) \\{\n  const \\{ data: cols, error: cErr \\} = await supabase\\.rpc\\('execute_sql', \\{ sql: 'SELECT \\* FROM information_schema\\.columns WHERE table_name = \\\\'profiles\\\\'' \\}\\);\n  if \\(cErr\\) \\{\n    // try direct select\n    const \\{ data: p \\} = await supabase\\.from\\('profiles'\\)\\.select\\('\\*'\\)\\.limit\\(1\\);\n    console\\.log\\('PROFILE KEYS:', Object\\.keys\\(p\\[0\\] \\|\\| \\{\\}\\)\\);\n  \\} else \\{\n    console\\.log\\('COLS:', cols\\);\n  \\}\n\\}\ncheckSchema\\(\\);\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --env-file=\\.env\\.local -e \"\nconst \\{ createClient \\} = require\\('@supabase/supabase-js'\\);\nconst supabase = createClient\\(process\\.env\\.NEXT_PUBLIC_SUPABASE_URL, process\\.env\\.SUPABASE_SERVICE_ROLE_KEY\\);\n\nasync function checkForeignKeys\\(\\) \\{\n  const \\{ data, error \\} = await supabase\\.from\\('cabinets'\\)\\.select\\('\\*'\\)\\.limit\\(5\\);\n  console\\.log\\('CABINETS:', data, error\\);\n\\}\ncheckForeignKeys\\(\\);\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npx supabase": true,
+        "/^node --env-file=\\.env\\.local -e \"\nconst \\{ createClient \\} = require\\('@supabase/supabase-js'\\);\nconst supabase = createClient\\(process\\.env\\.NEXT_PUBLIC_SUPABASE_URL, process\\.env\\.SUPABASE_SERVICE_ROLE_KEY\\);\n\nasync function testProfiles\\(\\) \\{\n  const \\{ data, error \\} = await supabase\\.from\\('profiles'\\)\\.select\\('\\*'\\)\\.eq\\('role', 'dentiste'\\);\n  console\\.log\\('Dentistes count:', data\\?\\.length, 'error:', error\\);\n  console\\.log\\('Dentistes:', data\\);\n\\}\ntestProfiles\\(\\);\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --env-file=\\.env\\.local -e \"\nconst \\{ createClient \\} = require\\('@supabase/supabase-js'\\);\nconst supabase = createClient\\(process\\.env\\.NEXT_PUBLIC_SUPABASE_URL, process\\.env\\.SUPABASE_SERVICE_ROLE_KEY\\);\n\nasync function testQuery\\(\\) \\{\n  const \\{ data, error \\} = await supabase\n    \\.from\\('profiles'\\)\n    \\.select\\('\\*, cabinet:cabinets\\(\\*\\)'\\)\n    \\.eq\\('role', 'dentiste'\\)\n    \\.order\\('created_at', \\{ ascending: false \\}\\);\n  console\\.log\\('QUERY RESULT:', JSON\\.stringify\\(data, null, 2\\), 'ERROR:', error\\);\n\\}\ntestQuery\\(\\);\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
