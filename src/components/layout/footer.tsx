@@ -131,6 +131,17 @@ export function Footer() {
           <p className="mt-6 text-center text-sm text-slate-400">
             &copy; {new Date().getFullYear()} DECERF LAB. Tous droits réservés.
           </p>
+          <p className="mt-2 text-center text-xs text-slate-400">
+            Made with ♡ by{" "}
+            <a
+              href="https://lexeragroup.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-slate-500 hover:text-sky-600 transition-colors"
+            >
+              Lexeragroup
+            </a>
+          </p>
         </div>
       </div>
     </footer>
