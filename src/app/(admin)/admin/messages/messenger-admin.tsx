@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Plus, Search } from "lucide-react";
+import { ArrowLeft, MessageSquare, Plus, Search } from "lucide-react";
 import { ChatThread } from "@/components/messagerie/chat-thread";
 
 type Author = {
@@ -57,6 +57,8 @@ export function MessengerAdmin({
   const [unread, setUnread] = useState(initialUnread);
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(Boolean(initialOpenNew));
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -126,7 +128,9 @@ export function MessengerAdmin({
   const createConv = async (dentisteId: string) => {
     const d = dentistes.find((x) => x.id === dentisteId);
     if (!d) return;
-    const { data: conv } = await supabase
+    setCreating(true);
+    setCreateError(null);
+    const { data: conv, error } = await supabase
       .from("conversations")
       .insert({
         titre: `Conversation avec Dr ${d.prenom ?? ""} ${d.nom ?? ""}`.trim(),
@@ -136,6 +140,11 @@ export function MessengerAdmin({
         `*, dentiste:profiles!conversations_dentiste_id_fkey(id, nom, prenom, avatar_url, role), commande:commandes(numero)`
       )
       .single();
+    setCreating(false);
+    if (error) {
+      setCreateError(error.message);
+      return;
+    }
     if (conv) {
       setConversations((p) => [conv as Conversation, ...p]);
       open(conv.id);
@@ -229,12 +238,14 @@ export function MessengerAdmin({
         className={`${
           isEmbed
             ? "flex h-full min-h-0 flex-col"
-            : "flex h-[calc(100vh-200px)] min-h-[520px]"
+            : "flex h-[calc(100dvh-9rem)] min-h-[420px] md:h-[calc(100vh-200px)] md:min-h-[520px]"
         }`}
       >
         <aside
           className={`flex flex-col border-gray-200 ${
-            isEmbed ? "h-1/2 border-b" : "w-80 border-r"
+            isEmbed
+              ? "h-1/2 border-b"
+              : `w-full border-b md:w-80 md:border-b-0 md:border-r ${activeId ? "hidden md:flex" : "flex"}`
           }`}
         >
           <div className="border-b border-gray-100 p-3">
@@ -250,6 +261,7 @@ export function MessengerAdmin({
               </div>
               <button
                 onClick={() => setShowNew(!showNew)}
+                disabled={creating}
                 className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
                 title="Nouvelle conversation"
               >
@@ -267,6 +279,7 @@ export function MessengerAdmin({
                     <button
                       key={d.id}
                       onClick={() => createConv(d.id)}
+                      disabled={creating}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
                     >
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
@@ -282,6 +295,7 @@ export function MessengerAdmin({
                     </button>
                   ))
                 )}
+                {createError && <p role="alert" className="p-3 text-xs text-red-600">{createError}</p>}
               </div>
             )}
           </div>
@@ -343,7 +357,7 @@ export function MessengerAdmin({
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <section className={`min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
           {!activeConv ? (
             <div className="flex flex-1 flex-col items-center justify-center text-gray-400">
               <MessageSquare className="h-16 w-16" />
@@ -351,8 +365,11 @@ export function MessengerAdmin({
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-gray-200 px-6 py-3">
+              <div className="flex items-center justify-between border-b border-gray-200 px-3 py-3 md:px-6">
                 <div className="flex items-center gap-3">
+                  <button type="button" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 md:hidden" onClick={() => setActiveId(null)} aria-label="Retour aux conversations">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-sm font-medium text-sky-700">
                     {activeConv.dentiste?.prenom?.[0]}
                     {activeConv.dentiste?.nom?.[0]}

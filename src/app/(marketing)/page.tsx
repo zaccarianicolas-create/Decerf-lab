@@ -55,9 +55,9 @@ const services = [
   },
   {
     icon: CreditCard,
-    title: "Paiement simplifié",
+    title: "Facturation claire",
     description:
-      "Facturation claire et paiement en ligne sécurisé.",
+      "Factures archivées, statuts et soldes dus consultables dans votre espace.",
     color: "bg-emerald-50 text-emerald-600",
   },
 ];
@@ -72,7 +72,7 @@ const steps = [
   {
     step: "02",
     title: "Passez commande",
-    description: "Décrivez vos travaux, envoyez fichiers STL et photos.",
+    description: "Décrivez les travaux, envoyez vos fichiers STL et photos, ou demandez un ramassage.",
     icon: Upload,
   },
   {

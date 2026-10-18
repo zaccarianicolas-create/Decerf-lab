@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { MobileSidebarMenu } from "./mobile-sidebar-menu";
 
 const dentistLinks = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   { label: "Mes patients", href: "/dashboard/patients", icon: Users },
   { label: "Mes commandes", href: "/dashboard/commandes", icon: Package },
   { label: "Nouvelle commande", href: "/dashboard/commandes/nouvelle", icon: Plus },
+  { label: "Factures", href: "/dashboard/factures", icon: FileText },
   { label: "Finance", href: "/dashboard/finance", icon: CreditCard },
   { label: "Tarifs", href: "/dashboard/tarifs", icon: Receipt },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
@@ -43,6 +45,8 @@ export function DashboardSidebar() {
   };
 
   return (
+    <>
+    <MobileSidebarMenu links={dentistLinks} brandHref="/" />
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-white lg:block">
       <div className="flex h-full flex-col">
         {/* Logo */}
@@ -104,5 +108,6 @@ export function DashboardSidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

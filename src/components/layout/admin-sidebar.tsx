@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { MobileSidebarMenu } from "./mobile-sidebar-menu";
 
 const adminLinks = [
   { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
@@ -34,7 +35,7 @@ const adminLinks = [
   { label: "Services", href: "/admin/services", icon: Wrench },
   { label: "Collaborateurs", href: "/admin/collaborateurs", icon: Users },
   { label: "Protocoles", href: "/admin/protocoles", icon: BookOpen },
-  { label: "Paiements", href: "/admin/paiements", icon: CreditCard },
+  { label: "Factures & paiements", href: "/admin/paiements", icon: CreditCard },
   { label: "Journal & RGPD", href: "/admin/journal", icon: Shield },
   { label: "Paramètres", href: "/admin/parametres", icon: Settings },
 ];
@@ -51,6 +52,8 @@ export function AdminSidebar() {
   };
 
   return (
+    <>
+    <MobileSidebarMenu links={adminLinks} brandHref="/admin" dark />
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-gray-200 bg-gray-900 lg:block">
       <div className="flex h-full flex-col">
         {/* Logo */}
@@ -112,5 +115,6 @@ export function AdminSidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

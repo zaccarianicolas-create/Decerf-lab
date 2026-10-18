@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -17,6 +18,8 @@ import {
   Trash2,
   Edit3,
   CornerUpLeft,
+  Mic,
+  MicOff,
 } from "lucide-react";
 
 type Author = {
@@ -79,29 +82,45 @@ export function ChatThread({
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const { data: msgs } = await supabase
       .from("messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
-    setMessages((msgs ?? []) as ChatMessage[]);
-
+    const refreshedMessages = await Promise.all(
+      ((msgs ?? []) as ChatMessage[]).map(async (message) => {
+        if (!message.attachment_bucket || !message.attachment_path) return message;
+        const { data } = await supabase.storage
+          .from(message.attachment_bucket)
+          .createSignedUrl(message.attachment_path, 60 * 60);
+        return data?.signedUrl ? { ...message, attachment_url: data.signedUrl } : message;
+      })
+    );
+    let loadedReactions: Reaction[] = [];
     if (msgs && msgs.length > 0) {
       const ids = (msgs as ChatMessage[]).map((m) => m.id);
       const { data: rx } = await supabase
         .from("message_reactions")
         .select("*")
         .in("message_id", ids);
-      setReactions((rx ?? []) as Reaction[]);
+      loadedReactions = (rx ?? []) as Reaction[];
     }
 
-    setLoading(false);
+    startTransition(() => {
+      setMessages(refreshedMessages);
+      setReactions(loadedReactions);
+      setLoading(false);
+    });
 
     // Mark unread incoming as read
     await supabase
@@ -177,24 +196,33 @@ export function ChatThread({
 
   const send = async () => {
     if (!input.trim() && !editing) return;
+    setMessageError(null);
 
     if (editing) {
-      await supabase
+      const { error } = await supabase
         .from("messages")
         .update({ contenu: input, edited_at: new Date().toISOString() })
         .eq("id", editing.id);
+      if (error) {
+        setMessageError("Impossible de modifier ce message.");
+        return;
+      }
       setEditing(null);
       setInput("");
       return;
     }
 
-    await supabase.from("messages").insert({
+    const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       auteur_id: currentUserId,
       contenu: input,
       message_type: "text",
       reply_to_id: replyTo?.id ?? null,
     });
+    if (error) {
+      setMessageError("Le message n’a pas pu être envoyé. Vérifie ta connexion et réessaie.");
+      return;
+    }
     setInput("");
     setReplyTo(null);
   };
@@ -203,34 +231,44 @@ export function ChatThread({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    await uploadAttachment(file);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const uploadAttachment = async (file: File) => {
+    setUploadError(null);
+    if (file.size > 100 * 1024 * 1024) {
+      setUploadError("Le fichier dépasse la limite de 100 Mo.");
+      return;
+    }
     setUploading(true);
-    const path = `${conversationId}/${currentUserId}/${Date.now()}-${file.name}`;
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${conversationId}/${currentUserId}/${Date.now()}-${safeFileName}`;
     const { error } = await supabase.storage
       .from("messages")
       .upload(path, file, { contentType: file.type });
 
     if (error) {
       console.error(error);
+      setUploadError("Impossible d’envoyer cette pièce jointe. Réessaie ou réduis sa taille.");
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
       return;
     }
 
-    const { data: signed } = await supabase.storage
-      .from("messages")
-      .createSignedUrl(path, 60 * 60 * 24 * 7); // 7 jours
-
     const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
     const isAudio = file.type.startsWith("audio/");
     const isPdf = file.type === "application/pdf";
 
-    await supabase.from("messages").insert({
+    const messageId = crypto.randomUUID();
+    const { error: insertError } = await supabase.from("messages").insert({
+      id: messageId,
       conversation_id: conversationId,
       auteur_id: currentUserId,
       contenu: null,
-      message_type: isImage ? "image" : isAudio ? "audio" : isPdf ? "pdf" : "file",
+      message_type: isImage ? "image" : isVideo ? "video" : isAudio ? "audio" : isPdf ? "pdf" : "file",
       reply_to_id: replyTo?.id ?? null,
-      attachment_url: signed?.signedUrl ?? null,
+      attachment_url: null,
       attachment_name: file.name,
       attachment_mime: file.type,
       attachment_size: file.size,
@@ -238,9 +276,61 @@ export function ChatThread({
       attachment_path: path,
     });
 
+    if (insertError) {
+      setUploadError("Le fichier est envoyé, mais le message n’a pas pu être enregistré.");
+      setUploading(false);
+      return;
+    }
+
+    const { data: signed } = await supabase.storage
+      .from("messages")
+      .createSignedUrl(path, 60 * 60);
+    if (signed?.signedUrl) {
+      const { error: updateError } = await supabase
+        .from("messages")
+        .update({ attachment_url: signed.signedUrl })
+        .eq("id", messageId);
+      if (updateError) {
+        setUploadError("Le fichier est conservé ; son lien sera rafraîchi au prochain affichage.");
+      }
+    }
+
     setReplyTo(null);
     setUploading(false);
-    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const toggleRecording = async () => {
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+      setRecording(false);
+      return;
+    }
+    setUploadError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        setUploadError("L’enregistrement vocal a échoué.");
+      };
+      recorder.onstop = async () => {
+        setRecording(false);
+        stream.getTracks().forEach((track) => track.stop());
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        const extension = mimeType.includes("mp4") ? "m4a" : "webm";
+        await uploadAttachment(new File([blob], `vocal-${Date.now()}.${extension}`, { type: mimeType }));
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setUploadError("Autorise l’accès au microphone pour enregistrer un vocal.");
+    }
   };
 
   const softDelete = async (msg: ChatMessage) => {
@@ -374,9 +464,11 @@ export function ChatThread({
                           <img
                             src={msg.attachment_url}
                             alt={msg.attachment_name || ""}
-                            className="max-h-64 rounded-lg"
+                            className="max-h-80 max-w-full rounded-lg object-contain"
                           />
                         </a>
+                        ) : msg.message_type === "video" && msg.attachment_url ? (
+                          <video controls preload="metadata" src={msg.attachment_url} className="max-h-80 max-w-full rounded-lg" />
                       ) : msg.message_type === "audio" && msg.attachment_url ? (
                         <audio controls src={msg.attachment_url} className="max-w-full" />
                       ) : msg.attachment_url ? (
@@ -431,7 +523,7 @@ export function ChatThread({
                     )}
 
                     <div
-                      className={`mt-0.5 flex gap-0.5 text-[10px] text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 ${isMe ? "justify-end" : ""}`}
+                      className={`mt-0.5 flex gap-0.5 text-[10px] text-gray-400 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 ${isMe ? "justify-end" : ""}`}
                     >
                       {!readOnly && !isDeleted && (
                         <>
@@ -514,6 +606,7 @@ export function ChatThread({
 
       {!readOnly && (
         <div className="border-t border-gray-200 bg-white p-3">
+            {messageError && <p role="alert" className="mb-2 text-xs text-red-600">{messageError}</p>}
           {(replyTo || editing) && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-gray-50 px-2 py-1 text-xs">
               <span className="truncate">
@@ -542,7 +635,7 @@ export function ChatThread({
             </div>
           )}
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -555,9 +648,21 @@ export function ChatThread({
             <input
               ref={fileRef}
               type="file"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
               hidden
               onChange={onFile}
             />
+
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={uploading}
+              aria-label={recording ? "Arrêter le vocal" : "Enregistrer un vocal"}
+              className={`rounded-md p-2 ${recording ? "bg-red-50 text-red-600" : "text-gray-500 hover:bg-gray-100"}`}
+              title={recording ? "Arrêter le vocal" : "Vocal"}
+            >
+              {recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
 
             <div className="relative flex-1">
               <textarea
@@ -571,7 +676,7 @@ export function ChatThread({
                 }}
                 rows={1}
                 placeholder="Votre message..."
-                className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+                className="w-full min-w-0 resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
               />
             </div>
 
@@ -613,6 +718,7 @@ export function ChatThread({
               <Send className="h-4 w-4" />
             </button>
           </div>
+          {uploadError && <p role="alert" className="mt-2 text-xs text-red-600">{uploadError}</p>}
         </div>
       )}
     </div>

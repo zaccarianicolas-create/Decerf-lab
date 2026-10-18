@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CreditCard, FileText, Loader2, Wallet } from "lucide-react";
+import { ArrowLeft, FileText, Loader2 } from "lucide-react";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 
 export function FactureValidation({
@@ -19,14 +19,12 @@ export function FactureValidation({
 }) {
   const router = useRouter();
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "virement">("stripe");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     montant_ttc: number;
     solde_du: number;
     email_sent: boolean;
-    payment_url: string | null;
   } | null>(null);
 
   const estimatedTotals = useMemo(
@@ -65,7 +63,7 @@ export function FactureValidation({
             const [commande_item_id, service_option_id] = key.split(":");
             return { commande_item_id, service_option_id };
           }),
-          payment_method: paymentMethod,
+          payment_method: "virement",
         }),
       });
       const data = await response.json();
@@ -97,11 +95,6 @@ export function FactureValidation({
           <a href={`/api/dashboard/factures/${factureId}/pdf`}>
             <Button variant="outline"><FileText className="mr-2 h-4 w-4" />Télécharger la facture</Button>
           </a>
-          {result.payment_url && (
-            <a href={result.payment_url}>
-              <Button><CreditCard className="mr-2 h-4 w-4" />Payer par Stripe</Button>
-            </a>
-          )}
           <Link href="/dashboard/finance">
             <Button variant="ghost">Retour à Finance</Button>
           </Link>
@@ -163,32 +156,15 @@ export function FactureValidation({
       ))}
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Mode de règlement</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <label className={`flex cursor-pointer items-start gap-3 rounded-md border p-4 ${paymentMethod === "stripe" ? "border-sky-500 bg-sky-50" : "border-gray-200"}`}>
-            <input type="radio" name="payment-method" checked={paymentMethod === "stripe"} onChange={() => setPaymentMethod("stripe")} className="mt-1" />
-            <span>
-              <span className="flex items-center gap-2 text-sm font-semibold text-gray-900"><CreditCard className="h-4 w-4" />Paiement en ligne</span>
-              <span className="mt-1 block text-xs text-gray-500">Lien de paiement sécurisé Stripe.</span>
-            </span>
-          </label>
-          <label className={`flex cursor-pointer items-start gap-3 rounded-md border p-4 ${paymentMethod === "virement" ? "border-sky-500 bg-sky-50" : "border-gray-200"}`}>
-            <input type="radio" name="payment-method" checked={paymentMethod === "virement"} onChange={() => setPaymentMethod("virement")} className="mt-1" />
-            <span>
-              <span className="flex items-center gap-2 text-sm font-semibold text-gray-900"><Wallet className="h-4 w-4" />Facture traditionnelle</span>
-              <span className="mt-1 block text-xs text-gray-500">Virement selon les conditions et coordonnées du laboratoire.</span>
-            </span>
-          </label>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <p className="text-xs text-gray-500">
               {estimatedTotals.ht.toFixed(2)} € HT + {estimatedTotals.tva.toFixed(2)} € TVA ({snapshot.taux_tva}%)
             </p>
             <p className="text-2xl font-bold text-gray-900">{estimatedTtc.toFixed(2)} €</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Les conditions de règlement et coordonnées bancaires figurent sur la facture.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {error && <p role="alert" className="max-w-xs text-sm text-red-600">{error}</p>}

@@ -267,6 +267,11 @@ export function StockList({
                   />
                   Traçabilité par lot
                 </label>
+                {lotsFeatureEnabled && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Le numéro, le fournisseur et les dates se saisissent à chaque réception dans la fiche de l’article.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Seuil d’alerte</label>

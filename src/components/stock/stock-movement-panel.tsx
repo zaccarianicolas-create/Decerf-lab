@@ -36,8 +36,6 @@ const TYPE_OPTIONS = [
   { value: "ajustement_negatif", label: "Ajustement -" },
 ];
 
-const NEGATIVE_TYPES = new Set(["sortie", "consommation", "casse", "ajustement_negatif"]);
-
 export function StockMovementPanel({
   articles,
   lots = [],
@@ -91,12 +89,12 @@ export function StockMovementPanel({
     [lots, articleId]
   );
 
-  const requiresLot = Boolean(lotsEnabled && selectedArticle?.gestion_lots && NEGATIVE_TYPES.has(typeMouvement));
+  const requiresLot = Boolean(lotsEnabled && selectedArticle?.gestion_lots);
 
   const handleSubmit = async () => {
     if (!articleId) return setError("Choisis un article.");
     if (!quantite || Number(quantite) <= 0) return setError("Quantité invalide.");
-    if (requiresLot && !lotId) return setError("Ce type de mouvement nécessite un lot.");
+    if (requiresLot && !lotId) return setError("Sélectionne le lot concerné par ce mouvement.");
 
     setSaving(true);
     setError("");
@@ -116,8 +114,8 @@ export function StockMovementPanel({
     });
     setSaving(false);
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      setError((json as any)?.error || "Erreur lors du mouvement");
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      setError(json.error || "Erreur lors du mouvement");
       return;
     }
 
@@ -196,7 +194,7 @@ export function StockMovementPanel({
 
         {selectedArticle?.gestion_lots && lotsEnabled && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Lot {requiresLot ? "(requis)" : "(optionnel)"}</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Lot (requis)</label>
             <select value={lotId} onChange={(e) => setLotId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">— Sélectionner un lot —</option>
               {availableLots.map((lot) => (
@@ -207,7 +205,11 @@ export function StockMovementPanel({
                 </option>
               ))}
             </select>
-            {availableLots.length === 0 && <p className="mt-1 text-xs text-red-600">Aucun lot disponible pour cet article.</p>}
+            {availableLots.length === 0 && (
+              <p className="mt-1 text-xs text-red-600">
+                Aucun lot disponible. Crée d&apos;abord un lot depuis la fiche de cet article.
+              </p>
+            )}
           </div>
         )}
 

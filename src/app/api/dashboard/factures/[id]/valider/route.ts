@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createFacturePdf } from "@/lib/facture-pdf";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 import { sendEmail, emailTemplates } from "@/lib/email";
-import { createFactureCheckout } from "@/lib/facture-checkout";
 
 export async function POST(
   request: Request,
@@ -19,10 +18,8 @@ export async function POST(
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
   const selectedOptions: unknown = body.selected_options;
-  const paymentMethod = body.payment_method;
   if (
     !Array.isArray(selectedOptions) ||
-    !["stripe", "virement"].includes(paymentMethod) ||
     selectedOptions.some((selection) =>
       !selection ||
       typeof selection !== "object" ||
@@ -50,7 +47,7 @@ export async function POST(
       p_facture_id: facture.id,
       p_actor_id: user.id,
       p_selected_options: selectedOptions,
-      p_methode_paiement: paymentMethod,
+      p_methode_paiement: "virement",
     }
   );
   if (validationError) {
@@ -115,23 +112,12 @@ export async function POST(
     return NextResponse.json({ error: pathError.message, validated: true }, { status: 500 });
   }
 
-  let paymentUrl: string | undefined;
-  if (paymentMethod === "stripe" && Number(updatedFacture.solde_du) > 0) {
-    try {
-      const checkout = await createFactureCheckout(admin, facture.id, user.id);
-      paymentUrl = checkout.url ?? undefined;
-    } catch (error) {
-      console.error("Facture validated but Stripe checkout could not be prepared", error);
-    }
-  }
-
   let emailSent = Boolean(updatedFacture.email_envoye_at);
   if (!emailSent && snapshot.client.email) {
     const template = emailTemplates.facture_emise({
       prenom: snapshot.client.prenom,
       numero: updatedFacture.numero,
       montant: Number(updatedFacture.montant_ttc),
-      paymentUrl,
     });
     const emailResult = await sendEmail({
       to: snapshot.client.email,
@@ -161,7 +147,6 @@ export async function POST(
     solde_du: Number(updatedFacture.solde_du),
     statut: updatedFacture.statut,
     email_sent: emailSent,
-    payment_url: paymentUrl ?? null,
     pdf_url: signed?.signedUrl ?? null,
     already_validated: Boolean(validation?.already_validated),
   });

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { emailTemplates, sendEmail } from "@/lib/email";
-import { createFactureCheckout } from "@/lib/facture-checkout";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 
 export async function POST(
@@ -19,7 +18,7 @@ export async function POST(
   const admin = createAdminClient();
   const { data: facture, error } = await admin
     .from("factures")
-    .select("id, numero, statut, dentiste_id, montant_ttc, billing_snapshot, pdf_storage_path, methode_paiement")
+    .select("id, numero, statut, dentiste_id, montant_ttc, billing_snapshot, pdf_storage_path")
     .eq("id", id)
     .eq("dentiste_id", user.id)
     .maybeSingle();
@@ -41,20 +40,10 @@ export async function POST(
   if (!snapshot.client.email) {
     return NextResponse.json({ error: "Aucune adresse e-mail disponible pour cette facture." }, { status: 409 });
   }
-  let paymentUrl: string | undefined;
-  if (facture.methode_paiement === "stripe") {
-    try {
-      const checkout = await createFactureCheckout(admin, facture.id, user.id);
-      paymentUrl = checkout.url ?? undefined;
-    } catch (checkoutError) {
-      console.error("Could not create Stripe link while resending invoice", checkoutError);
-    }
-  }
   const template = emailTemplates.facture_emise({
     prenom: snapshot.client.prenom,
     numero: facture.numero,
     montant: Number(facture.montant_ttc),
-    paymentUrl,
   });
   const result = await sendEmail({
     to: snapshot.client.email,

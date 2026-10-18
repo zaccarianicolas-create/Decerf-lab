@@ -191,14 +191,13 @@ export const emailTemplates = {
       ),
     };
   },
-  facture_emise(p: { prenom?: string; numero: string; montant: number; paymentUrl?: string }) {
+  facture_emise(p: { prenom?: string; numero: string; montant: number }) {
     return {
       subject: `Facture ${p.numero} disponible`,
       html: wrap(
         "Nouvelle facture",
         `<p>Bonjour ${p.prenom ?? ""},</p>
          <p>La facture <strong>${p.numero}</strong> d'un montant de <strong>${p.montant.toFixed(2)} €</strong> est disponible.</p>
-         ${p.paymentUrl ? btn("Payer par carte", p.paymentUrl) : ""}
          ${btn("Consulter ma facture", `${APP_URL}/dashboard/finance`)}`
       ),
     };

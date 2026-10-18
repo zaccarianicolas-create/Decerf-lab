@@ -184,8 +184,8 @@ export function StockDetail({
     });
     setLotSaving(false);
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      setLotError((json as any)?.error || "Erreur création lot");
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      setLotError(json.error || "Erreur création lot");
       return;
     }
     setLotNumero("");
@@ -321,7 +321,7 @@ export function StockDetail({
                 </h2>
                 <p className="text-sm text-red-700">
                   Ces lots ont encore du stock restant. Action recommandée: isoler physiquement,
-                  décider du sort (destruction/retour/dérogation) et tracer un mouvement d'ajustement.
+                  décider du sort (destruction/retour/dérogation) et tracer un mouvement d&apos;ajustement.
                 </p>
                 <div className="space-y-2">
                   {expiredLots.map((lot) => (
@@ -359,6 +359,9 @@ export function StockDetail({
                   <Boxes className="h-4 w-4 text-sky-600" />
                   Lots
                 </h2>
+                <p className="text-sm text-gray-500">
+                  Chaque réception crée un lot distinct ; les mouvements tracés doivent sélectionner le lot concerné.
+                </p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>

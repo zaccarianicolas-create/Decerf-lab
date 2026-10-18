@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Search } from "lucide-react";
+import { ArrowLeft, MessageSquare, Plus, Search } from "lucide-react";
 import { ChatThread } from "@/components/messagerie/chat-thread";
 
 type Author = {
@@ -19,7 +19,7 @@ type Conversation = {
   titre: string | null;
   commande_id: string | null;
   derniere_activite: string;
-  commande: { numero: string } | null;
+  commande: { numero: string } | { numero: string }[] | null;
 };
 
 export function MessengerDentiste({
@@ -42,6 +42,8 @@ export function MessengerDentiste({
   const [unread, setUnread] = useState(initialUnread);
   const [conversations, setConversations] = useState(initialConversations);
   const [search, setSearch] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -105,13 +107,32 @@ export function MessengerDentiste({
     setUnread((u) => ({ ...u, [id]: 0 }));
   };
 
+  const createConversation = async () => {
+    setCreating(true);
+    setError(null);
+    const { data, error: createError } = await supabase
+      .from("conversations")
+      .insert({ titre: "Conversation avec DECERF LAB", dentiste_id: currentUserId })
+      .select("id, titre, commande_id, derniere_activite, commande:commandes(numero)")
+      .single();
+    setCreating(false);
+    if (createError || !data) {
+      setError(createError?.message || "Impossible de créer la conversation.");
+      return;
+    }
+    const conversation = data as Conversation;
+    setConversations((current) => [conversation, ...current]);
+    open(conversation.id);
+  };
+
   const active = conversations.find((c) => c.id === activeId);
   const filtered = conversations.filter((c) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
+    const commande = Array.isArray(c.commande) ? c.commande[0] : c.commande;
     return (
       c.titre?.toLowerCase().includes(q) ||
-      c.commande?.numero?.toLowerCase().includes(q)
+      commande?.numero?.toLowerCase().includes(q)
     );
   });
 
@@ -121,23 +142,45 @@ export function MessengerDentiste({
         <div className="flex h-full flex-col">
           {isEmbed && (
             <div className="border-b border-gray-100 p-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher..."
-                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher..."
+                    className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={createConversation}
+                  disabled={creating}
+                  aria-label="Nouvelle conversation"
+                  className="rounded-md bg-sky-600 p-2 text-white disabled:opacity-50"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
               </div>
             </div>
           )}
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
           <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
           <p className="mt-4 text-sm text-gray-500">
-            Aucune conversation pour le moment. Une conversation peut être ouverte
-            par le laboratoire ou attachée à une commande.
+            Aucune conversation pour le moment. Démarre un échange avec le laboratoire.
           </p>
+          {!isEmbed && (
+            <button
+              type="button"
+              onClick={createConversation}
+              disabled={creating}
+              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {creating ? "Création…" : "Nouvelle conversation"}
+            </button>
+          )}
+          {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
           </div>
         </div>
       </Card>
@@ -157,10 +200,27 @@ export function MessengerDentiste({
           className={`${
             isEmbed
               ? "h-1/2 overflow-y-auto border-b border-gray-200"
-              : "w-72 overflow-y-auto border-r border-gray-200"
+              : `w-full overflow-y-auto border-r border-gray-200 md:w-72 ${activeId ? "hidden md:block" : "block"}`
           }`}
         >
+          <div className="flex items-center gap-2 border-b border-gray-100 p-3">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Rechercher…"
+                className="w-full rounded-md border border-gray-200 py-2 pl-9 pr-3 text-sm"
+              />
+            </div>
+            <button type="button" onClick={createConversation} disabled={creating} aria-label="Nouvelle conversation" className="rounded-md bg-sky-600 p-2 text-white disabled:opacity-50">
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
           {filtered.map((c) => (
+            (() => {
+              const commande = Array.isArray(c.commande) ? c.commande[0] : c.commande;
+              return (
             <button
               key={c.id}
               onClick={() => open(c.id)}
@@ -183,21 +243,31 @@ export function MessengerDentiste({
                   )}
                 </div>
                 <p className="truncate text-xs text-gray-500">
-                  {c.commande
-                    ? `Commande ${c.commande.numero}`
+                  {commande
+                    ? `Commande ${commande.numero}`
                     : "Conversation générale"}
                 </p>
               </div>
             </button>
+              );
+            })()
           ))}
         </aside>
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <section className={`min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
           {active && (
-            <ChatThread
-              conversationId={active.id}
-              currentUserId={currentUserId}
-              authorsMap={authorsMap}
-            />
+            <>
+              <div className="flex min-h-12 items-center gap-2 border-b border-gray-200 px-3">
+                <button type="button" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 md:hidden" onClick={() => setActiveId(null)} aria-label="Retour aux conversations">
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <p className="truncate text-sm font-medium text-gray-900">{active.titre || "DECERF LAB"}</p>
+              </div>
+              <ChatThread
+                conversationId={active.id}
+                currentUserId={currentUserId}
+                authorsMap={authorsMap}
+              />
+            </>
           )}
         </section>
       </div>

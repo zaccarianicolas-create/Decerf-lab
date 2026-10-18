@@ -144,7 +144,7 @@ export default async function AdminPaiementsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Paiements</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Factures & paiements</h1>
         <p className="text-sm text-gray-500">
           Suivi des paiements et facturation
         </p>

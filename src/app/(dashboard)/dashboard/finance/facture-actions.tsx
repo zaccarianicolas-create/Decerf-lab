@@ -3,42 +3,21 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, CreditCard, Download, Loader2, Mail } from "lucide-react";
+import { Check, Download, Loader2, Mail } from "lucide-react";
 
 export function FactureActions({
   factureId,
   statut,
-  solde,
   pdfAvailable,
   emailSent,
-  methodePaiement,
 }: {
   factureId: string;
   statut: string;
-  solde: number;
   pdfAvailable: boolean;
   emailSent: boolean;
-  methodePaiement: string | null;
 }) {
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailSending, setEmailSending] = useState(false);
-
-  const payerParStripe = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/dashboard/factures/${factureId}/paiement`, {
-        method: "POST",
-      });
-      const result = await response.json();
-      if (!response.ok || !result.url) throw new Error(result.error || "Lien Stripe indisponible.");
-      window.location.assign(result.url);
-    } catch (paymentError) {
-      setError(paymentError instanceof Error ? paymentError.message : "Erreur de paiement.");
-      setLoading(false);
-    }
-  };
 
   const renvoyerFacture = async () => {
     setEmailSending(true);
@@ -78,12 +57,6 @@ export function FactureActions({
         </Button>
       )}
       {pdfAvailable && emailSent && <Check className="h-4 w-4 text-emerald-600" aria-label="Facture envoyée par e-mail" />}
-      {methodePaiement === "stripe" && solde > 0 && (
-        <Button size="sm" onClick={payerParStripe} disabled={loading}>
-          {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <CreditCard className="mr-1 h-4 w-4" />}
-          Payer
-        </Button>
-      )}
       {error && <p role="alert" className="w-full text-right text-xs text-red-600">{error}</p>}
     </div>
   );
