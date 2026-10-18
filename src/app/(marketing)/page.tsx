@@ -20,9 +20,9 @@ import {
 const services = [
   {
     icon: FlaskConical,
-    title: "Prothèses fixes",
+    title: "Gouttières sur mesure",
     description:
-      "Couronnes, bridges, inlays/onlays en zircone, e.max, métal-céramique.",
+      "Contention, bruxisme, blanchiment et protections sportives.",
     color: "bg-sky-50 text-sky-600",
   },
   {
@@ -36,14 +36,14 @@ const services = [
     icon: Zap,
     title: "Orthodontie",
     description:
-      "Gouttières d'alignement, appareils orthodontiques sur mesure.",
+      "Appareils orthodontiques sur mesure, plaques de Hawley et appareils de contention amovibles.",
     color: "bg-violet-50 text-violet-600",
   },
   {
     icon: Upload,
     title: "Flux numérique",
     description:
-      "Réception STL, conception CFAO, impression 3D. Workflow 100% digital.",
+      "Réception STL, conception CAO, impression 3D. Workflow 100% digital.",
     color: "bg-amber-50 text-amber-600",
   },
   {
