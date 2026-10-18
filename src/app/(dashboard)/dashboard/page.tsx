@@ -23,37 +23,36 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  // Récupérer le profil
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const [profileResult, commandesResult, totalCommandesResult, commandesEnCoursResult, messagesNonLusResult] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      supabase
+        .from("commandes")
+        .select("id, statut, montant_total, created_at, numero, patient_ref, priorite")
+        .eq("dentiste_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("commandes")
+        .select("id", { count: "exact", head: true })
+        .eq("dentiste_id", user.id),
+      supabase
+        .from("commandes")
+        .select("id", { count: "exact", head: true })
+        .eq("dentiste_id", user.id)
+        .in("statut", ["en_attente", "acceptee", "en_cours", "controle_qualite"]),
+      supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("lu", false)
+        .neq("auteur_id", user.id),
+    ]);
 
-  // Statistiques commandes
-  const { data: commandes } = await supabase
-    .from("commandes")
-    .select("id, statut, montant_total, created_at, numero, patient_ref, priorite")
-    .eq("dentiste_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const { count: totalCommandes } = await supabase
-    .from("commandes")
-    .select("id", { count: "exact", head: true })
-    .eq("dentiste_id", user.id);
-
-  const { count: commandesEnCours } = await supabase
-    .from("commandes")
-    .select("id", { count: "exact", head: true })
-    .eq("dentiste_id", user.id)
-    .in("statut", ["en_attente", "acceptee", "en_cours", "controle_qualite"]);
-
-  const { count: messagesNonLus } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("lu", false)
-    .neq("auteur_id", user.id);
+  const { data: profile } = profileResult;
+  const { data: commandes } = commandesResult;
+  const { count: totalCommandes } = totalCommandesResult;
+  const { count: commandesEnCours } = commandesEnCoursResult;
+  const { count: messagesNonLus } = messagesNonLusResult;
 
   return (
     <div>

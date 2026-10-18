@@ -6,6 +6,26 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const protectedRoutes = ["/dashboard", "/admin", "/atelier"];
+  const authRoutes = ["/login", "/register"];
+  const pendingRoute = "/compte-en-attente";
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+  const isAuthRoute = authRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+  const isPendingRoute = request.nextUrl.pathname === pendingRoute;
+
+  if (
+    !isProtectedRoute &&
+    !isAuthRoute &&
+    !isPendingRoute &&
+    !request.nextUrl.pathname.startsWith("/api")
+  ) {
+    return supabaseResponse;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -40,18 +60,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  // Routes protégées
-  const protectedRoutes = ["/dashboard", "/admin", "/atelier"];
-  const authRoutes = ["/login", "/register"];
-  const pendingRoute = "/compte-en-attente";
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
-  const isAuthRoute = authRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
-  const isPendingRoute = request.nextUrl.pathname === pendingRoute;
 
   // Rediriger vers login si pas authentifié
   if (!user && isProtectedRoute) {
