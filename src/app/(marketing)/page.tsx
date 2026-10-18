@@ -3,9 +3,9 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  FlaskConical,
-  Shield,
-  Zap,
+  Smile,
+  AlignHorizontalDistributeCenter,
+  ScanFace,
   MessageSquare,
   Upload,
   CreditCard,
@@ -19,25 +19,25 @@ import {
 
 const services = [
   {
-    icon: FlaskConical,
-    title: "Gouttières sur mesure",
-    description:
-      "Contention, bruxisme, blanchiment et protections sportives.",
-    color: "bg-sky-50 text-sky-600",
-  },
-  {
-    icon: Shield,
+    icon: Smile,
     title: "Prothèses amovibles",
     description:
       "Prothèses partielles et complètes, châssis métalliques. Confort optimal.",
     color: "bg-teal-50 text-teal-600",
   },
   {
-    icon: Zap,
+    icon: AlignHorizontalDistributeCenter,
     title: "Orthodontie",
     description:
       "Appareils orthodontiques sur mesure, plaques de Hawley et appareils de contention amovibles.",
     color: "bg-violet-50 text-violet-600",
+  },
+  {
+    icon: ScanFace,
+    title: "Gouttières sur mesure",
+    description:
+      "Contention, bruxisme, blanchiment et protections sportives.",
+    color: "bg-sky-50 text-sky-600",
   },
   {
     icon: Upload,
