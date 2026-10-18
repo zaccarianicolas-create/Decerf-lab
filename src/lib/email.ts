@@ -13,6 +13,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.decerf-lab.be";
 export type EmailTemplate =
   | "invitation"
   | "certificat_emis"
+  | "facture_a_valider"
   | "facture_emise"
   | "commande_creee"
   | "commande_statut"
@@ -28,6 +29,7 @@ type SendArgs = {
   subject: string;
   html: string;
   text?: string;
+  attachments?: { filename: string; content: string }[];
   payload?: Record<string, unknown>;
   /** Si fourni, vérifie la préférence (clé email_*) avant envoi */
   prefKey?: keyof PrefsRow;
@@ -115,6 +117,7 @@ export async function sendEmail(args: SendArgs): Promise<{ ok: boolean; id?: str
         subject: args.subject,
         html: args.html,
         text: args.text,
+        attachments: args.attachments,
       }),
     });
     const json = (await res.json()) as { id?: string; message?: string };
@@ -177,13 +180,25 @@ export const emailTemplates = {
       ),
     };
   },
-  facture_emise(p: { prenom?: string; numero: string; montant: number }) {
+  facture_a_valider(p: { prenom?: string; commande: string; url: string }) {
+    return {
+      subject: `Facture à vérifier — commande ${p.commande}`,
+      html: wrap(
+        "Facture à vérifier",
+        `<p>Bonjour ${p.prenom ?? ""},</p>
+         <p>Le travail de votre commande <strong>${p.commande}</strong> est terminé. Vérifiez les options facturables et validez votre facture.</p>
+         ${btn("Vérifier la facture", p.url)}`
+      ),
+    };
+  },
+  facture_emise(p: { prenom?: string; numero: string; montant: number; paymentUrl?: string }) {
     return {
       subject: `Facture ${p.numero} disponible`,
       html: wrap(
         "Nouvelle facture",
         `<p>Bonjour ${p.prenom ?? ""},</p>
          <p>La facture <strong>${p.numero}</strong> d'un montant de <strong>${p.montant.toFixed(2)} €</strong> est disponible.</p>
+         ${p.paymentUrl ? btn("Payer par carte", p.paymentUrl) : ""}
          ${btn("Consulter ma facture", `${APP_URL}/dashboard/finance`)}`
       ),
     };

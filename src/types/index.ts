@@ -342,7 +342,7 @@ export interface ServiceLabo {
   type_travail: TypeTravail | null;
   materiaux_disponibles: Materiau[];
   mode_fourniture: ModeFourniture;
-  prix_indicatif: number | null;
+  prix_base_ht: number | null;
   duree_estimee_jours: number | null;
   instructions: string | null;
   actif: boolean;

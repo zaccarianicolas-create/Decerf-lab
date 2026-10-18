@@ -17,9 +17,9 @@ export async function POST(request: Request) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
+      { error: `Webhook Error: ${err instanceof Error ? err.message : "signature invalide"}` },
       { status: 400 }
     );
   }
@@ -29,7 +29,33 @@ export async function POST(request: Request) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
+      const factureId = session.metadata?.facture_id;
       const commandeId = session.metadata?.commande_id;
+
+      if (factureId && session.payment_status === "paid") {
+        const { data: paiement } = await supabase
+          .from("paiements")
+          .select("id, statut")
+          .eq("stripe_checkout_session_id", session.id)
+          .eq("facture_id", factureId)
+          .maybeSingle();
+
+        if (!paiement) {
+          return NextResponse.json({ error: "Paiement facture introuvable" }, { status: 404 });
+        }
+
+        if (paiement.statut !== "paye") {
+          const { error } = await supabase.rpc("appliquer_paiement_facture", {
+            p_paiement_id: paiement.id,
+            p_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? "",
+          });
+          if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        break;
+      }
 
       if (commandeId) {
         const { data: paiement } = await supabase

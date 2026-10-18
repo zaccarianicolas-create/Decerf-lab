@@ -92,7 +92,7 @@ export default function NouvelleCommandePage() {
           .order("nom"),
         supabase
           .from("services_labo")
-          .select("*")
+          .select("id, nom, description, categorie, type_travail, materiaux_disponibles, mode_fourniture, duree_estimee_jours, instructions")
           .eq("actif", true)
           .order("ordre"),
       ]);
@@ -550,9 +550,6 @@ export default function NouvelleCommandePage() {
                             {svcs.map((s: any) => (
                               <option key={s.id} value={s.id}>
                                 {s.nom}
-                                {s.prix_indicatif
-                                  ? ` — ${Number(s.prix_indicatif).toFixed(2)} €`
-                                  : ""}
                                 {s.duree_estimee_jours
                                   ? ` (≈ ${s.duree_estimee_jours}j)`
                                   : ""}
@@ -581,11 +578,6 @@ export default function NouvelleCommandePage() {
                         {selectedService.mode_fourniture === "les_deux" && (
                           <span className="flex items-center gap-1">
                             <Monitor className="h-3.5 w-3.5" /> Numérique ou physique
-                          </span>
-                        )}
-                        {selectedService.prix_indicatif && (
-                          <span className="font-medium text-gray-900">
-                            {Number(selectedService.prix_indicatif).toFixed(2)} €
                           </span>
                         )}
                         {selectedService.duree_estimee_jours && (

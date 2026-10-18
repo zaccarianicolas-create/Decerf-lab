@@ -13,6 +13,7 @@ import {
   LogOut,
   Users,
   CreditCard,
+  Receipt,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ const dentistLinks = [
   { label: "Mes commandes", href: "/dashboard/commandes", icon: Package },
   { label: "Nouvelle commande", href: "/dashboard/commandes/nouvelle", icon: Plus },
   { label: "Finance", href: "/dashboard/finance", icon: CreditCard },
+  { label: "Tarifs", href: "/dashboard/tarifs", icon: Receipt },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
   { label: "Mon profil", href: "/dashboard/profil", icon: User },
   { label: "Mes données (RGPD)", href: "/dashboard/rgpd", icon: Shield },

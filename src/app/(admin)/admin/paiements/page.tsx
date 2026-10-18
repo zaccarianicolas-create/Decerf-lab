@@ -84,7 +84,6 @@ export default async function AdminPaiementsPage() {
       `
       id,
       numero,
-      montant_total,
       date_livraison,
       statut,
       dentiste:profiles!commandes_dentiste_id_fkey(nom, prenom)
@@ -108,11 +107,9 @@ export default async function AdminPaiementsPage() {
 
   const pendingCommandes = (commandesFacturables || [])
     .filter((commande: any) => !commandeIdsFactures.has(commande.id))
-    .filter((commande: any) => Number(commande.montant_total || 0) > 0)
     .map((commande: any) => ({
       id: commande.id,
       numero: commande.numero,
-      montant_total: Number(commande.montant_total || 0),
       date_livraison: commande.date_livraison,
       dentiste_nom:
         [commande.dentiste?.prenom, commande.dentiste?.nom]

@@ -4,8 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Receipt, Scale, TrendingDown } from "lucide-react";
+import { FactureActions } from "./facture-actions";
 
 function factureBadge(statut: string) {
+  if (statut === "brouillon") return <Badge variant="warning">À valider</Badge>;
   if (statut === "payee") return <Badge variant="success">Payée</Badge>;
   if (statut === "partiellement_payee") return <Badge variant="warning">Partielle</Badge>;
   if (statut === "en_retard") return <Badge variant="danger">En retard</Badge>;
@@ -39,7 +41,7 @@ export default async function DashboardFinancePage({
 
   let facturesQuery = supabase
     .from("factures")
-    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,commande:commandes(numero)")
+    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,methode_paiement,commande:commandes(numero)")
     .eq("dentiste_id", user.id)
     .order("date_emission", { ascending: false })
     .limit(60);
@@ -209,6 +211,7 @@ export default async function DashboardFinancePage({
                     <th className="pb-3 font-medium">Montant</th>
                     <th className="pb-3 font-medium">Solde</th>
                     <th className="pb-3 font-medium">Statut</th>
+                    <th className="pb-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -226,6 +229,16 @@ export default async function DashboardFinancePage({
                       </td>
                       <td className="py-3 text-sm text-gray-700">{Number(f.solde_du || 0).toFixed(2)} €</td>
                       <td className="py-3">{factureBadge(f.statut)}</td>
+                      <td className="py-3 text-right">
+                        <FactureActions
+                          factureId={f.id}
+                          statut={f.statut}
+                          solde={Number(f.solde_du || 0)}
+                          pdfAvailable={Boolean(f.pdf_storage_path)}
+                          emailSent={Boolean(f.email_envoye_at)}
+                          methodePaiement={f.methode_paiement}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createFactureCheckout } from "@/lib/facture-checkout";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -12,40 +13,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  const { commande_id, montant } = await request.json();
+  const body = await request.json().catch(() => ({}));
+  if (typeof body.facture_id !== "string") {
+    return NextResponse.json({ error: "facture_id requis" }, { status: 400 });
+  }
 
-  // Créer une session Stripe Checkout
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          product_data: {
-            name: `Commande DECERF LAB`,
-            description: `Paiement de la commande`,
-          },
-          unit_amount: Math.round(montant * 100),
-        },
-        quantity: 1,
-      },
-    ],
-    metadata: {
-      commande_id,
-      user_id: user.id,
-    },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/commandes/${commande_id}?payment=success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/commandes/${commande_id}?payment=cancelled`,
-  });
-
-  // Enregistrer le paiement en BDD
-  await supabase.from("paiements").insert({
-    commande_id,
-    montant,
-    stripe_checkout_session_id: session.id,
-    statut: "en_attente",
-  });
-
-  return NextResponse.json({ url: session.url });
+  try {
+    const result = await createFactureCheckout(
+      createAdminClient(),
+      body.facture_id,
+      user.id
+    );
+    return NextResponse.json({ url: result.url });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Impossible de créer le paiement." },
+      { status: 400 }
+    );
+  }
 }

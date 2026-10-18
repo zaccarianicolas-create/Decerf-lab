@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, FileText, Receipt, ScrollText } from "lucide-react";
+import { PaiementVirementButton } from "./paiement-virement-button";
 
 type PendingCommande = {
   id: string;
   numero: string;
-  montant_total: number;
   date_livraison: string | null;
   dentiste_nom: string;
 };
@@ -48,6 +48,7 @@ type LedgerRow = {
 };
 
 function statutFactureBadge(statut: string) {
+  if (statut === "brouillon") return <Badge variant="warning">À valider</Badge>;
   if (statut === "payee") return <Badge variant="success">Payée</Badge>;
   if (statut === "partiellement_payee") {
     return <Badge className="border-amber-200 bg-amber-50 text-amber-700">Partielle</Badge>;
@@ -99,7 +100,7 @@ export function FacturationPanel({
       setError(null);
       setCreatingCommandeId(commandeId);
 
-      const res = await fetch("/api/admin/factures", {
+      const res = await fetch("/api/admin/factures/brouillon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commande_id: commandeId }),
@@ -253,7 +254,12 @@ export function FacturationPanel({
                         <p className="text-sm font-semibold text-gray-900">{Number(f.montant_ttc).toFixed(2)} €</p>
                         <p className="text-xs text-gray-500">Solde: {Number(f.solde_du).toFixed(2)} €</p>
                       </div>
-                      <div>{statutFactureBadge(f.statut)}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {statutFactureBadge(f.statut)}
+                        {Number(f.solde_du) > 0 && !["brouillon", "annulee"].includes(f.statut) && (
+                          <PaiementVirementButton factureId={f.id} solde={Number(f.solde_du)} />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -327,15 +333,12 @@ export function FacturationPanel({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {Number(c.montant_total || 0).toFixed(2)} €
-                    </p>
                     <Button
                       size="sm"
                       onClick={() => createFactureFromCommande(c.id)}
                       isLoading={creatingCommandeId === c.id}
                     >
-                      Générer facture
+                      Préparer la facture
                     </Button>
                   </div>
                 </div>

@@ -82,6 +82,7 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [notesLabo, setNotesLabo] = useState(commande.notes_labo || "");
   const [showCertificat, setShowCertificat] = useState(false);
   const [workflowType, setWorkflowType] = useState("information");
@@ -104,12 +105,21 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
 
   const updateStatut = async (newStatut: string) => {
     setSaving(true);
-    await supabase
-      .from("commandes")
-      .update({ statut: newStatut })
-      .eq("id", commande.id);
-    setSaving(false);
-    router.refresh();
+    setStatusError(null);
+    try {
+      const response = await fetch(`/api/admin/commandes/${commande.id}/statut`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: newStatut }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Impossible de modifier le statut.");
+      router.refresh();
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : "Erreur lors de la modification du statut.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const saveNotes = async () => {
@@ -331,6 +341,12 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
           )}
         </div>
       </div>
+
+      {statusError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {statusError}
+        </div>
+      )}
 
       {/* Timeline de statut */}
       <Card className="mb-6">

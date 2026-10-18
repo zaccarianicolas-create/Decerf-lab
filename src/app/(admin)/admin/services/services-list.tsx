@@ -38,7 +38,14 @@ type Service = {
   type_travail: string | null;
   materiaux_disponibles: string[];
   mode_fourniture: string;
-  prix_indicatif: number | null;
+  prix_base_ht: number | null;
+  options: {
+    id: string;
+    nom: string;
+    prix_ht: number;
+    actif: boolean;
+    ordre: number;
+  }[];
   duree_estimee_jours: number | null;
   instructions: string | null;
   actif: boolean;
@@ -102,9 +109,10 @@ const emptyForm = {
   type_travail: "",
   materiaux_disponibles: [] as string[],
   mode_fourniture: "les_deux",
-  prix_indicatif: "",
+  prix_base_ht: "",
   duree_estimee_jours: "",
   instructions: "",
+  options: [] as { id?: string; nom: string; prix_ht: string; actif: boolean; ordre: number }[],
 };
 
 export function ServicesList({
@@ -153,9 +161,16 @@ export function ServicesList({
       type_travail: s.type_travail || "",
       materiaux_disponibles: s.materiaux_disponibles || [],
       mode_fourniture: s.mode_fourniture,
-      prix_indicatif: s.prix_indicatif?.toString() || "",
+      prix_base_ht: s.prix_base_ht?.toString() || "",
       duree_estimee_jours: s.duree_estimee_jours?.toString() || "",
       instructions: s.instructions || "",
+      options: (s.options ?? []).map((option) => ({
+        id: option.id,
+        nom: option.nom,
+        prix_ht: String(option.prix_ht),
+        actif: option.actif,
+        ordre: option.ordre,
+      })),
     });
     setEditingId(s.id);
     setShowForm(true);
@@ -163,6 +178,16 @@ export function ServicesList({
   };
 
   const handleSave = async () => {
+    if (form.options.some((option) =>
+      !option.nom.trim() ||
+      option.prix_ht === "" ||
+      !Number.isFinite(Number(option.prix_ht)) ||
+      Number(option.prix_ht) < 0
+    )) {
+      showError("Chaque option doit avoir un nom et un prix HT valide.");
+      return;
+    }
+
     setSaving(true);
     const payload = {
       nom: form.nom,
@@ -171,13 +196,18 @@ export function ServicesList({
       type_travail: form.type_travail || null,
       materiaux_disponibles: form.materiaux_disponibles,
       mode_fourniture: form.mode_fourniture,
-      prix_indicatif: form.prix_indicatif
-        ? parseFloat(form.prix_indicatif)
+      prix_base_ht: form.prix_base_ht
+        ? parseFloat(form.prix_base_ht)
         : null,
       duree_estimee_jours: form.duree_estimee_jours
         ? parseInt(form.duree_estimee_jours)
         : null,
       instructions: form.instructions || null,
+      options: form.options.map((option, index) => ({
+        ...option,
+        prix_ht: Number(option.prix_ht || 0),
+        ordre: index + 1,
+      })),
     };
 
     const maxOrdre = Math.max(0, ...services.map((s) => s.ordre));
@@ -185,10 +215,12 @@ export function ServicesList({
 
     if (!result.success) {
       showError(result.error || "Erreur lors de l'enregistrement");
+      setSaving(false);
+      return;
     } else if (editingId) {
-      setServices((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...s, ...payload } : s))
-      );
+      setServices((prev) => prev.map((s) =>
+        s.id === editingId ? { ...s, ...result.data } as Service : s
+      ));
     } else if (result.data) {
       setServices((prev) => [...prev, result.data as Service]);
     }
@@ -499,13 +531,13 @@ export function ServicesList({
                   </select>
                 </div>
                 <Input
-                  label="Prix indicatif (€)"
+                  label="Prix de base HT (€)"
                   type="number"
                   step="0.01"
                   placeholder="250.00"
-                  value={form.prix_indicatif}
+                  value={form.prix_base_ht}
                   onChange={(e) =>
-                    setForm({ ...form, prix_indicatif: e.target.value })
+                    setForm({ ...form, prix_base_ht: e.target.value })
                   }
                 />
                 <Input
@@ -517,6 +549,82 @@ export function ServicesList({
                     setForm({ ...form, duree_estimee_jours: e.target.value })
                   }
                 />
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Options facturables
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Présentées au dentiste uniquement lors de la validation de la facture.
+                  </p>
+                </div>
+                {form.options.map((option, index) => (
+                  <div
+                    key={option.id ?? `option-${index}`}
+                    className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_160px_auto_auto]"
+                  >
+                    <Input
+                      label="Nom de l’option"
+                      value={option.nom}
+                      onChange={(e) => setForm((current) => ({
+                        ...current,
+                        options: current.options.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, nom: e.target.value } : item
+                        ),
+                      }))}
+                    />
+                    <Input
+                      label="Prix HT (€)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={option.prix_ht}
+                      onChange={(e) => setForm((current) => ({
+                        ...current,
+                        options: current.options.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, prix_ht: e.target.value } : item
+                        ),
+                      }))}
+                    />
+                    <label className="flex h-10 items-center gap-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={option.actif}
+                        onChange={(e) => setForm((current) => ({
+                          ...current,
+                          options: current.options.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, actif: e.target.checked } : item
+                          ),
+                        }))}
+                      />
+                      Active
+                    </label>
+                    <button
+                      type="button"
+                      aria-label="Retirer cette option"
+                      onClick={() => setForm((current) => ({
+                        ...current,
+                        options: current.options.filter((_, itemIndex) => itemIndex !== index),
+                      }))}
+                      className="mb-1 rounded p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setForm((current) => ({
+                    ...current,
+                    options: [...current.options, { nom: "", prix_ht: "", actif: true, ordre: current.options.length + 1 }],
+                  }))}
+                >
+                  <Plus className="mr-1 h-4 w-4" /> Ajouter une option
+                </Button>
               </div>
 
               {/* Mode de fourniture */}
@@ -703,10 +811,10 @@ export function ServicesList({
                       </span>
 
                       {/* Prix */}
-                      {s.prix_indicatif && (
+                      {s.prix_base_ht !== null && (
                         <span className="flex items-center gap-1">
                           <Euro className="h-3.5 w-3.5" />
-                          {Number(s.prix_indicatif).toFixed(2)} €
+                          {Number(s.prix_base_ht).toFixed(2)} € HT
                         </span>
                       )}
 
