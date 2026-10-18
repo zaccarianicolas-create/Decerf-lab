@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { renderCertificateTemplate } from "@/lib/certificat-template";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,18 +13,86 @@ import {
   Send,
   Save,
   FileCheck,
-  Building2,
 } from "lucide-react";
 
+type WorkItem = {
+  id: string;
+  item_label: string | null;
+  type_travail: string;
+  description: string | null;
+  dents: string[] | null;
+  materiau: string | null;
+  teinte: string | null;
+};
+
+type CertificateRecord = {
+  id: string;
+  numero_certificat: string;
+  statut: string | null;
+  labo_nom: string | null;
+  labo_adresse: string | null;
+  labo_responsable: string | null;
+  labo_numero_agrement: string | null;
+  labo_site_fabrication: string | null;
+  dentiste_nom: string | null;
+  dentiste_inami: string | null;
+  patient_reference: string | null;
+  description_travail: string | null;
+  materiaux_utilises: string | null;
+  dents: string | null;
+  lot_materiaux: string | null;
+  classe_dispositif: string | null;
+  code_nomenclature: string | null;
+  normes_appliquees: string | null;
+  declaration_conformite: string | null;
+  signe_par: string | null;
+  date_emission: string | null;
+  date_validation: string | null;
+  valide_par: string | null;
+  emis_par: string | null;
+  envoye_par: string | null;
+  envoye_au_praticien: boolean;
+  date_envoi: string | null;
+  pdf_storage_bucket: string | null;
+  pdf_storage_path: string | null;
+  modele_id: string | null;
+  donnees_snapshot: Record<string, unknown> | null;
+};
+
 type CertificatModalProps = {
-  commande: any;
-  certificat: any | null;
+  commande: {
+    id: string;
+    patient_ref: string | null;
+    patient?: { reference: string | null } | null;
+    dentiste?: {
+      prenom: string;
+      nom: string;
+      numero_inami: string | null;
+      cabinet?: {
+        nom: string;
+        adresse: string | null;
+        code_postal: string | null;
+        ville: string | null;
+      } | {
+        nom: string;
+        adresse: string | null;
+        code_postal: string | null;
+        ville: string | null;
+      }[] | null;
+    } | null;
+    items: WorkItem[];
+  };
+  commandeItemId: string;
+  certificatModeles: { id: string; nom: string; version: number; est_defaut: boolean; contenu_template: string }[];
+  certificat: CertificateRecord | null;
   currentUserId: string;
   onClose: () => void;
 };
 
 export function CertificatModal({
   commande,
+  commandeItemId,
+  certificatModeles,
   certificat: initialCert,
   currentUserId,
   onClose,
@@ -33,8 +102,15 @@ export function CertificatModal({
   const [cert, setCert] = useState(initialCert);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const [confirmCustomMade, setConfirmCustomMade] = useState(Boolean(initialCert));
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [modeleId, setModeleId] = useState<string>(
+    initialCert?.modele_id || certificatModeles.find((model) => model.est_defaut)?.id || ""
+  );
 
   const dentiste = commande.dentiste;
+  const cabinet = Array.isArray(dentiste?.cabinet) ? dentiste.cabinet[0] : dentiste?.cabinet;
+  const dentisteAdresse = [cabinet?.nom, cabinet?.adresse, cabinet?.code_postal, cabinet?.ville].filter(Boolean).join(", ");
   const patient = commande.patient;
   const items = commande.items || [];
 
@@ -44,6 +120,7 @@ export function CertificatModal({
     labo_adresse: cert?.labo_adresse || "",
     labo_responsable: cert?.labo_responsable || "",
     labo_numero_agrement: cert?.labo_numero_agrement || "",
+    labo_site_fabrication: cert?.labo_site_fabrication || "",
     dentiste_nom:
       cert?.dentiste_nom ||
       (dentiste ? `Dr ${dentiste.prenom} ${dentiste.nom}` : ""),
@@ -56,7 +133,7 @@ export function CertificatModal({
     description_travail:
       cert?.description_travail ||
       items
-        .map((i: any) => {
+        .map((i) => {
           const parts = [i.type_travail?.replace(/_/g, " ")];
           if (i.dents?.length) parts.push(`dents: ${i.dents.join(", ")}`);
           if (i.materiau) parts.push(i.materiau.replace(/_/g, " "));
@@ -67,13 +144,17 @@ export function CertificatModal({
     materiaux_utilises:
       cert?.materiaux_utilises ||
       items
-        .map((i: any) => i.materiau?.replace(/_/g, " "))
+        .map((i) => i.materiau?.replace(/_/g, " "))
         .filter(Boolean)
         .join(", "),
     dents:
       cert?.dents ||
-      items.flatMap((i: any) => i.dents || []).join(", "),
+      items.flatMap((i) => i.dents || []).join(", "),
     lot_materiaux: cert?.lot_materiaux || "",
+    classe_dispositif: cert?.classe_dispositif || "",
+    code_nomenclature: cert?.code_nomenclature || "",
+    exigences_non_satisfaites: String(cert?.donnees_snapshot?.exigences_non_satisfaites || ""),
+    justification: String(cert?.donnees_snapshot?.justification || ""),
     normes_appliquees:
       cert?.normes_appliquees ||
       "Règlement (UE) 2017/745 relatif aux dispositifs médicaux - AR du 18/03/1999",
@@ -92,50 +173,71 @@ export function CertificatModal({
     emis: "Émis",
     envoye: "Envoyé",
   };
+  const selectedModel = certificatModeles.find((model) => model.id === modeleId);
+  const actualMaterials = Array.isArray(cert?.donnees_snapshot?.materiaux_lots)
+    ? cert.donnees_snapshot.materiaux_lots as Record<string, unknown>[]
+    : [];
+  const previewContent = selectedModel
+    ? renderCertificateTemplate(selectedModel.contenu_template, {
+        "labo.nom": form.labo_nom,
+        "labo.adresse": form.labo_adresse,
+        "labo.site_fabrication": form.labo_site_fabrication,
+        "dispositifs.liste": form.description_travail,
+        "patient.identifiant": form.patient_reference,
+        "dentiste.nom": form.dentiste_nom,
+        "dentiste.cabinet": cabinet?.nom || "",
+        "dentiste.adresse": dentisteAdresse,
+        "prescription.caracteristiques": form.description_travail,
+        "production.materiaux_lots": actualMaterials.map((material) => {
+          const parts = [String(material.nom || "Article")];
+          if (material.numero_lot) parts.push(`lot ${String(material.numero_lot)}`);
+          if (material.quantite) parts.push(`${String(material.quantite)}${material.unite ? ` ${String(material.unite)}` : ""}`);
+          return parts.join(" · ");
+        }).join("\n") || form.materiaux_utilises || "",
+        "conformite.declaration": form.declaration_conformite,
+        "conformite.exigences_non_satisfaites": form.exigences_non_satisfaites,
+        "conformite.justification": form.justification,
+        "conformite.classe_dispositif": form.classe_dispositif,
+        "conformite.code_nomenclature": form.code_nomenclature,
+        "document.date_emission": new Date(`${form.date_emission}T00:00:00`).toLocaleDateString("fr-BE"),
+        "document.signataire": form.signe_par,
+        "document.numero": cert?.numero_certificat || "Attribué à la création",
+      })
+    : "Choisissez un modèle pour afficher l’aperçu.";
 
   const generateOrUpdate = async () => {
     setSaving(true);
+    setErrorMessage(null);
 
     if (cert) {
-      // Update existing
-      const { error } = await supabase
-        .from("certificats_conformite")
-        .update({
-          ...form,
-        })
-        .eq("id", cert.id);
-
-      if (!error) {
-        setCert({ ...cert, ...form });
+      const response = await fetch(`/api/admin/certificats/${cert.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, modele_id: modeleId }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setCert(data);
+      } else {
+        setErrorMessage(data.error || "Impossible d’enregistrer cette fiche.");
       }
     } else {
-      // Generate new via API
-      const res = await fetch("/api/admin/certificat", {
+      const res = await fetch("/api/admin/certificats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           commande_id: commande.id,
+          commande_item_id: commandeItemId,
+          dispositif_sur_mesure: confirmCustomMade,
+          modele_id: modeleId,
           ...form,
         }),
       });
       const data = await res.json();
-      if (data.id) {
-        // Fetch the created certificat
-        const { data: created } = await supabase
-          .from("certificats_conformite")
-          .select("*")
-          .eq("id", data.id)
-          .single();
-        if (created) {
-          // Update with any form edits
-          await supabase
-            .from("certificats_conformite")
-            .update({ ...form, statut: created.statut || "brouillon" })
-            .eq("id", created.id);
-          setCert({ ...created, ...form, statut: created.statut || "brouillon" });
-        } else if (!data.exists) {
-          setCert(data);
-        }
+      if (res.ok && data.id) {
+        setCert(data);
+      } else {
+        setErrorMessage(data.error || "Impossible de créer cette fiche.");
       }
     }
 
@@ -157,34 +259,42 @@ export function CertificatModal({
   const transitionCertificat = async (target: "valide" | "emis" | "envoye") => {
     if (!cert) return;
     setSaving(true);
+    setErrorMessage(null);
+    const currentCert = cert;
 
-    const now = new Date().toISOString();
-    const payload: Record<string, unknown> = { statut: target };
+    if (target === "emis") {
+      const response = await fetch(`/api/admin/certificats/${cert.id}/emettre`, { method: "POST" });
+      const data = await response.json();
+      if (response.ok) {
+        setCert({ ...cert, statut: "emis", pdf_storage_bucket: "certificats", pdf_storage_path: data.path || cert.pdf_storage_path });
+        await logCertEvent("Déclaration émise", cert.numero_certificat);
+      } else {
+        setErrorMessage(data.error || "Impossible d’émettre la fiche.");
+      }
+      setSaving(false);
+      return;
+    }
 
     if (target === "valide") {
-      payload.valide_par = currentUserId;
-      payload.date_validation = now;
-    }
-    if (target === "emis") {
-      payload.emis_par = currentUserId;
-      payload.date_emission = form.date_emission;
-      if (!payload.valide_par && !cert.valide_par) {
-        payload.valide_par = currentUserId;
-        payload.date_validation = now;
+      const response = await fetch(`/api/admin/certificats/${cert.id}/valider`, { method: "POST" });
+      const data = await response.json();
+      if (response.ok) {
+        setCert(data);
+        await logCertEvent("Déclaration validée", cert.numero_certificat);
+      } else {
+        setErrorMessage(data.error || "Impossible de valider la fiche.");
       }
+      setSaving(false);
+      return;
     }
-    if (target === "envoye") {
-      payload.envoye_au_praticien = true;
-      payload.date_envoi = now;
-      payload.envoye_par = currentUserId;
-      if (!payload.emis_par && !cert.emis_par) {
-        payload.emis_par = currentUserId;
-      }
-      if (!payload.valide_par && !cert.valide_par) {
-        payload.valide_par = currentUserId;
-        payload.date_validation = now;
-      }
-    }
+
+    const now = new Date().toISOString();
+    const payload: Record<string, unknown> = {
+      statut: target,
+      envoye_au_praticien: true,
+      date_envoi: now,
+      envoye_par: currentUserId,
+    };
 
     const { error } = await supabase
       .from("certificats_conformite")
@@ -192,21 +302,17 @@ export function CertificatModal({
       .eq("id", cert.id);
 
     if (!error) {
-      const updated = { ...cert, ...payload };
+      const updated = { ...currentCert, ...payload };
       setCert(updated);
       if (target === "envoye") {
         setSent(true);
       }
 
-      if (target === "valide") {
-        await logCertEvent("Certificat validé", cert.numero_certificat);
-      }
-      if (target === "emis") {
-        await logCertEvent("Certificat émis", cert.numero_certificat);
-      }
       if (target === "envoye") {
-        await logCertEvent("Certificat envoyé au praticien", cert.numero_certificat);
+        await logCertEvent("Déclaration mise à disposition du praticien", cert.numero_certificat);
       }
+    } else {
+      setErrorMessage(error.message);
     }
 
     setSaving(false);
@@ -250,18 +356,28 @@ export function CertificatModal({
     win.print();
   };
 
-  const handleSendToPraticien = async () => {
+  const handleDownloadPdf = () => {
+    if (cert) window.location.href = `/api/certificats/${cert.id}/pdf`;
+  };
+
+  const handleDownloadVasExport = async () => {
     if (!cert) return;
     setSaving(true);
-    await supabase
-      .from("certificats_conformite")
-      .update({
-        envoye_au_praticien: true,
-        date_envoi: new Date().toISOString(),
-      })
-      .eq("id", cert.id);
-    setCert({ ...cert, envoye_au_praticien: true, date_envoi: new Date().toISOString() });
-    setSent(true);
+    setErrorMessage(null);
+    const response = await fetch(`/api/admin/certificats/${cert.id}/vas-export`, { method: "POST" });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setErrorMessage(data.error || "Impossible de préparer l’export VAS.");
+      setSaving(false);
+      return;
+    }
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `VAS-${cert.numero_certificat}.json`;
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
     setSaving(false);
   };
 
@@ -309,7 +425,7 @@ export function CertificatModal({
                     Valider
                   </Button>
                 )}
-                {(certStatut === "brouillon" || certStatut === "valide") && (
+                {certStatut === "valide" && (
                   <Button
                     onClick={() => transitionCertificat("emis")}
                     disabled={saving}
@@ -328,26 +444,27 @@ export function CertificatModal({
                   <Printer className="h-4 w-4" />
                   Imprimer
                 </Button>
-                <Button
-                  onClick={handlePrint}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Exporter
-                </Button>
-                <Button
-                  onClick={() => transitionCertificat("envoye")}
-                  disabled={saving || certStatut === "envoye"}
-                  size="sm"
-                  className="gap-2 bg-green-600 hover:bg-green-700"
-                >
-                  <Send className="h-4 w-4" />
-                  {certStatut === "envoye" || sent
-                    ? "Envoyé ✓"
-                    : "Envoyer au praticien"}
-                </Button>
+                {cert.pdf_storage_path && (
+                  <Button onClick={handleDownloadPdf} variant="outline" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" /> Télécharger le PDF
+                  </Button>
+                )}
+                {["emis", "envoye"].includes(certStatut) && (
+                  <Button onClick={handleDownloadVasExport} disabled={saving} variant="outline" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" /> Export VAS
+                  </Button>
+                )}
+                {certStatut === "emis" && (
+                  <Button
+                    onClick={() => transitionCertificat("envoye")}
+                    disabled={saving || sent}
+                    size="sm"
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Send className="h-4 w-4" />
+                    {sent ? "Mis à disposition ✓" : "Mettre à disposition"}
+                  </Button>
+                )}
               </>
             )}
             <button
@@ -366,6 +483,23 @@ export function CertificatModal({
             <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
               Données du certificat
             </h3>
+            <label className="block space-y-1 text-sm font-medium text-gray-700">
+              Modèle de déclaration
+              <select
+                value={modeleId}
+                onChange={(event) => setModeleId(event.target.value)}
+                disabled={Boolean(cert && certStatut !== "brouillon")}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Choisir un modèle</option>
+                {certificatModeles.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.nom} · v{model.version}{model.est_defaut ? " · défaut" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <fieldset disabled={Boolean(cert && certStatut !== "brouillon")} className="min-w-0 space-y-4 border-0 p-0">
 
             <div className="rounded-lg bg-gray-50 p-4">
               <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
@@ -385,6 +519,11 @@ export function CertificatModal({
                   onChange={(e) =>
                     setForm({ ...form, labo_adresse: e.target.value })
                   }
+                />
+                <Input
+                  label="Site de fabrication"
+                  value={form.labo_site_fabrication}
+                  onChange={(e) => setForm({ ...form, labo_site_fabrication: e.target.value })}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <Input
@@ -485,6 +624,27 @@ export function CertificatModal({
                   }
                   placeholder="Ex: LOT-2026-ZRC-001"
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="space-y-1 text-sm font-medium text-gray-700">
+                    Classe du dispositif
+                    <select
+                      value={form.classe_dispositif}
+                      onChange={(e) => setForm({ ...form, classe_dispositif: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">À déterminer</option>
+                      <option value="I">I</option>
+                      <option value="IIa">IIa</option>
+                      <option value="IIb">IIb</option>
+                      <option value="III">III</option>
+                    </select>
+                  </label>
+                  <Input
+                    label="Code de nomenclature"
+                    value={form.code_nomenclature}
+                    onChange={(e) => setForm({ ...form, code_nomenclature: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
 
@@ -516,6 +676,28 @@ export function CertificatModal({
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Exigences non satisfaites (ou indiquer « Aucune »)
+                  </label>
+                  <textarea
+                    value={form.exigences_non_satisfaites}
+                    onChange={(e) => setForm({ ...form, exigences_non_satisfaites: e.target.value })}
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">
+                    Justification si des exigences ne sont pas satisfaites
+                  </label>
+                  <textarea
+                    value={form.justification}
+                    onChange={(e) => setForm({ ...form, justification: e.target.value })}
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
               </div>
             </div>
 
@@ -537,19 +719,32 @@ export function CertificatModal({
                 }
               />
             </div>
+            </fieldset>
 
-            <Button
-              onClick={generateOrUpdate}
-              disabled={saving}
-              className="w-full gap-2 bg-sky-600 hover:bg-sky-700"
-            >
-              <Save className="h-4 w-4" />
-              {saving
-                ? "Enregistrement..."
-                : cert
-                  ? "Mettre à jour le certificat"
-                  : "Générer le certificat"}
-            </Button>
+            {(!cert || certStatut === "brouillon") && (
+              <Button
+                onClick={generateOrUpdate}
+                disabled={saving || !modeleId || (!cert && !confirmCustomMade)}
+                className="w-full gap-2 bg-sky-600 hover:bg-sky-700"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Enregistrement..." : cert ? "Mettre à jour le brouillon" : "Générer le brouillon"}
+              </Button>
+            )}
+            {!cert && (
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={confirmCustomMade}
+                  onChange={(event) => setConfirmCustomMade(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>Je confirme que cette ligne concerne un dispositif médical sur mesure.</span>
+              </label>
+            )}
+            {errorMessage && (
+              <p role="alert" className="text-sm text-red-700">{errorMessage}</p>
+            )}
           </div>
 
           {/* Right: Preview */}
@@ -563,117 +758,9 @@ export function CertificatModal({
               className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              {/* Header */}
-              <div className="header mb-6 border-b-4 border-double border-gray-800 pb-4 text-center">
-                <h1 className="text-xl font-bold tracking-widest text-gray-900">
-                  CERTIFICAT DE CONFORMITÉ
-                </h1>
-                <h2 className="mt-1 text-sm text-gray-600">
-                  Dispositif médical sur mesure
-                </h2>
-                <p className="subtitle mt-1 text-xs text-gray-400">
-                  {form.normes_appliquees}
-                </p>
-              </div>
-
-              {/* Labo */}
-              <div className="section mb-5">
-                <p className="section-title mb-2 border-b border-gray-300 pb-1 text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Laboratoire
-                </p>
-                <p className="text-sm font-semibold">{form.labo_nom}</p>
-                {form.labo_adresse && (
-                  <p className="text-sm text-gray-600">{form.labo_adresse}</p>
-                )}
-                {form.labo_responsable && (
-                  <p className="text-sm text-gray-600">
-                    Responsable : {form.labo_responsable}
-                  </p>
-                )}
-                {form.labo_numero_agrement && (
-                  <p className="text-sm text-gray-600">
-                    N° agrément : {form.labo_numero_agrement}
-                  </p>
-                )}
-              </div>
-
-              {/* Praticien */}
-              <div className="section mb-5">
-                <p className="section-title mb-2 border-b border-gray-300 pb-1 text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Praticien prescripteur
-                </p>
-                <p className="text-sm font-semibold">{form.dentiste_nom}</p>
-                {form.dentiste_inami && (
-                  <p className="text-sm text-gray-600">
-                    N° INAMI/RIZIV : {form.dentiste_inami}
-                  </p>
-                )}
-              </div>
-
-              {/* Patient */}
-              <div className="section mb-5">
-                <p className="section-title mb-2 border-b border-gray-300 pb-1 text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Patient
-                </p>
-                <p className="text-sm">
-                  Référence : {form.patient_reference || "—"}
-                </p>
-              </div>
-
-              {/* Dispositif */}
-              <div className="section mb-5">
-                <p className="section-title mb-2 border-b border-gray-300 pb-1 text-xs font-bold uppercase tracking-wider text-gray-500">
-                  Description du dispositif
-                </p>
-                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700">
-                  {form.description_travail}
-                </pre>
-                {form.dents && (
-                  <p className="mt-1 text-sm">
-                    <strong>Dents :</strong> {form.dents}
-                  </p>
-                )}
-                {form.materiaux_utilises && (
-                  <p className="text-sm">
-                    <strong>Matériaux :</strong> {form.materiaux_utilises}
-                  </p>
-                )}
-                {form.lot_materiaux && (
-                  <p className="text-sm">
-                    <strong>Traçabilité lot :</strong> {form.lot_materiaux}
-                  </p>
-                )}
-              </div>
-
-              {/* Déclaration */}
-              <div className="declaration my-6 border-l-4 border-gray-800 bg-gray-50 p-4 italic">
-                <p className="text-sm leading-relaxed text-gray-700">
-                  {form.declaration_conformite}
-                </p>
-              </div>
-
-              {/* Signature */}
-              <div className="footer mt-8 flex items-end justify-between">
-                <div className="text-sm">
-                  <p>
-                    Date :{" "}
-                    {new Date(form.date_emission).toLocaleDateString("fr-FR")}
-                  </p>
-                </div>
-                <div className="signature text-right text-sm">
-                  <p className="mb-8">Signature :</p>
-                  <p className="border-t border-gray-400 pt-1">
-                    {form.signe_par || "________________"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Numéro en bas */}
-              {cert?.numero_certificat && (
-                <div className="numero mt-8 border-t border-gray-200 pt-3 text-center text-xs text-gray-400">
-                  {cert.numero_certificat} — {form.labo_nom}
-                </div>
-              )}
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
+                {previewContent}
+              </pre>
             </div>
           </div>
         </div>

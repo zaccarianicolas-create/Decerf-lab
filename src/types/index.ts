@@ -289,6 +289,7 @@ export interface CertificatConformite {
   id: string;
   numero_certificat: string;
   commande_id: string;
+  commande_item_id: string | null;
   patient_id: string | null;
   statut: "brouillon" | "valide" | "emis" | "envoye";
   labo_nom: string;
@@ -313,6 +314,14 @@ export interface CertificatConformite {
   envoye_par: string | null;
   pdf_storage_bucket: string | null;
   pdf_storage_path: string | null;
+  modele_id: string | null;
+  modele_version: number | null;
+  donnees_snapshot: Record<string, unknown>;
+  labo_site_fabrication: string | null;
+  vas_export_storage_path: string | null;
+  classe_dispositif: "I" | "IIa" | "IIb" | "III" | null;
+  code_nomenclature: string | null;
+  notice_utilisation_storage_path: string | null;
   version: number;
   signe_par: string | null;
   envoye_au_praticien: boolean;

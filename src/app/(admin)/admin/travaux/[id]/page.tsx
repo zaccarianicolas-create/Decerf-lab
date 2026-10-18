@@ -23,7 +23,7 @@ export default async function AdminTravailPage({
       `
       *,
       patient:patients(*),
-      dentiste:profiles!commandes_dentiste_id_fkey(id, nom, prenom, email, numero_inami, telephone),
+      dentiste:profiles!commandes_dentiste_id_fkey(id, nom, prenom, email, numero_inami, telephone, cabinet:cabinets(nom, adresse, code_postal, ville)),
       items:commande_items(*),
       fichiers:fichiers(*),
       certificat:certificats_conformite(*),
@@ -37,10 +37,12 @@ export default async function AdminTravailPage({
 
   if (!commande) notFound();
 
-  // Le certificat est un array, prendre le premier
-  const certificat = Array.isArray(commande.certificat)
-    ? commande.certificat[0] || null
-    : commande.certificat;
+  const certificats = Array.isArray(commande.certificat)
+    ? commande.certificat
+    : commande.certificat
+      ? [commande.certificat]
+      : [];
+  const certificat = certificats[0] || null;
 
   const { data: orthoDossier } = await admin
     .from("commande_ortho")
@@ -108,12 +110,19 @@ export default async function AdminTravailPage({
     ]);
 
       const lotsFeatureEnabled = parametres?.gestion_lots_stock_active ?? true;
+      const { data: certificatModeles } = await admin
+        .from("certificat_modeles")
+        .select("id, nom, version, est_defaut, contenu_template")
+        .eq("actif", true)
+        .order("est_defaut", { ascending: false })
+        .order("nom", { ascending: true });
 
   return (
     <TravailDetail
       commande={{
         ...commande,
         certificat,
+        certificats,
         ortho,
         assignations: assignations ?? [],
         taches: taches ?? [],
@@ -125,6 +134,7 @@ export default async function AdminTravailPage({
       stockArticles={stockArticles ?? []}
       stockLots={stockLots ?? []}
       lotsFeatureEnabled={lotsFeatureEnabled}
+      certificatModeles={certificatModeles ?? []}
     />
   );
 }

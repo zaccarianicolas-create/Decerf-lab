@@ -11,7 +11,6 @@ import {
   User,
   Briefcase,
   FileCheck,
-  Printer,
   Download,
   Send,
   Monitor,
@@ -53,12 +52,23 @@ const STATUT_ORDER: Record<string, number> = {
   annulee: -1,
 };
 
+type CertificateSummary = {
+  id: string;
+  commande_item_id: string | null;
+  numero_certificat: string;
+  statut: string | null;
+  date_emission: string;
+  pdf_storage_path: string | null;
+};
+
 export function CommandeDetail({ commande }: { commande: any }) {
   const supabase = createClient();
   const patient = commande.patient;
   const items = commande.items || [];
   const fichiers = commande.fichiers || [];
-  const certificat = commande.certificat;
+  const certificats = ((commande.certificats || []) as CertificateSummary[]).filter(
+    (certificate) => certificate.statut === "envoye" && Boolean(certificate.pdf_storage_path)
+  );
   const workflowEvents = (commande.workflow_events || []).filter(
     (event: any) => event.visible_praticien
   );
@@ -73,78 +83,6 @@ export function CommandeDetail({ commande }: { commande: any }) {
     fileName: string;
     format: string | null;
   } | null>(null);
-
-  const handlePrintCertificat = () => {
-    if (!certificat) return;
-
-    const win = window.open("", "_blank");
-    if (!win) return;
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Certificat de Conformité — ${certificat.numero_certificat}</title>
-        <style>
-          @page { margin: 2cm; }
-          body { font-family: 'Georgia', serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; }
-          .header { text-align: center; border-bottom: 3px double #333; padding-bottom: 15px; margin-bottom: 25px; }
-          .header h1 { font-size: 18pt; margin: 0; letter-spacing: 2px; }
-          .header h2 { font-size: 13pt; margin: 5px 0 0; font-weight: normal; color: #555; }
-          .section { margin-bottom: 18px; }
-          .section-title { font-size: 11pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #444; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 8px; }
-          .declaration { background: #f8f8f8; padding: 15px; border-left: 3px solid #333; margin: 15px 0; font-style: italic; }
-          .footer { margin-top: 30px; display: flex; justify-content: space-between; }
-          .signature { text-align: right; }
-          .numero { text-align: center; font-size: 9pt; color: #999; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>CERTIFICAT DE CONFORMITÉ</h1>
-          <h2>Dispositif médical sur mesure</h2>
-          <p style="font-size:10pt;color:#777">${certificat.normes_appliquees}</p>
-        </div>
-        <div class="section">
-          <p class="section-title">Laboratoire</p>
-          <p><strong>${certificat.labo_nom}</strong></p>
-          ${certificat.labo_adresse ? `<p>${certificat.labo_adresse}</p>` : ""}
-          ${certificat.labo_responsable ? `<p>Responsable : ${certificat.labo_responsable}</p>` : ""}
-          ${certificat.labo_numero_agrement ? `<p>N° agrément : ${certificat.labo_numero_agrement}</p>` : ""}
-        </div>
-        <div class="section">
-          <p class="section-title">Praticien prescripteur</p>
-          <p><strong>${certificat.dentiste_nom || "—"}</strong></p>
-          ${certificat.dentiste_inami ? `<p>N° INAMI/RIZIV : ${certificat.dentiste_inami}</p>` : ""}
-        </div>
-        <div class="section">
-          <p class="section-title">Patient</p>
-          <p>Référence : ${certificat.patient_reference || "—"}</p>
-        </div>
-        <div class="section">
-          <p class="section-title">Description du dispositif</p>
-          <p>${certificat.description_travail}</p>
-          ${certificat.dents ? `<p><strong>Dents :</strong> ${certificat.dents}</p>` : ""}
-          ${certificat.materiaux_utilises ? `<p><strong>Matériaux :</strong> ${certificat.materiaux_utilises}</p>` : ""}
-          ${certificat.lot_materiaux ? `<p><strong>Traçabilité lot :</strong> ${certificat.lot_materiaux}</p>` : ""}
-        </div>
-        <div class="declaration">
-          <p>${certificat.declaration_conformite}</p>
-        </div>
-        <div class="footer">
-          <div><p>Date : ${new Date(certificat.date_emission).toLocaleDateString("fr-FR")}</p></div>
-          <div class="signature">
-            <p style="margin-bottom:40px">Signature :</p>
-            <p style="border-top:1px solid #999;padding-top:5px">${certificat.signe_par || "________________"}</p>
-          </div>
-        </div>
-        <div class="numero">${certificat.numero_certificat} — ${certificat.labo_nom}</div>
-      </body>
-      </html>
-    `);
-    win.document.close();
-    win.print();
-  };
 
   const uploadAddedFiles = async () => {
     if (uploadFiles.length === 0) return;
@@ -466,51 +404,35 @@ export function CommandeDetail({ commande }: { commande: any }) {
           )}
 
           {/* Certificat */}
-          {certificat && (
+          {certificats.length > 0 && (
             <Card className="border-green-200 bg-green-50/30">
               <CardContent className="p-6">
                 <h2 className="mb-4 flex items-center gap-2 font-semibold text-green-800">
                   <FileCheck className="h-5 w-5" />
-                  Certificat de conformité
+                  Déclarations de conformité
                 </h2>
-                <div className="space-y-2 text-sm text-gray-700">
-                  <p>
-                    <strong>N° :</strong> {certificat.numero_certificat}
-                  </p>
-                  <p>
-                    <strong>Statut :</strong> {certificat.statut || "brouillon"}
-                  </p>
-                  <p>
-                    <strong>Date :</strong>{" "}
-                    {new Date(certificat.date_emission).toLocaleDateString("fr-FR")}
-                  </p>
-                  <p>
-                    <strong>Description :</strong>{" "}
-                    {certificat.description_travail}
-                  </p>
-                  <p>
-                    <strong>Normes :</strong> {certificat.normes_appliquees}
-                  </p>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    onClick={handlePrintCertificat}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Printer className="h-4 w-4" />
-                    Imprimer
-                  </Button>
-                  <Button
-                    onClick={handlePrintCertificat}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Exporter PDF
-                  </Button>
+                <div className="divide-y divide-green-100">
+                  {certificats.map((certificate) => {
+                    const item = items.find((entry: { id: string; item_label: string | null; type_travail: string }) => entry.id === certificate.commande_item_id);
+                    const deviceLabel = item?.item_label || item?.type_travail?.replace(/_/g, " ") || "Travail de la commande";
+                    const pdfAvailable = certificate.statut === "envoye" && Boolean(certificate.pdf_storage_path);
+                    return (
+                      <div key={certificate.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                        <div>
+                          <p className="font-medium text-gray-900">{deviceLabel}</p>
+                          <p className="text-xs text-gray-600">{certificate.numero_certificat} · {certificate.statut || "brouillon"}</p>
+                          <p className="text-xs text-gray-500">Émise le {new Date(certificate.date_emission).toLocaleDateString("fr-FR")}</p>
+                        </div>
+                        {pdfAvailable ? (
+                          <a href={`/api/certificats/${certificate.id}/pdf`} className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            <Download className="h-4 w-4" /> Télécharger le PDF
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-500">PDF en préparation au laboratoire</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

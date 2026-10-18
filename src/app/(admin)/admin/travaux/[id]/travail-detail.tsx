@@ -55,6 +55,7 @@ type TravailProps = {
   stockArticles?: any[];
   stockLots?: any[];
   lotsFeatureEnabled?: boolean;
+  certificatModeles?: { id: string; nom: string; version: number; est_defaut: boolean; contenu_template: string }[];
 };
 
 const STATUT_STEPS = [
@@ -78,13 +79,14 @@ const STATUT_ORDER = [
   "livree",
 ];
 
-export function TravailDetail({ commande, currentUserId, protocoles = [], protocoleInstances = [], stockArticles = [], stockLots = [], lotsFeatureEnabled = true }: TravailProps) {
+export function TravailDetail({ commande, currentUserId, protocoles = [], protocoleInstances = [], stockArticles = [], stockLots = [], lotsFeatureEnabled = true, certificatModeles = [] }: TravailProps) {
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [notesLabo, setNotesLabo] = useState(commande.notes_labo || "");
   const [showCertificat, setShowCertificat] = useState(false);
+  const [certificatItemId, setCertificatItemId] = useState<string | null>(null);
   const [workflowType, setWorkflowType] = useState("information");
   const [workflowTitle, setWorkflowTitle] = useState("");
   const [workflowDescription, setWorkflowDescription] = useState("");
@@ -176,6 +178,11 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
   const dentiste = commande.dentiste;
   const patient = commande.patient;
   const items = commande.items || [];
+  const certificats = commande.certificats || [];
+  const certificatItem = items.find((item: any) => item.id === certificatItemId);
+  const certificatForItem = certificats.find(
+    (certificate: any) => certificate.commande_item_id === certificatItemId
+  ) || null;
   const fichiers = commande.fichiers || [];
   const workflowEvents = commande.workflow_events || [];
   const notesTechniques = commande.notes_techniques || [];
@@ -892,52 +899,46 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {commande.certificat ? (
-                <div className="space-y-3">
-                  <div className="rounded-lg bg-green-50 p-3">
-                    <p className="text-sm font-medium text-green-700">
-                      {commande.certificat.numero_certificat}
-                    </p>
-                    <p className="text-xs text-green-700">
-                      Statut: {commande.certificat.statut || "brouillon"}
-                    </p>
-                    <p className="text-xs text-green-600">
-                      Émis le{" "}
-                      {new Date(
-                        commande.certificat.date_emission
-                      ).toLocaleDateString("fr-FR")}
-                    </p>
-                    {commande.certificat.envoye_au_praticien && (
-                      <p className="mt-1 text-xs text-green-600">
-                        ✓ Envoyé au praticien
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    onClick={() => setShowCertificat(true)}
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Voir / Modifier
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-500">
-                    Aucun certificat généré pour ce travail.
-                  </p>
-                  <Button
-                    onClick={() => setShowCertificat(true)}
-                    className="w-full gap-2 bg-sky-600 hover:bg-sky-700"
-                    size="sm"
-                  >
-                    <FileCheck className="h-4 w-4" />
-                    Générer le certificat
-                  </Button>
-                </div>
-              )}
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">
+                  Une fiche distincte est gérée pour chaque dispositif sur mesure.
+                </p>
+                {items.map((item: any) => {
+                  const certificate = certificats.find(
+                    (entry: any) => entry.commande_item_id === item.id
+                  );
+                  const label = item.item_label || typeLabel(item.type_travail);
+                  return (
+                    <div key={item.id} className="rounded-lg border border-gray-200 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{label}</p>
+                          {item.dents?.length > 0 && (
+                            <p className="text-xs text-gray-500">Dents : {item.dents.join(", ")}</p>
+                          )}
+                          {certificate && (
+                            <p className="mt-1 text-xs text-green-700">
+                              {certificate.numero_certificat} · {certificate.statut || "brouillon"}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setCertificatItemId(item.id);
+                            setShowCertificat(true);
+                          }}
+                          variant={certificate ? "outline" : "default"}
+                          size="sm"
+                          className="shrink-0 gap-2"
+                        >
+                          {certificate ? <FileText className="h-4 w-4" /> : <FileCheck className="h-4 w-4" />}
+                          {certificate ? "Ouvrir" : "Créer la fiche"}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
@@ -1044,16 +1045,24 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
           lots={lotsFeatureEnabled ? stockLots : []}
           lotsEnabled={lotsFeatureEnabled}
           protocoleInstances={protocoleInstances}
+          workItems={(items as any[]).map((item) => ({
+            id: item.id,
+            label: [typeLabel(item.type_travail), item.dents?.length ? `dents ${item.dents.join(", ")}` : null]
+              .filter(Boolean)
+              .join(" · "),
+          }))}
           fixedCommandeId={commande.id}
           title="Consommer du stock pour ce travail"
         />
       </div>
 
       {/* Modal certificat */}
-      {showCertificat && (
+      {showCertificat && certificatItem && (
         <CertificatModal
-          commande={commande}
-          certificat={commande.certificat}
+          commande={{ ...commande, items: [certificatItem] }}
+          commandeItemId={certificatItem.id}
+          certificat={certificatForItem}
+          certificatModeles={certificatModeles}
           currentUserId={currentUserId}
           onClose={() => {
             setShowCertificat(false);

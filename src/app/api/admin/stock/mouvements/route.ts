@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
     quantite?: number | string;
     motif?: string | null;
     commande_id?: string | null;
+    commande_item_id?: string | null;
     fiche_manuelle_id?: string | null;
     lot_id?: string | null;
     protocole_instance_id?: string | null;
@@ -103,6 +104,7 @@ export async function POST(request: NextRequest) {
       quantite,
       motif: body.motif?.trim() || null,
       commande_id: body.commande_id || null,
+      commande_item_id: body.commande_item_id || null,
       fiche_manuelle_id: body.fiche_manuelle_id || null,
       lot_id: body.lot_id || null,
       protocole_instance_id: body.protocole_instance_id || null,
@@ -130,6 +132,7 @@ export async function POST(request: NextRequest) {
       quantite,
       motif: body.motif || null,
       commande_id: body.commande_id || null,
+      commande_item_id: body.commande_item_id || null,
       fiche_manuelle_id: body.fiche_manuelle_id || null,
       lot_id: body.lot_id || null,
       protocole_instance_id: body.protocole_instance_id || null,

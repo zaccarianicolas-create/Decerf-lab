@@ -26,11 +26,12 @@ export default async function DashboardCommandeDetailPage({
 
   if (!commande) notFound();
 
-  // Normalize certificat
-  const certificat =
-    Array.isArray(commande.certificats) && commande.certificats.length > 0
-      ? commande.certificats[0]
-      : null;
+  const certificats = Array.isArray(commande.certificats)
+    ? commande.certificats
+    : commande.certificats
+      ? [commande.certificats]
+      : [];
+  const certificat = certificats[0] || null;
 
   const { data: orthoDossier } = await supabase
     .from("commande_ortho")
@@ -49,7 +50,7 @@ export default async function DashboardCommandeDetailPage({
 
   return (
     <CommandeDetail
-      commande={{ ...commande, certificat, ortho }}
+      commande={{ ...commande, certificat, certificats, ortho }}
     />
   );
 }

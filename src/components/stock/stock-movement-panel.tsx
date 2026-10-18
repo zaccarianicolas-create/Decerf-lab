@@ -25,6 +25,7 @@ type Lot = {
 
 type Commande = { id: string; numero: string };
 type Fiche = { id: string; numero: string; titre: string };
+type WorkItem = { id: string; label: string };
 type ProtocoleInstance = { id: string; titre: string; statut?: string | null };
 
 const TYPE_OPTIONS = [
@@ -42,6 +43,7 @@ export function StockMovementPanel({
   lotsEnabled = true,
   commandes = [],
   fiches = [],
+  workItems = [],
   protocoleInstances = [],
   fixedArticleId = null,
   fixedCommandeId = null,
@@ -55,6 +57,7 @@ export function StockMovementPanel({
   lotsEnabled?: boolean;
   commandes?: Commande[];
   fiches?: Fiche[];
+  workItems?: WorkItem[];
   protocoleInstances?: ProtocoleInstance[];
   fixedArticleId?: string | null;
   fixedCommandeId?: string | null;
@@ -70,6 +73,7 @@ export function StockMovementPanel({
   const [motif, setMotif] = useState("");
   const [commandeId, setCommandeId] = useState(fixedCommandeId || "");
   const [ficheId, setFicheId] = useState(fixedFicheId || "");
+  const [workItemId, setWorkItemId] = useState("");
   const [lotId, setLotId] = useState("");
   const [protocoleInstanceId, setProtocoleInstanceId] = useState(fixedProtocoleInstanceId || "");
   const [saving, setSaving] = useState(false);
@@ -94,6 +98,9 @@ export function StockMovementPanel({
   const handleSubmit = async () => {
     if (!articleId) return setError("Choisis un article.");
     if (!quantite || Number(quantite) <= 0) return setError("Quantité invalide.");
+    if (fixedCommandeId && workItems.length > 0 && !workItemId) {
+      return setError("Associe ce mouvement à une ligne de travail.");
+    }
     if (requiresLot && !lotId) return setError("Sélectionne le lot concerné par ce mouvement.");
 
     setSaving(true);
@@ -107,6 +114,7 @@ export function StockMovementPanel({
         quantite: Number(quantite),
         motif: motif || null,
         commande_id: commandeId || null,
+        commande_item_id: workItemId || null,
         fiche_manuelle_id: ficheId || null,
         lot_id: lotId || null,
         protocole_instance_id: protocoleInstanceId || null,
@@ -123,6 +131,7 @@ export function StockMovementPanel({
     setMotif("");
     if (!fixedCommandeId) setCommandeId("");
     if (!fixedFicheId) setFicheId("");
+    setWorkItemId("");
     if (!fixedProtocoleInstanceId) setProtocoleInstanceId("");
     setLotId("");
     if (refreshOnSuccess) router.refresh();
@@ -213,6 +222,24 @@ export function StockMovementPanel({
           </div>
         )}
 
+        {fixedCommandeId && workItems.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Ligne de travail (requis)
+            </label>
+            <select
+              value={workItemId}
+              onChange={(event) => setWorkItemId(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">— Sélectionner le dispositif concerné —</option>
+              {workItems.map((item) => (
+                <option key={item.id} value={item.id}>{item.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {!fixedCommandeId && commandes.length > 0 && (
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Commande liée (optionnel)</label>
@@ -261,7 +288,7 @@ export function StockMovementPanel({
           <textarea value={motif} onChange={(e) => setMotif(e.target.value)} rows={3} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Contexte du mouvement" />
         </div>
 
-        <Button onClick={handleSubmit} disabled={saving || !articleId || !quantite || (requiresLot && !lotId)} className="w-full bg-sky-600 hover:bg-sky-700">
+        <Button onClick={handleSubmit} disabled={Boolean(saving || !articleId || !quantite || (requiresLot && !lotId) || (fixedCommandeId && workItems.length > 0 && !workItemId))} className="w-full bg-sky-600 hover:bg-sky-700">
           {saving ? "Enregistrement…" : "Enregistrer le mouvement"}
         </Button>
       </CardContent>
