@@ -212,6 +212,7 @@ export function ChatThread({
       }
       setEditing(null);
       setInput("");
+      if (textareaRef.current) textareaRef.current.style.height = "44px";
       return;
     }
 
@@ -228,6 +229,7 @@ export function ChatThread({
     }
     setInput("");
     setReplyTo(null);
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
   };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -383,8 +385,12 @@ export function ChatThread({
     setInput(nextInput);
     setShowEmoji(false);
     requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(start + emoji.length, start + emoji.length);
+      const currentTextarea = textareaRef.current;
+      if (!currentTextarea) return;
+      currentTextarea.style.height = "auto";
+      currentTextarea.style.height = `${Math.min(currentTextarea.scrollHeight, 160)}px`;
+      currentTextarea.focus();
+      currentTextarea.setSelectionRange(start + emoji.length, start + emoji.length);
     });
   };
 
@@ -710,7 +716,11 @@ export function ChatThread({
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.currentTarget.style.height = "auto";
+                  e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 160)}px`;
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -719,7 +729,7 @@ export function ChatThread({
                 }}
                 rows={1}
                 placeholder="Votre message..."
-                className="w-full min-w-0 resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+                className="max-h-40 min-h-11 w-full min-w-0 resize-none overflow-y-auto rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
               />
             </div>
 

@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, MessageSquare, Plus, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Search,
+} from "lucide-react";
 import { ChatThread } from "@/components/messagerie/chat-thread";
 
 type Author = {
@@ -57,6 +64,7 @@ export function MessengerAdmin({
   const [unread, setUnread] = useState(initialUnread);
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(Boolean(initialOpenNew));
+  const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -251,71 +259,106 @@ export function MessengerAdmin({
       <div
         className={`${
           isEmbed
-            ? "flex h-full min-h-0 flex-col"
+            ? "flex h-full min-h-0 flex-col md:flex-row"
             : "flex h-[calc(100dvh-9rem)] min-h-[420px] md:h-[calc(100vh-200px)] md:min-h-[520px]"
         }`}
       >
         <aside
           className={`flex flex-col border-gray-200 ${
             isEmbed
-              ? "h-1/2 border-b"
+              ? `h-1/2 min-h-0 border-b md:h-full md:shrink-0 md:border-b-0 md:border-r ${isConversationListCollapsed ? "md:w-16" : "md:w-72"}`
               : `w-full border-b md:w-80 md:border-b-0 md:border-r ${activeId ? "hidden md:flex" : "flex"}`
           }`}
         >
-          <div className="border-b border-gray-100 p-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher..."
-                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
-                />
-              </div>
+          {isEmbed && isConversationListCollapsed ? (
+            <div className="hidden shrink-0 flex-col items-center gap-2 border-b border-gray-100 py-3 md:flex">
               <button
                 type="button"
-                onClick={() => setShowNew(!showNew)}
-                disabled={creating}
+                onClick={() => setIsConversationListCollapsed(false)}
+                aria-label="Développer la liste des conversations"
+                title="Développer la liste"
+                className="rounded-md p-2 text-gray-600 hover:bg-gray-100"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConversationListCollapsed(false);
+                  setShowNew(true);
+                }}
                 aria-label="Nouvelle conversation"
                 title="Nouvelle conversation"
-                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
+                className="rounded-md bg-sky-600 p-2 text-white hover:bg-sky-700"
               >
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            {showNew && (
-              <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
-                {dentistes.length === 0 ? (
-                  <p className="p-3 text-sm text-gray-500">
-                    Aucun praticien trouvé pour ouvrir une nouvelle conversation.
-                  </p>
-                ) : (
-                  dentistes.map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => createConv(d.id)}
-                      disabled={creating}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
-                        {d.prenom?.[0]}
-                        {d.nom?.[0]}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          Dr {d.prenom} {d.nom}
-                        </p>
-                        <p className="text-xs text-gray-500">{d.email}</p>
-                      </div>
-                    </button>
-                  ))
+          ) : (
+            <div className="shrink-0 border-b border-gray-100 p-3">
+              <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher..."
+                    className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+                {isEmbed && (
+                  <button
+                    type="button"
+                    onClick={() => setIsConversationListCollapsed(true)}
+                    aria-label="Réduire la liste des conversations"
+                    title="Réduire la liste"
+                    className="hidden rounded-md p-2 text-gray-600 hover:bg-gray-100 md:inline-flex"
+                  >
+                    <PanelLeftClose className="h-4 w-4" />
+                  </button>
                 )}
-                {createError && <p role="alert" className="p-3 text-xs text-red-600">{createError}</p>}
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  disabled={creating}
+                  aria-label="Nouvelle conversation"
+                  title="Nouvelle conversation"
+                  className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
               </div>
-            )}
-          </div>
-          <div className="flex-1 overflow-y-auto">
+              {showNew && (
+                <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
+                  {dentistes.length === 0 ? (
+                    <p className="p-3 text-sm text-gray-500">
+                      Aucun praticien trouvé pour ouvrir une nouvelle conversation.
+                    </p>
+                  ) : (
+                    dentistes.map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => createConv(d.id)}
+                        disabled={creating}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
+                          {d.prenom?.[0]}
+                          {d.nom?.[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">Dr {d.prenom} {d.nom}</p>
+                          <p className="text-xs text-gray-500">{d.email}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                  {createError && <p role="alert" className="p-3 text-xs text-red-600">{createError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="py-12 text-center">
                 <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
@@ -330,15 +373,17 @@ export function MessengerAdmin({
                 <button
                   key={c.id}
                   onClick={() => open(c.id)}
+                  title={`Dr ${c.dentiste?.prenom ?? ""} ${c.dentiste?.nom ?? ""}`}
+                  aria-label={`Ouvrir la conversation avec Dr ${c.dentiste?.prenom ?? ""} ${c.dentiste?.nom ?? ""}`}
                   className={`flex w-full items-start gap-3 border-b border-gray-50 px-4 py-3 text-left ${
                     activeId === c.id ? "bg-sky-50" : "hover:bg-gray-50"
-                  }`}
+                  } ${isEmbed && isConversationListCollapsed ? "justify-center px-2 md:items-center" : ""}`}
                 >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-medium text-sky-700">
                     {c.dentiste?.prenom?.[0] || "?"}
                     {c.dentiste?.nom?.[0] || ""}
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className={`min-w-0 flex-1 ${isEmbed && isConversationListCollapsed ? "md:hidden" : ""}`}>
                     <div className="flex items-center justify-between">
                       <p className="truncate text-sm font-medium text-gray-900">
                         Dr {c.dentiste?.prenom} {c.dentiste?.nom}
@@ -350,21 +395,15 @@ export function MessengerAdmin({
                       )}
                     </div>
                     <p className="truncate text-xs text-gray-500">
-                      {c.titre ||
-                        (c.commande
-                          ? `Commande ${c.commande.numero}`
-                          : "Conversation")}
+                      {c.titre || (c.commande ? `Commande ${c.commande.numero}` : "Conversation")}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {new Date(c.derniere_activite).toLocaleDateString(
-                        "fr-FR",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
+                      {new Date(c.derniere_activite).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
                 </button>

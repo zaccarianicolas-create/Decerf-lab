@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { X, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,7 +11,9 @@ interface ChatModalProps {
   chatPath: string;
 }
 
-const DEFAULT_MODAL_DIMENSIONS = { width: 420, height: 680 };
+const subscribeToMount = () => () => undefined;
+const getClientMountSnapshot = () => true;
+const getServerMountSnapshot = () => false;
 
 export function ChatModalWindow({
   isOpen,
@@ -19,11 +21,12 @@ export function ChatModalWindow({
   unreadCount,
   chatPath,
 }: ChatModalProps) {
-  const [mounted, setMounted] = useState(false);
-  const [position, setPosition] = useState({ x: 24, y: 24 });
-  const [modalDimensions, setModalDimensions] = useState(
-    DEFAULT_MODAL_DIMENSIONS
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    getClientMountSnapshot,
+    getServerMountSnapshot
   );
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,28 +37,6 @@ export function ChatModalWindow({
   const supabase = useRef(createClient());
 
   const chatUrl = `${chatPath}${chatPath.includes("?") ? "&" : "?"}embed=1`;
-
-  const getModalDimensions = () => {
-    const width = Math.min(440, window.innerWidth - 20);
-    const height = Math.min(700, window.innerHeight - 20);
-    return { width, height };
-  };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || !isOpen || typeof window === "undefined") return;
-    const dims = getModalDimensions();
-    setModalDimensions(dims);
-    setPosition({
-      x: Math.max(8, Math.round((window.innerWidth - dims.width) / 2)),
-      y: Math.max(8, Math.round((window.innerHeight - dims.height) / 2)),
-    });
-    // Reset only failure state on reopen; keep iframe loaded state for fast toggles.
-    setIframeFailed(false);
-  }, [mounted, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
@@ -99,12 +80,11 @@ export function ChatModalWindow({
 
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-      const dims = getModalDimensions();
-      setModalDimensions(dims);
+      const rect = modalRef.current.getBoundingClientRect();
 
       // Keep within viewport
-      const maxX = window.innerWidth - dims.width;
-      const maxY = window.innerHeight - dims.height;
+      const maxX = window.innerWidth - rect.width;
+      const maxY = window.innerHeight - rect.height;
 
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -132,16 +112,18 @@ export function ChatModalWindow({
       ref={modalRef}
       style={{
         position: "fixed",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: position ? `${position.x}px` : "50%",
+        top: position ? `${position.y}px` : "50%",
         zIndex: 9999,
-        width: `${modalDimensions.width}px`,
-        height: `${modalDimensions.height}px`,
+        width: "min(920px, calc(100vw - 24px))",
+        height: "min(760px, calc(100vh - 24px))",
         maxWidth: "calc(100vw - 16px)",
         maxHeight: "calc(100vh - 16px)",
         opacity: isOpen ? 1 : 0,
         pointerEvents: isOpen ? "auto" : "none",
-        transform: isOpen ? "translateY(0)" : "translateY(8px)",
+        transform: position
+          ? isOpen ? "none" : "translateY(8px)"
+          : isOpen ? "translate(-50%, -50%)" : "translate(-50%, calc(-50% + 8px))",
         visibility: isOpen ? "visible" : "hidden",
         transition: "opacity 120ms ease, transform 120ms ease",
       }}
