@@ -114,36 +114,32 @@ export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative min-h-[65vh] overflow-hidden">
-        {/* Background image + overlay */}
+      <section className="relative min-h-[560px] overflow-hidden bg-slate-950 sm:min-h-[600px] lg:min-h-[min(72vh,660px)]">
         <Image
           src="/images/hero-lab-v2.jpg"
-          alt="Laboratoire dentaire DECERF LAB"
+          alt="Modèle dentaire en cours de scan numérique au laboratoire"
           fill
-          className="object-cover object-center"
+          className="object-cover object-[68%_center]"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-sky-900/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 via-slate-950/45 to-slate-950/10" />
 
-        {/* Content */}
-        <div className="relative z-10 mx-auto flex min-h-[65vh] max-w-4xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
-          <div className="animate-fade-in-up">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-900/40 px-4 py-1.5 text-sm font-medium text-sky-200 backdrop-blur-sm">
+        <div className="relative z-10 mx-auto flex min-h-[560px] max-w-7xl items-center px-4 py-14 sm:min-h-[600px] sm:px-6 lg:min-h-[min(72vh,660px)] lg:px-8">
+          <div className="animate-fade-in-up max-w-3xl">
+            <div className="mb-5 inline-flex items-center gap-2 border-l-2 border-teal-300 pl-3 text-sm font-semibold text-teal-100">
               <Microscope className="h-4 w-4" />
-              Laboratoire dentaire &amp; orthodontique
+              Prothèse dentaire · Orthodontie · Flux numérique
             </div>
-            <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              La précision au service de{" "}
-              <span className="bg-gradient-to-r from-sky-300 to-teal-300 bg-clip-text text-transparent">
-                votre pratique
-              </span>
+            <h1 className="font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+              Des travaux précis.
+              <br />
+              <span className="text-teal-200">Un suivi sans détour.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
-              DECERF LAB allie savoir-faire artisanal et technologie de pointe.
-              Commandez, suivez et échangez depuis votre espace dédié — tout
-              est pensé pour simplifier votre quotidien.
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white sm:text-lg">
+              Prothèses dentaires et appareils orthodontiques réalisés sur prescription.
+              Échangez directement avec le laboratoire et suivez chaque travail en ligne.
             </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-7 flex flex-col items-start gap-3 sm:flex-row">
               <Link href="/register">
                 <Button
                   size="lg"
@@ -157,45 +153,27 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-white/30 bg-white/10 px-6 text-white backdrop-blur-sm hover:bg-white/20"
+                  className="border-white/50 bg-slate-950/20 px-6 text-white backdrop-blur-sm hover:bg-white/15"
                 >
                   Découvrir nos services
                 </Button>
               </Link>
             </div>
 
-            {/* Trust indicators */}
-            <div className="mt-12 flex items-center justify-center gap-8 border-t border-white/10 pt-10">
+            <div className="mt-9 flex items-center justify-start gap-5 border-t border-white/25 pt-6 sm:gap-8">
               <div>
                 <div className="text-2xl font-bold text-white">15+</div>
-                <div className="text-sm text-slate-400">ans d&apos;expérience</div>
+                <div className="text-sm text-white/80">ans d&apos;expérience</div>
               </div>
-              <div className="h-10 w-px bg-white/20" />
+              <div className="h-10 w-px bg-white/35" />
               <div>
                 <div className="text-2xl font-bold text-white">6000+</div>
-                <div className="text-sm text-slate-400">travaux réalisés</div>
+                <div className="text-sm text-white/80">travaux réalisés</div>
               </div>
-              <div className="h-10 w-px bg-white/20" />
+              <div className="h-10 w-px bg-white/35" />
               <div>
                 <div className="text-2xl font-bold text-white">24h</div>
-                <div className="text-sm text-slate-400">délai de réponse</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating quality card */}
-        <div className="absolute bottom-8 right-6 z-10 rounded-xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md sm:right-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/20">
-              <CheckCircle2 className="h-5 w-5 text-teal-300" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-white">
-                Qualité certifiée
-              </div>
-              <div className="text-xs text-slate-300">
-                Matériaux traçables &amp; CE
+                <div className="text-sm text-white/80">délai de réponse</div>
               </div>
             </div>
           </div>
