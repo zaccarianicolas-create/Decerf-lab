@@ -252,8 +252,8 @@ export default function HomePage() {
             <div className="relative">
               <div className="overflow-hidden rounded-2xl border border-slate-200/70">
                 <Image
-                  src="/images/process-lab.jpg"
-                  alt="Confection de prothèses en laboratoire dentaire"
+                  src="/images/empreinte.jpeg"
+                  alt="Empreinte dentaire tenue par des mains gantées"
                   width={800}
                   height={600}
                   className="h-auto w-full object-cover object-center"
