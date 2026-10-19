@@ -26,12 +26,17 @@ type Service = {
 
 function RemovableProsthesisIcon({ className }: LineIconProps) {
   return (
-    <svg viewBox="0 0 96 68" fill="none" aria-hidden="true" className={className}>
-      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55">
-        <path d="M12 14c7-8 17-9 25-4 7 4 15 4 22 0 8-5 18-4 25 4-2 19-12 38-36 47C24 52 14 33 12 14Z" />
-        <path d="M20 18c4 18 14 30 28 36 14-6 24-18 28-36" />
-        <path d="M23 13c2 6 3 10 5 14m7-16c1 7 2 12 4 17m8-15v17m8-17c-1 7-2 12-4 17m12-15c-2 7-3 12-5 16m13-13c-3 6-5 10-8 14" />
-        <path d="M21 31c5 4 10 6 15 7m39-7c-5 4-10 6-15 7" />
+    <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
+      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
+        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
+        <path d="M26 15c3 18 14 33 34 43 20-10 31-25 34-43" />
+        <path d="M27 18c5 4 10 6 15 7m-6 8c5 3 10 5 15 6m3 2c4 1 8 1 12 0m7-2c5-1 10-3 15-6m-6-8c5-1 10-3 15-7" />
+        <rect x="25" y="19" width="8" height="11" rx="3" transform="rotate(-22 25 19)" />
+        <rect x="37" y="29" width="8" height="11" rx="3" transform="rotate(-34 37 29)" />
+        <rect x="49" y="37" width="8" height="11" rx="3" transform="rotate(-12 49 37)" />
+        <rect x="63" y="37" width="8" height="11" rx="3" transform="rotate(12 63 37)" />
+        <rect x="75" y="29" width="8" height="11" rx="3" transform="rotate(34 75 29)" />
+        <rect x="87" y="19" width="8" height="11" rx="3" transform="rotate(22 87 19)" />
       </g>
     </svg>
   );
@@ -39,13 +44,13 @@ function RemovableProsthesisIcon({ className }: LineIconProps) {
 
 function ThermoformedAlignerIcon({ className }: LineIconProps) {
   return (
-    <svg viewBox="0 0 96 68" fill="none" aria-hidden="true" className={className}>
-      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55">
-        <path d="M15 43c2-17 15-31 33-33 18 2 31 16 33 33-9 10-20 15-33 16-13-1-24-6-33-16Z" />
-        <path d="M22 41c4-13 13-22 26-25 13 3 22 12 26 25-7 7-15 10-26 11-11-1-19-4-26-11Z" />
-        <path d="M19 36c8 3 17 4 29 4s21-1 29-4" />
-        <path d="m29 24 4 12m8-17 2 17m10-17-2 17m10-12-4 12" />
-        <path d="M30 47c6 3 12 5 18 5s12-2 18-5" />
+    <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
+      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
+        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
+        <path d="M23 13c2 22 15 39 37 49 22-10 35-27 37-49" />
+        <path d="M29 16c3 18 13 31 31 40 18-9 28-22 31-40" />
+        <path d="M27 20c6 3 12 5 18 6m-6 10c6 2 12 4 18 4m6 0c6 0 12-2 18-4m6-10c6-1 12-3 18-6" />
+        <path d="M22 22c7 4 15 7 23 8m30 0c8-1 16-4 23-8" />
       </g>
     </svg>
   );
@@ -53,17 +58,17 @@ function ThermoformedAlignerIcon({ className }: LineIconProps) {
 
 function OrthodonticApplianceIcon({ className }: LineIconProps) {
   return (
-    <svg viewBox="0 0 96 68" fill="none" aria-hidden="true" className={className}>
-      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55">
-        <path d="M12 15c5 4 8 13 12 23 5 11 13 18 24 21 11-3 19-10 24-21 4-10 7-19 12-23" />
-        <path d="M15 20c10 4 19 6 33 6s23-2 33-6" />
-        <path d="M20 28c8 3 17 5 28 5s20-2 28-5" />
-        <rect x="19" y="24" width="7" height="9" rx="1.2" />
-        <rect x="31" y="28" width="7" height="9" rx="1.2" />
-        <rect x="44.5" y="29" width="7" height="9" rx="1.2" />
-        <rect x="58" y="28" width="7" height="9" rx="1.2" />
-        <rect x="70" y="24" width="7" height="9" rx="1.2" />
-        <path d="M16 22c9 6 20 10 32 10s23-4 32-10" />
+    <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
+      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
+        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
+        <path d="M24 15c3 18 14 33 36 43 22-10 33-25 36-43" />
+        <path d="M21 23c11 8 24 12 39 12s28-4 39-12" />
+        <path d="M24 26c11 8 23 12 36 12s25-4 36-12" />
+        <rect x="22" y="21" width="9" height="10" rx="1.5" transform="rotate(-18 22 21)" />
+        <rect x="37" y="28" width="9" height="10" rx="1.5" transform="rotate(-10 37 28)" />
+        <rect x="55.5" y="30" width="9" height="10" rx="1.5" />
+        <rect x="74" y="28" width="9" height="10" rx="1.5" transform="rotate(10 74 28)" />
+        <rect x="89" y="21" width="9" height="10" rx="1.5" transform="rotate(18 89 21)" />
       </g>
     </svg>
   );
