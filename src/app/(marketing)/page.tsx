@@ -28,15 +28,17 @@ function RemovableProsthesisIcon({ className }: LineIconProps) {
   return (
     <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
       <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
-        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
-        <path d="M26 15c3 18 14 33 34 43 20-10 31-25 34-43" />
-        <path d="M27 18c5 4 10 6 15 7m-6 8c5 3 10 5 15 6m3 2c4 1 8 1 12 0m7-2c5-1 10-3 15-6m-6-8c5-1 10-3 15-7" />
-        <rect x="25" y="19" width="8" height="11" rx="3" transform="rotate(-22 25 19)" />
-        <rect x="37" y="29" width="8" height="11" rx="3" transform="rotate(-34 37 29)" />
-        <rect x="49" y="37" width="8" height="11" rx="3" transform="rotate(-12 49 37)" />
-        <rect x="63" y="37" width="8" height="11" rx="3" transform="rotate(12 63 37)" />
-        <rect x="75" y="29" width="8" height="11" rx="3" transform="rotate(34 75 29)" />
-        <rect x="87" y="19" width="8" height="11" rx="3" transform="rotate(22 87 19)" />
+        <path d="M12 12c6 29 23 49 48 57 25-8 42-28 48-57" />
+        <path d="M20 15c6 24 20 39 40 46 20-7 34-22 40-46" />
+        <ellipse cx="22" cy="22" rx="4" ry="6" transform="rotate(-24 22 22)" />
+        <ellipse cx="29" cy="36" rx="4.2" ry="6" transform="rotate(-30 29 36)" />
+        <ellipse cx="39" cy="48" rx="4.2" ry="5.7" transform="rotate(-24 39 48)" />
+        <ellipse cx="50" cy="56" rx="4.1" ry="5.4" transform="rotate(-12 50 56)" />
+        <ellipse cx="60" cy="59" rx="4.2" ry="5.5" />
+        <ellipse cx="70" cy="56" rx="4.1" ry="5.4" transform="rotate(12 70 56)" />
+        <ellipse cx="81" cy="48" rx="4.2" ry="5.7" transform="rotate(24 81 48)" />
+        <ellipse cx="91" cy="36" rx="4.2" ry="6" transform="rotate(30 91 36)" />
+        <ellipse cx="98" cy="22" rx="4" ry="6" transform="rotate(24 98 22)" />
       </g>
     </svg>
   );
@@ -46,11 +48,11 @@ function ThermoformedAlignerIcon({ className }: LineIconProps) {
   return (
     <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
       <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
-        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
-        <path d="M23 13c2 22 15 39 37 49 22-10 35-27 37-49" />
-        <path d="M29 16c3 18 13 31 31 40 18-9 28-22 31-40" />
-        <path d="M27 20c6 3 12 5 18 6m-6 10c6 2 12 4 18 4m6 0c6 0 12-2 18-4m6-10c6-1 12-3 18-6" />
-        <path d="M22 22c7 4 15 7 23 8m30 0c8-1 16-4 23-8" />
+        <path d="M12 12c6 29 23 49 48 57 25-8 42-28 48-57" />
+        <path d="M18 13c5 26 20 43 42 51 22-8 37-25 42-51" />
+        <path d="M24 16c5 21 17 35 36 42 19-7 31-21 36-42" />
+        <path d="M19 22c12 8 26 12 41 12s29-4 41-12" />
+        <path d="M25 25c10 7 22 10 35 10s25-3 35-10" />
       </g>
     </svg>
   );
@@ -60,15 +62,16 @@ function OrthodonticApplianceIcon({ className }: LineIconProps) {
   return (
     <svg viewBox="0 0 120 80" fill="none" aria-hidden="true" className={className}>
       <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
-        <path d="M17 13c2 22 17 43 43 55 26-12 41-33 43-55" />
-        <path d="M24 15c3 18 14 33 36 43 22-10 33-25 36-43" />
-        <path d="M21 23c11 8 24 12 39 12s28-4 39-12" />
-        <path d="M24 26c11 8 23 12 36 12s25-4 36-12" />
-        <rect x="22" y="21" width="9" height="10" rx="1.5" transform="rotate(-18 22 21)" />
-        <rect x="37" y="28" width="9" height="10" rx="1.5" transform="rotate(-10 37 28)" />
-        <rect x="55.5" y="30" width="9" height="10" rx="1.5" />
-        <rect x="74" y="28" width="9" height="10" rx="1.5" transform="rotate(10 74 28)" />
-        <rect x="89" y="21" width="9" height="10" rx="1.5" transform="rotate(18 89 21)" />
+        <path d="M12 12c6 29 23 49 48 57 25-8 42-28 48-57" />
+        <path d="M20 15c6 24 20 39 40 46 20-7 34-22 40-46" />
+        <path d="M20 23c12 8 26 12 40 12s28-4 40-12" />
+        <path d="M23 26c12 8 24 12 37 12s25-4 37-12" />
+        <rect x="20" y="20" width="8" height="9" rx="1" transform="rotate(-22 20 20)" />
+        <rect x="34" y="28" width="8" height="9" rx="1" transform="rotate(-13 34 28)" />
+        <rect x="48" y="32" width="8" height="9" rx="1" transform="rotate(-5 48 32)" />
+        <rect x="64" y="32" width="8" height="9" rx="1" transform="rotate(5 64 32)" />
+        <rect x="78" y="28" width="8" height="9" rx="1" transform="rotate(13 78 28)" />
+        <rect x="92" y="20" width="8" height="9" rx="1" transform="rotate(22 92 20)" />
       </g>
     </svg>
   );
@@ -80,21 +83,21 @@ const services: Service[] = [
     title: "Prothèses amovibles",
     description:
       "Prothèses partielles et complètes, châssis métalliques. Confort optimal.",
-    color: "text-[#354f73]",
+    color: "bg-teal-50 text-teal-600",
   },
   {
     illustration: OrthodonticApplianceIcon,
     title: "Appareils orthodontiques",
     description:
       "Appareils orthodontiques sur mesure, plaques de Hawley et appareils de contention amovibles.",
-    color: "text-[#354f73]",
+    color: "bg-violet-50 text-violet-600",
   },
   {
     illustration: ThermoformedAlignerIcon,
     title: "Gouttières thermoformées",
     description:
       "Contention, bruxisme, blanchiment et protections sportives.",
-    color: "text-[#354f73]",
+    color: "bg-sky-50 text-sky-600",
   },
   {
     icon: Upload,
@@ -262,12 +265,10 @@ export default function HomePage() {
               >
                 <CardContent className="p-6">
                   <div
-                    className={service.illustration
-                      ? `mb-4 inline-flex h-14 w-24 items-center justify-center ${service.color} transition-transform duration-300 group-hover:scale-105`
-                      : `mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${service.color} transition-transform duration-300 group-hover:scale-110`}
+                    className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${service.color} transition-transform duration-300 group-hover:scale-110`}
                   >
                     {service.illustration ? (
-                      <service.illustration className="h-full w-full" />
+                      <service.illustration className="h-8 w-8" />
                     ) : service.icon ? (
                       <service.icon className="h-6 w-6" />
                     ) : null}
