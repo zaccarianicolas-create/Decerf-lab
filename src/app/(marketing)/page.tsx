@@ -121,8 +121,8 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative min-h-[560px] overflow-hidden bg-slate-950 sm:min-h-[600px] lg:min-h-[min(72vh,660px)]">
         <Image
-          src="/images/hero-lab-v2.jpg"
-          alt="Modèle dentaire en cours de scan numérique au laboratoire"
+          src="/images/bann site.png"
+          alt="Prothésiste ajustant un modèle dentaire sur articulateur"
           fill
           className="object-cover object-[68%_center]"
           priority
