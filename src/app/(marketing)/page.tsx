@@ -136,8 +136,9 @@ export default function HomePage() {
               <span className="text-teal-200">Un suivi sans détour.</span>
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-white sm:text-lg">
-              Prothèses dentaires et appareils orthodontiques réalisés sur prescription.
-              Échangez directement avec le laboratoire et suivez chaque travail en ligne.
+              Prothèses dentaires et appareils orthodontiques sur mesure, réalisés
+              rapidement et avec précision. Une réparation urgente ? Contactez
+              directement le laboratoire pour trouver la meilleure solution.
             </p>
             <div className="mt-7 flex flex-col items-start gap-3 sm:flex-row">
               <Link href="/register">
