@@ -373,7 +373,7 @@ export function MessengerAdmin({
           </div>
         </aside>
 
-        <section className={`min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
+        <section className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
           {!activeConv ? (
             <div className="flex flex-1 flex-col items-center justify-center text-gray-400">
               <MessageSquare className="h-16 w-16" />

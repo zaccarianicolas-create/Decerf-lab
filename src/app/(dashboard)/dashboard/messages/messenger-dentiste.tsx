@@ -251,7 +251,7 @@ export function MessengerDentiste({
             })()
           ))}
         </aside>
-        <section className={`min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
+        <section className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
           {active && (
             <>
               <div className="flex min-h-12 items-center gap-2 border-b border-gray-200 px-3">

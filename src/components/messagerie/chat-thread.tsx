@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import {
   Send,
+  Camera,
   Paperclip,
   Smile,
   Reply,
@@ -88,6 +89,8 @@ export function ChatThread({
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -235,6 +238,13 @@ export function ChatThread({
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const onCameraPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadAttachment(file);
+    if (cameraRef.current) cameraRef.current.value = "";
+  };
+
   const uploadAttachment = async (file: File) => {
     setUploadError(null);
     if (file.size > 100 * 1024 * 1024) {
@@ -365,6 +375,19 @@ export function ChatThread({
     setReactionTargetId(null);
   };
 
+  const insertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? input.length;
+    const end = textarea?.selectionEnd ?? input.length;
+    const nextInput = `${input.slice(0, start)}${emoji}${input.slice(end)}`;
+    setInput(nextInput);
+    setShowEmoji(false);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  };
+
   const reactionsByMsg = useMemo(() => {
     const map: Record<string, Record<string, string[]>> = {};
     for (const r of reactions) {
@@ -389,8 +412,8 @@ export function ChatThread({
   };
 
   return (
-    <div className="flex h-full min-h-[400px] flex-col">
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
         {loading ? (
           <div className="flex h-full items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
@@ -605,7 +628,7 @@ export function ChatThread({
       </div>
 
       {!readOnly && (
-        <div className="border-t border-gray-200 bg-white p-3">
+        <div className="relative z-20 flex-shrink-0 border-t border-gray-200 bg-white p-3">
             {messageError && <p role="alert" className="mb-2 text-xs text-red-600">{messageError}</p>}
           {(replyTo || editing) && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-gray-50 px-2 py-1 text-xs">
@@ -641,7 +664,8 @@ export function ChatThread({
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
               className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
-              title="Pièce jointe"
+              aria-label="Joindre un fichier"
+              title="Joindre un fichier"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -651,6 +675,24 @@ export function ChatThread({
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
               hidden
               onChange={onFile}
+            />
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              disabled={uploading}
+              aria-label="Prendre une photo"
+              title="Prendre une photo"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={onCameraPhoto}
             />
 
             <button
@@ -666,6 +708,7 @@ export function ChatThread({
 
             <div className="relative flex-1">
               <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -683,22 +726,21 @@ export function ChatThread({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowEmoji(!showEmoji)}
+                onClick={() => setShowEmoji((visible) => !visible)}
+                aria-label="Choisir un emoji"
                 className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
                 title="Emoji"
               >
                 <Smile className="h-4 w-4" />
               </button>
               {showEmoji && (
-                <div className="absolute bottom-full right-0 mb-2 grid grid-cols-8 gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+                <div className="absolute bottom-full right-0 z-30 mb-2 grid max-h-44 w-64 max-w-[calc(100vw-32px)] grid-cols-6 gap-1 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
                   {EMOJI_PALETTE.map((e) => (
                     <button
                       key={e}
                       type="button"
-                      onClick={() => {
-                        setInput((prev) => prev + e);
-                        setShowEmoji(false);
-                      }}
+                      onClick={() => insertEmoji(e)}
+                      aria-label={`Insérer ${e}`}
                       className="rounded p-1 text-base hover:bg-gray-100"
                     >
                       {e}
