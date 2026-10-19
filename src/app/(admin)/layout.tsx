@@ -1,18 +1,9 @@
-import { AdminSidebar } from "@/components/layout/admin-sidebar";
-import { ChatFab } from "@/components/messagerie/chat-fab";
+import { WorkspaceLayoutShell } from "@/components/layout/workspace-layout-shell";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminSidebar />
-      <main className="pt-14 lg:pl-64 lg:pt-0">
-        <div className="px-4 py-8 sm:px-6 lg:px-8">{children}</div>
-      </main>
-      <ChatFab href="/admin/messages" />
-    </div>
-  );
+  return <WorkspaceLayoutShell workspace="admin">{children}</WorkspaceLayoutShell>;
 }

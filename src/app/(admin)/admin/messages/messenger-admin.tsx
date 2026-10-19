@@ -183,9 +183,12 @@ export function MessengerAdmin({
                 />
               </div>
               <button
+                type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
+                disabled={creating}
+                aria-label="Nouvelle conversation"
                 title="Nouvelle conversation"
+                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -201,6 +204,7 @@ export function MessengerAdmin({
                     <button
                       key={d.id}
                       onClick={() => createConv(d.id)}
+                      disabled={creating}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
                     >
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-xs font-medium text-sky-700">
@@ -216,6 +220,7 @@ export function MessengerAdmin({
                     </button>
                   ))
                 )}
+                {createError && <p role="alert" className="p-3 text-xs text-red-600">{createError}</p>}
               </div>
             )}
           </div>
@@ -224,8 +229,17 @@ export function MessengerAdmin({
             <MessageSquare className="h-12 w-12 text-gray-300" />
             <p className="mt-3 text-base font-medium text-gray-700">Aucune conversation</p>
             <p className="mt-1 text-sm">
-              Cliquez sur + pour démarrer un nouvel échange avec un praticien.
+              Choisissez un praticien pour démarrer un échange avec le laboratoire.
             </p>
+            <button
+              type="button"
+              onClick={() => setShowNew((visible) => !visible)}
+              disabled={creating}
+              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {showNew ? "Masquer les praticiens" : "Démarrer une conversation"}
+            </button>
           </div>
         </div>
       </Card>
@@ -260,10 +274,12 @@ export function MessengerAdmin({
                 />
               </div>
               <button
+                type="button"
                 onClick={() => setShowNew(!showNew)}
                 disabled={creating}
-                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
+                aria-label="Nouvelle conversation"
                 title="Nouvelle conversation"
+                className="rounded-lg bg-sky-600 p-2 text-white hover:bg-sky-700"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -361,7 +377,16 @@ export function MessengerAdmin({
           {!activeConv ? (
             <div className="flex flex-1 flex-col items-center justify-center text-gray-400">
               <MessageSquare className="h-16 w-16" />
-              <p className="mt-4 text-sm">Sélectionnez une conversation</p>
+              <p className="mt-4 text-sm">{conversations.length === 0 ? "Aucune conversation pour le moment." : "Sélectionnez une conversation"}</p>
+              {conversations.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowNew(true)}
+                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700"
+                >
+                  <Plus className="h-4 w-4" /> Nouvelle conversation
+                </button>
+              )}
             </div>
           ) : (
             <>

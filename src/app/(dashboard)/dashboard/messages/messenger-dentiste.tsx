@@ -169,17 +169,15 @@ export function MessengerDentiste({
           <p className="mt-4 text-sm text-gray-500">
             Aucune conversation pour le moment. Démarre un échange avec le laboratoire.
           </p>
-          {!isEmbed && (
-            <button
-              type="button"
-              onClick={createConversation}
-              disabled={creating}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              {creating ? "Création…" : "Nouvelle conversation"}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={createConversation}
+            disabled={creating}
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+            {creating ? "Création…" : "Démarrer une conversation"}
+          </button>
           {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
           </div>
         </div>
