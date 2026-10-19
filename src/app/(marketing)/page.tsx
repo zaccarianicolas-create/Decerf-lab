@@ -213,13 +213,19 @@ export default function HomePage() {
                     className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${service.color} transition-transform duration-300 group-hover:scale-110`}
                   >
                     {service.image ? (
-                      <Image
-                        src={service.image}
-                        alt=""
+                      <span
                         aria-hidden="true"
-                        width={360}
-                        height={360}
-                        className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
+                        className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 max-w-none -translate-x-1/2 -translate-y-1/2 bg-current"
+                        style={{
+                          maskImage: `url(${service.image})`,
+                          maskPosition: "center",
+                          maskRepeat: "no-repeat",
+                          maskSize: "contain",
+                          WebkitMaskImage: `url(${service.image})`,
+                          WebkitMaskPosition: "center",
+                          WebkitMaskRepeat: "no-repeat",
+                          WebkitMaskSize: "contain",
+                        }}
                       />
                     ) : service.icon ? (
                       <service.icon className="h-6 w-6" />
