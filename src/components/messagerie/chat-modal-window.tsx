@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { X, Minus } from "lucide-react";
+import { Grip, X, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface ChatModalProps {
@@ -27,6 +27,7 @@ export function ChatModalWindow({
     getServerMountSnapshot
   );
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [modalSize, setModalSize] = useState<{ width: number; height: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,6 +35,7 @@ export function ChatModalWindow({
   const [iframeFailed, setIframeFailed] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const supabase = useRef(createClient());
 
   const chatUrl = `${chatPath}${chatPath.includes("?") ? "&" : "?"}embed=1`;
@@ -69,6 +71,41 @@ export function ChatModalWindow({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     });
+  };
+
+  const handleResizeStart = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = modalRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (!position) setPosition({ x: rect.left, y: rect.top });
+    resizeStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      width: rect.width,
+      height: rect.height,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleResizeMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = resizeStartRef.current;
+    const rect = modalRef.current?.getBoundingClientRect();
+    if (!start || !rect) return;
+
+    const minWidth = Math.min(360, window.innerWidth - 16);
+    const minHeight = Math.min(420, window.innerHeight - 16);
+    const maxWidth = Math.max(minWidth, window.innerWidth - rect.left - 8);
+    const maxHeight = Math.max(minHeight, window.innerHeight - rect.top - 8);
+    setModalSize({
+      width: Math.max(minWidth, Math.min(maxWidth, start.width + event.clientX - start.x)),
+      height: Math.max(minHeight, Math.min(maxHeight, start.height + event.clientY - start.y)),
+    });
+  };
+
+  const handleResizeEnd = () => {
+    resizeStartRef.current = null;
   };
 
   // Mouse move - drag window
@@ -115,8 +152,10 @@ export function ChatModalWindow({
         left: position ? `${position.x}px` : "50%",
         top: position ? `${position.y}px` : "50%",
         zIndex: 9999,
-        width: "min(920px, calc(100vw - 24px))",
-        height: "min(760px, calc(100vh - 24px))",
+        width: modalSize ? `${modalSize.width}px` : "min(920px, calc(100vw - 24px))",
+        height: modalSize ? `${modalSize.height}px` : "min(760px, calc(100vh - 24px))",
+        minWidth: "min(360px, calc(100vw - 16px))",
+        minHeight: "min(420px, calc(100vh - 16px))",
         maxWidth: "calc(100vw - 16px)",
         maxHeight: "calc(100vh - 16px)",
         opacity: isOpen ? 1 : 0,
@@ -128,7 +167,7 @@ export function ChatModalWindow({
         transition: "opacity 120ms ease, transform 120ms ease",
       }}
       aria-hidden={!isOpen}
-      className="pointer-events-auto flex flex-col rounded-lg border border-gray-200 bg-white shadow-2xl"
+      className="pointer-events-auto flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-2xl"
     >
       {/* Header - Draggable */}
       <div
@@ -231,6 +270,18 @@ export function ChatModalWindow({
           </div>
         )}
       </div>
+      <button
+        type="button"
+        onPointerDown={handleResizeStart}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeEnd}
+        onPointerCancel={handleResizeEnd}
+        aria-label="Redimensionner la fenêtre"
+        title="Redimensionner"
+        className="absolute bottom-1 right-1 z-30 flex h-6 w-6 touch-none cursor-nwse-resize items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+      >
+        <Grip className="h-4 w-4" />
+      </button>
     </div>
   );
 }
