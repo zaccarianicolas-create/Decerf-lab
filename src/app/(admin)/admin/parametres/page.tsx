@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ParametresForm } from "./parametres-form";
 import { BrandingPanel } from "./branding-panel";
+import { PartenairesPanel, type Partenaire } from "./partenaires-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,11 @@ export default async function AdminParametresPage() {
     .select("*")
     .limit(1)
     .maybeSingle();
+  const { data: partenaires } = await admin
+    .from("partenaires")
+    .select("id, slug, nom, logo_path, site_url, ordre, actif")
+    .order("ordre", { ascending: true })
+    .order("nom", { ascending: true });
 
   return (
     <div>
@@ -62,6 +68,8 @@ export default async function AdminParametresPage() {
         <h2 className="mb-4 text-xl font-bold text-gray-900">Branding & identité labo</h2>
         <BrandingPanel initial={parametres} />
       </div>
+
+      <PartenairesPanel initial={(partenaires ?? []) as Partenaire[]} />
     </div>
   );
 }

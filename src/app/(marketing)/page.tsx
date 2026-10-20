@@ -2,17 +2,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PartnersBand } from "@/components/partners/partners-band";
 import {
   MessageSquare,
   Upload,
   CreditCard,
   ArrowRight,
   CheckCircle2,
-  Quote,
   Microscope,
   Clock,
   Award,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 type Service = {
   icon?: typeof Upload;
@@ -91,27 +93,6 @@ const steps = [
     title: "Réception",
     description: "Recevez vos prothèses avec contrôle qualité rigoureux.",
     icon: CheckCircle2,
-  },
-];
-
-const testimonials = [
-  {
-    name: "Dr. Sophie Martin",
-    role: "Chirurgien-dentiste, Paris",
-    content:
-      "La qualité des prothèses est remarquable. Le flux numérique et le suivi en temps réel ont transformé ma collaboration avec le labo.",
-  },
-  {
-    name: "Dr. Pierre Durand",
-    role: "Orthodontiste, Lyon",
-    content:
-      "Les gouttières sont d'une précision exceptionnelle. L'espace en ligne me fait gagner un temps considérable sur chaque cas.",
-  },
-  {
-    name: "Dr. Claire Lefèvre",
-    role: "Chirurgien-dentiste, Marseille",
-    content:
-      "Enfin un labo qui communique vraiment. Le chat intégré et les notifications d'avancement, c'est exactement ce qu'il nous fallait.",
   },
 ];
 
@@ -426,52 +407,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
-              Témoignages
-            </p>
-            <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              La confiance de nos praticiens
-            </h2>
-          </div>
-
-          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <Card
-                key={testimonial.name}
-                className="border-0 bg-slate-50 shadow-none"
-              >
-                <CardContent className="p-6">
-                  <Quote className="mb-4 h-8 w-8 text-sky-200" />
-                  <p className="text-sm leading-relaxed text-slate-600">
-                    &ldquo;{testimonial.content}&rdquo;
-                  </p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600">
-                      {testimonial.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .slice(0, 2)}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        {testimonial.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {testimonial.role}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PartnersBand />
 
       {/* CTA */}
       <section id="contact" className="relative overflow-hidden bg-slate-900 py-16 sm:py-20">
