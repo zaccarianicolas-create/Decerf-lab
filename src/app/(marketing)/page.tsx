@@ -374,24 +374,51 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Image + stats */}
-            <div className="relative">
-              <div className="overflow-hidden rounded-2xl">
-                {/* Remplacer par : src="/images/julie-decerf.jpg" */}
-                <div className="flex aspect-[4/3] w-full items-center justify-center rounded-2xl bg-slate-200">
-                  <span className="text-sm text-slate-400">Photo de Julie Decerf</span>
-                </div>
-              </div>
-              <div className="absolute -bottom-8 left-4 right-4 grid grid-cols-2 gap-3 sm:left-8 sm:right-8">
-                <div className="rounded-xl border border-white/60 bg-white/90 p-4 text-center shadow-lg backdrop-blur-sm">
-                  <div className="text-2xl font-bold text-sky-600">6000+</div>
-                  <div className="text-xs text-slate-500">
-                    Prothèses réalisées
+            <div className="mx-auto w-full max-w-3xl">
+              <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-[minmax(0,1fr)_250px_minmax(0,1fr)] lg:gap-3">
+                <div className="hidden flex-col items-end gap-3 lg:flex">
+                  <div className="relative max-w-40 rounded-xl border border-sky-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-sky-700 shadow-sm lg:-translate-x-2 lg:-translate-y-12">
+                    Échanges directs avec la prothésiste
+                  </div>
+                  <div className="relative max-w-40 rounded-xl border border-violet-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-violet-700 shadow-sm lg:translate-x-2 lg:translate-y-8">
+                    Une collaboration en toute confiance
                   </div>
                 </div>
-                <div className="rounded-xl border border-white/60 bg-white/90 p-4 text-center shadow-lg backdrop-blur-sm">
-                  <div className="text-2xl font-bold text-teal-600">100%</div>
-                  <div className="text-xs text-slate-500">Digital workflow</div>
+                <figure className="relative mx-auto w-full max-w-[375px] lg:max-w-[250px]">
+                  <div className="relative mx-auto h-[460px] w-full max-w-[310px] sm:h-[560px] sm:max-w-[375px] lg:h-[500px] lg:max-w-[250px]">
+                    <Image
+                      src="/images/julie-decerf-portrait.png"
+                      alt="Julie Decerf, prothésiste dentaire chez DECERF LAB"
+                      fill
+                      sizes="(min-width: 1024px) 250px, 80vw"
+                      className="object-contain object-bottom"
+                    />
+                  </div>
+                  <figcaption className="mt-2 text-center text-sm font-medium text-slate-800">
+                    Julie Decerf <span className="font-normal text-slate-500">· Prothésiste dentaire</span>
+                  </figcaption>
+                </figure>
+                <div className="hidden flex-col items-start gap-3 lg:flex">
+                  <div className="relative max-w-40 rounded-xl border border-amber-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-amber-700 shadow-sm lg:translate-x-3 lg:translate-y-2">
+                    À l’écoute de vos préférences
+                  </div>
+                  <div className="relative max-w-40 rounded-xl border border-teal-100 bg-white/95 px-4 py-3 text-center text-sm font-medium leading-snug text-teal-700 shadow-sm lg:-translate-x-2 lg:translate-y-14">
+                    Réparation d’urgence
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap justify-center gap-2 lg:hidden">
+                <div className="max-w-full rounded-xl border border-sky-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-sky-700 shadow-sm">
+                  Échanges directs avec la prothésiste
+                </div>
+                <div className="max-w-full rounded-xl border border-violet-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-violet-700 shadow-sm">
+                  Une collaboration en toute confiance
+                </div>
+                <div className="max-w-full rounded-xl border border-amber-100 bg-white/95 px-3 py-3 text-center text-sm font-medium leading-snug text-amber-700 shadow-sm">
+                  À l’écoute de vos préférences
+                </div>
+                <div className="rounded-xl border border-teal-100 bg-white/95 px-4 py-3 text-center text-sm font-medium text-teal-700 shadow-sm">
+                  Réparation d’urgence
                 </div>
               </div>
             </div>
