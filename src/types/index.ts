@@ -80,6 +80,7 @@ export interface Profile {
   avatar_url: string | null;
   cabinet_id: string | null;
   numero_inami: string | null;
+  type_compte_client?: "dentiste_independant" | "clinique" | "laboratoire";
   numero_inami_verifie?: boolean;
   numero_inami_verifie_le?: string | null;
   numero_entreprise?: string | null;

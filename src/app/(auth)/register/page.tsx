@@ -22,7 +22,7 @@ const registerSchema = z
     numero_entreprise: z.string().trim().optional(),
     assujetti_tva: z.enum(["", "oui", "non"]),
     numero_tva: z.string().trim().optional(),
-    type_compte_client: z.enum(["dentiste_independant", "clinique"]),
+    type_compte_client: z.enum(["dentiste_independant", "clinique", "laboratoire"]),
     cabinet_nom: z.string().optional(),
     mode_travail_prefere: z.enum(["scan", "empreinte", "hybride"]),
     modele_scanner: z.string().optional(),
@@ -42,6 +42,7 @@ const registerSchema = z
     }
 
     if (
+      data.type_compte_client !== "laboratoire" &&
       data.mode_travail_prefere !== "empreinte" &&
       !data.modele_scanner?.trim()
     ) {
@@ -116,7 +117,7 @@ function RegisterForm() {
             assujetti_tva: boolean | null;
             numero_tva: string | null;
             cabinet_nom: string | null;
-            type_compte_client: "dentiste_independant" | "clinique";
+            type_compte_client: "dentiste_independant" | "clinique" | "laboratoire";
           };
           error?: string;
         };
@@ -177,9 +178,10 @@ function RegisterForm() {
             : "inscription_site",
           invitation_token: hasValidInvitation ? invitationToken : null,
           role: "dentiste",
-          mode_travail_prefere: data.mode_travail_prefere,
+          mode_travail_prefere:
+            data.type_compte_client === "laboratoire" ? null : data.mode_travail_prefere,
           modele_scanner:
-            data.mode_travail_prefere === "empreinte"
+            data.type_compte_client === "laboratoire" || data.mode_travail_prefere === "empreinte"
               ? null
               : data.modele_scanner?.trim() || null,
         },
@@ -250,7 +252,9 @@ function RegisterForm() {
         </p>
         <CardTitle className="mt-4 text-2xl">Créer un compte</CardTitle>
         <p className="text-sm text-gray-500">
-          Rejoignez DECERF LAB en tant que praticien
+          {typeCompte === "laboratoire"
+            ? "Ouvrez un compte professionnel pour vos travaux en sous-traitance"
+            : "Rejoignez DECERF LAB en tant que praticien"}
         </p>
       </CardHeader>
       <CardContent>
@@ -297,7 +301,7 @@ function RegisterForm() {
             <p className="mb-2 text-sm font-medium text-gray-700">
               Type de compte
             </p>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={() =>
@@ -322,6 +326,17 @@ function RegisterForm() {
               >
                 <span className="font-medium">Clinique</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setValue("type_compte_client", "laboratoire")}
+                className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                  typeCompte === "laboratoire"
+                    ? "border-sky-500 bg-sky-50 text-sky-700"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                }`}
+              >
+                <span className="font-medium">Laboratoire partenaire</span>
+              </button>
             </div>
           </div>
 
@@ -334,12 +349,12 @@ function RegisterForm() {
             {...register("telephone")}
           />
           <Input
-            label="Nom du cabinet (optionnel)"
-            placeholder="Cabinet dentaire du Parc"
+            label={`${typeCompte === "laboratoire" ? "Nom du laboratoire" : "Nom du cabinet"} (optionnel)`}
+            placeholder={typeCompte === "laboratoire" ? "Laboratoire partenaire" : "Cabinet dentaire du Parc"}
             error={errors.cabinet_nom?.message}
             {...register("cabinet_nom")}
           />
-          <div>
+          {typeCompte !== "laboratoire" && <div>
             <Input
               label="N° INAMI/RIZIV (facultatif)"
               placeholder="À renseigner si disponible"
@@ -348,7 +363,7 @@ function RegisterForm() {
             <p className="mt-1 text-xs text-gray-500">
               Non bloquant à l’inscription; le laboratoire pourra le vérifier ensuite.
             </p>
-          </div>
+          </div>}
           <Input
             label="N° d’entreprise (BCE/KBO, facultatif)"
             placeholder="0123.456.789"
@@ -381,7 +396,7 @@ function RegisterForm() {
             />
           )}
 
-          <div className="rounded-lg border border-gray-200 p-4">
+          {typeCompte !== "laboratoire" && <div className="rounded-lg border border-gray-200 p-4">
             <p className="mb-2 text-sm font-medium text-gray-700">
               Mode de travail préféré
             </p>
@@ -422,8 +437,9 @@ function RegisterForm() {
             </div>
             <input type="hidden" {...register("mode_travail_prefere")} />
           </div>
+          }
 
-          {modeTravail !== "empreinte" && (
+          {typeCompte !== "laboratoire" && modeTravail !== "empreinte" && (
             <Input
               label="Modèle de scanner"
               placeholder="ex: 3Shape TRIOS, iTero, Medit, Carestream"
@@ -432,7 +448,7 @@ function RegisterForm() {
             />
           )}
 
-          {modeTravail === "empreinte" && (
+          {typeCompte !== "laboratoire" && modeTravail === "empreinte" && (
             <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
               Pas de scanner ? Aucun souci. Le laboratoire accepte les empreintes
               et modèles en plâtre traditionnels.

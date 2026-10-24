@@ -15,7 +15,7 @@ type InvitationBody = {
   numero_entreprise?: string;
   assujetti_tva?: "oui" | "non" | "";
   numero_tva?: string;
-  type_compte_client?: "dentiste_independant" | "clinique";
+  type_compte_client?: "dentiste_independant" | "clinique" | "laboratoire";
 };
 
 async function requireAdmin() {

@@ -76,10 +76,14 @@ export async function POST(
         nom: old.nom,
         prenom: old.prenom,
         telephone: old.telephone,
+        numero_inami: old.numero_inami,
+        numero_entreprise: old.numero_entreprise,
+        assujetti_tva: old.assujetti_tva,
+        numero_tva: old.numero_tva,
         cabinet_id: old.cabinet_id,
         role_cible: "dentiste",
         onboarding_source: "conversion_sans_compte",
-        type_compte_client: "dentiste_independant",
+        type_compte_client: old.type_compte_client || "dentiste_independant",
         token,
         expire_at: expireAt,
         created_by: userId,
@@ -127,7 +131,12 @@ export async function POST(
       await admin.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { nom: old.nom, prenom: old.prenom, role: "dentiste" },
+        user_metadata: {
+          nom: old.nom,
+          prenom: old.prenom,
+          role: "dentiste",
+          type_compte_client: old.type_compte_client || "dentiste_independant",
+        },
       });
     if (authError || !authUser.user) {
       return NextResponse.json(

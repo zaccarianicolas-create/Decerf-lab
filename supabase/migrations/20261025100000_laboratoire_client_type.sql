@@ -1,0 +1,1 @@
+ALTER TYPE public.type_compte_client ADD VALUE IF NOT EXISTS 'laboratoire';

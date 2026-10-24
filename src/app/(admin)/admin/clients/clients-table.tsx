@@ -30,6 +30,7 @@ type Client = {
   numero_entreprise?: string | null;
   assujetti_tva?: boolean | null;
   numero_tva?: string | null;
+  type_compte_client?: "dentiste_independant" | "clinique" | "laboratoire";
   role: string;
   actif: boolean;
   statut_compte: "en_attente" | "approuve" | "rejete";
@@ -80,7 +81,8 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     numero_tva: "",
     type_compte_client: "dentiste_independant" as
       | "dentiste_independant"
-      | "clinique",
+      | "clinique"
+      | "laboratoire",
   });
   const [formData, setFormData] = useState({
     nom: "",
@@ -92,6 +94,10 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     numero_entreprise: "",
     assujetti_tva: "" as "" | "oui" | "non",
     numero_tva: "",
+    type_compte_client: "dentiste_independant" as
+      | "dentiste_independant"
+      | "clinique"
+      | "laboratoire",
     mode: "sans_compte" as "compte" | "invitation" | "sans_compte",
   });
 
@@ -326,13 +332,30 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   />
                 </div>
                 <Input
-                  label="Nom du cabinet"
-                  placeholder="Cabinet dentaire du centre"
+                  label={`Nom du ${formData.type_compte_client === "laboratoire" ? "laboratoire" : "cabinet"}`}
+                  placeholder={formData.type_compte_client === "laboratoire" ? "Laboratoire partenaire" : "Cabinet dentaire du centre"}
                   value={formData.cabinet_nom}
                   onChange={(e) =>
                     setFormData({ ...formData, cabinet_nom: e.target.value })
                   }
                 />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Type de compte client
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                    value={formData.type_compte_client}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      type_compte_client: e.target.value as "dentiste_independant" | "clinique" | "laboratoire",
+                    })}
+                  >
+                    <option value="dentiste_independant">Dentiste indépendant</option>
+                    <option value="clinique">Clinique</option>
+                    <option value="laboratoire">Laboratoire partenaire</option>
+                  </select>
+                </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input
                     label="N° INAMI/RIZIV (facultatif)"
@@ -513,8 +536,8 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                 </div>
 
                 <Input
-                  label="Nom de la clinique/cabinet"
-                  placeholder="Clinique dentaire du centre"
+                  label={`Nom du ${inviteFormData.type_compte_client === "laboratoire" ? "laboratoire" : "cabinet/clinique"}`}
+                  placeholder={inviteFormData.type_compte_client === "laboratoire" ? "Laboratoire partenaire" : "Clinique dentaire du centre"}
                   value={inviteFormData.cabinet_nom}
                   onChange={(e) =>
                     setInviteFormData({ ...inviteFormData, cabinet_nom: e.target.value })
@@ -569,7 +592,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   <p className="mb-2 text-sm font-medium text-gray-700">
                     Type de compte
                   </p>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <button
                       type="button"
                       onClick={() =>
@@ -601,6 +624,22 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                       }`}
                     >
                       <span className="font-medium">Clinique</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInviteFormData({
+                          ...inviteFormData,
+                          type_compte_client: "laboratoire",
+                        })
+                      }
+                      className={`flex-1 rounded-lg border-2 px-4 py-3 text-left text-sm transition-colors ${
+                        inviteFormData.type_compte_client === "laboratoire"
+                          ? "border-sky-500 bg-sky-50 text-sky-700"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium">Laboratoire partenaire</span>
                     </button>
                   </div>
                 </div>
@@ -675,7 +714,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                   >
                     <div>
                       <p className="font-medium text-gray-900">
-                        Dr {client.prenom} {client.nom}
+                        {client.type_compte_client === "laboratoire" ? "Laboratoire" : "Dr"} {client.prenom} {client.nom}
                       </p>
                       <p className="text-sm text-gray-500">{client.email}</p>
                       {client.telephone && (
@@ -764,7 +803,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                     {otherClients.map((client) => (
                       <tr key={client.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium">
-                          Dr {client.prenom} {client.nom}
+                          {client.type_compte_client === "laboratoire" ? "Laboratoire" : "Dr"} {client.prenom} {client.nom}
                         </td>
                         <td className="px-6 py-4 text-sm">{client.email}</td>
                         <td className="px-6 py-4 text-sm">

@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     numero_entreprise,
     assujetti_tva,
     numero_tva,
-    mode = "sans_compte",
     type_compte_client = "dentiste_independant",
+    mode = "sans_compte",
   } = body as {
     nom?: string;
     prenom?: string;
@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
     numero_entreprise?: string;
     assujetti_tva?: "oui" | "non" | "";
     numero_tva?: string;
+    type_compte_client?: "dentiste_independant" | "clinique" | "laboratoire";
     mode?: "compte" | "invitation" | "sans_compte";
-    type_compte_client?: "dentiste_independant" | "clinique";
   };
   const assujettiTva = assujetti_tva === "oui"
     ? true
@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
             nom,
             prenom,
             role: "dentiste",
+            type_compte_client,
             numero_inami: numero_inami?.trim() || null,
             numero_entreprise: numero_entreprise?.trim() || null,
             assujetti_tva: assujettiTva,
@@ -135,6 +136,7 @@ export async function POST(request: NextRequest) {
           numero_entreprise: numero_entreprise?.trim() || null,
           assujetti_tva: assujettiTva,
           numero_tva: numero_tva?.trim() || null,
+          type_compte_client,
           statut_compte: "approuve",
           actif: true,
           cabinet_id: cabinetId,
@@ -270,6 +272,7 @@ export async function POST(request: NextRequest) {
         numero_entreprise: numero_entreprise?.trim() || null,
         assujetti_tva: assujettiTva,
         numero_tva: numero_tva?.trim() || null,
+        type_compte_client,
         role: "dentiste",
         statut_compte: "approuve",
         actif: true,

@@ -47,6 +47,7 @@ type ClientDetailRecord = {
   numero_entreprise?: string | null;
   assujetti_tva?: boolean | null;
   numero_tva?: string | null;
+  type_compte_client?: "dentiste_independant" | "clinique" | "laboratoire";
   mode_travail_prefere: string | null;
   modele_scanner: string | null;
   statut_compte: string;
@@ -227,7 +228,7 @@ export function ClientDetail({
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">
-            Dr {client.prenom} {client.nom}
+            {client.type_compte_client === "laboratoire" ? "Laboratoire" : "Dr"} {client.prenom} {client.nom}
           </h1>
           <p className="text-sm text-gray-500">Fiche client détaillée</p>
         </div>
