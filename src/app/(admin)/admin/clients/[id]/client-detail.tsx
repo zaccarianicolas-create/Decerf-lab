@@ -34,32 +34,91 @@ const STATUT_LABELS: Record<string, { label: string; color: string }> = {
   annulee: { label: "Annulée", color: "border-red-200 bg-red-50 text-red-700" },
 };
 
+type ClientDetailRecord = {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string | null;
+  telephone: string | null;
+  numero_inami: string | null;
+  numero_inami_verifie?: boolean;
+  numero_inami_verifie_le?: string | null;
+  numero_inami_verifie_par?: string | null;
+  numero_entreprise?: string | null;
+  assujetti_tva?: boolean | null;
+  numero_tva?: string | null;
+  mode_travail_prefere: string | null;
+  modele_scanner: string | null;
+  statut_compte: string;
+  actif: boolean;
+  created_at: string;
+  cabinet: { nom: string } | null;
+};
+
+type PatientRow = {
+  id: string;
+  reference: string;
+  prenom: string;
+  nom: string;
+  date_naissance: string | null;
+  sexe: string | null;
+};
+
+type CommandeItemRow = { type_travail: string | null };
+
+type CommandeRow = {
+  id: string;
+  statut: string;
+  numero: string;
+  patient: { prenom: string; nom: string } | null;
+  patient_ref: string | null;
+  items: CommandeItemRow[] | null;
+  priorite: string;
+  created_at: string;
+};
+
 export function ClientDetail({
   client: initialClient,
   patients,
   commandes,
 }: {
-  client: any;
-  patients: any[];
-  commandes: any[];
+  client: ClientDetailRecord;
+  patients: PatientRow[];
+  commandes: CommandeRow[];
 }) {
   const supabase = createClient();
   const [client, setClient] = useState(initialClient);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [verifyingInami, setVerifyingInami] = useState(false);
   const [form, setForm] = useState({
     nom: client.nom,
     prenom: client.prenom,
     telephone: client.telephone || "",
     numero_inami: client.numero_inami || "",
+    numero_entreprise: client.numero_entreprise || "",
+    assujetti_tva: client.assujetti_tva === true ? "oui" : client.assujetti_tva === false ? "non" : "",
+    numero_tva: client.numero_tva || "",
     mode_travail_prefere: client.mode_travail_prefere || "",
     modele_scanner: client.modele_scanner || "",
   });
 
   const handleSave = async () => {
     setSaving(true);
+    setStatusNotice(null);
+    if (form.assujetti_tva === "oui" && !form.numero_tva.trim()) {
+      setStatusNotice("Le numéro TVA est requis quand le client se déclare assujetti.");
+      setSaving(false);
+      return;
+    }
     const payload = {
       ...form,
+      assujetti_tva:
+        form.assujetti_tva === "" ? null : form.assujetti_tva === "oui",
+      numero_tva: form.numero_tva.trim() || null,
+      numero_entreprise: form.numero_entreprise.trim() || null,
+      numero_inami: form.numero_inami.trim() || null,
       mode_travail_prefere:
         form.mode_travail_prefere === "" ? null : form.mode_travail_prefere,
       modele_scanner:
@@ -73,7 +132,18 @@ export function ClientDetail({
       .eq("id", client.id);
 
     if (!error) {
-      setClient({ ...client, ...payload });
+      const numeroInamiChanged = payload.numero_inami !== (client.numero_inami || "");
+      setClient({
+        ...client,
+        ...payload,
+        ...(numeroInamiChanged
+          ? {
+              numero_inami_verifie: false,
+              numero_inami_verifie_le: null,
+              numero_inami_verifie_par: null,
+            }
+          : {}),
+      });
       setEditing(false);
     }
     setSaving(false);
@@ -81,13 +151,60 @@ export function ClientDetail({
 
   const toggleStatut = async () => {
     const newStatut = client.statut_compte === "approuve" ? "rejete" : "approuve";
-    const { error } = await supabase
-      .from("profiles")
-      .update({ statut_compte: newStatut, actif: newStatut === "approuve" })
-      .eq("id", client.id);
-
-    if (!error) {
+    setStatusNotice(null);
+    try {
+      const response = await fetch(`/api/admin/clients/${client.id}/statut`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: newStatut }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        email_sent?: boolean | null;
+        email_error?: string | null;
+      };
+      if (!response.ok) {
+        setStatusNotice(result.error || "Impossible de modifier le statut.");
+        return;
+      }
       setClient({ ...client, statut_compte: newStatut, actif: newStatut === "approuve" });
+      setStatusNotice(
+        newStatut === "approuve" && result.email_sent === false
+          ? `Compte approuvé, mais e-mail non envoyé : ${result.email_error || "notification à transmettre manuellement"}.`
+          : newStatut === "approuve"
+            ? "Compte approuvé et e-mail envoyé."
+            : "Compte refusé."
+      );
+    } catch {
+      setStatusNotice("Erreur réseau pendant la mise à jour du compte.");
+    }
+  };
+
+  const verifyInami = async () => {
+    setVerifyingInami(true);
+    setStatusNotice(null);
+    try {
+      const response = await fetch(`/api/admin/clients/${client.id}/inami-verification`, {
+        method: "PATCH",
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        numero_inami_verifie_le?: string;
+      };
+      if (!response.ok) {
+        setStatusNotice(result.error || "Impossible de vérifier le numéro INAMI.");
+        return;
+      }
+      setClient({
+        ...client,
+        numero_inami_verifie: true,
+        numero_inami_verifie_le: result.numero_inami_verifie_le,
+      });
+      setStatusNotice("INAMI marqué comme vérifié par le laboratoire.");
+    } catch {
+      setStatusNotice("Erreur réseau pendant la vérification INAMI.");
+    } finally {
+      setVerifyingInami(false);
     }
   };
 
@@ -137,6 +254,11 @@ export function ClientDetail({
           </Button>
         </div>
       </div>
+      {statusNotice && (
+        <p className="rounded-lg bg-sky-50 p-3 text-sm text-sky-800" role="status">
+          {statusNotice}
+        </p>
+      )}
 
       {/* Stats cards */}
       <div className="grid grid-cols-4 gap-4">
@@ -203,6 +325,9 @@ export function ClientDetail({
                         prenom: client.prenom,
                         telephone: client.telephone || "",
                         numero_inami: client.numero_inami || "",
+                        numero_entreprise: client.numero_entreprise || "",
+                        assujetti_tva: client.assujetti_tva === true ? "oui" : client.assujetti_tva === false ? "non" : "",
+                        numero_tva: client.numero_tva || "",
                         mode_travail_prefere: client.mode_travail_prefere || "",
                         modele_scanner: client.modele_scanner || "",
                       });
@@ -239,6 +364,38 @@ export function ClientDetail({
                     setForm({ ...form, numero_inami: e.target.value })
                   }
                 />
+                <Input
+                  label="N° d’entreprise (BCE/KBO)"
+                  value={form.numero_entreprise}
+                  onChange={(e) =>
+                    setForm({ ...form, numero_entreprise: e.target.value })
+                  }
+                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Assujetti à la TVA ?
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    value={form.assujetti_tva}
+                    onChange={(e) =>
+                      setForm({ ...form, assujetti_tva: e.target.value })
+                    }
+                  >
+                    <option value="">À préciser</option>
+                    <option value="oui">Oui</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+                {form.assujetti_tva === "oui" && (
+                  <Input
+                    label="N° TVA"
+                    value={form.numero_tva}
+                    onChange={(e) =>
+                      setForm({ ...form, numero_tva: e.target.value })
+                    }
+                  />
+                )}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
                     Mode de travail préféré
@@ -276,7 +433,39 @@ export function ClientDetail({
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-gray-400" />
-                  <span>INAMI : {client.numero_inami || "Non renseigné"}</span>
+                  <span>
+                    INAMI : {client.numero_inami || "Non renseigné (non bloquant)"}
+                    {client.numero_inami && !client.numero_inami_verifie
+                      ? " · À vérifier"
+                      : client.numero_inami_verifie_le
+                        ? ` · Vérifié le ${new Date(client.numero_inami_verifie_le).toLocaleDateString("fr-FR")}`
+                        : ""}
+                  </span>
+                  {client.numero_inami && !client.numero_inami_verifie && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={verifyInami}
+                      disabled={verifyingInami}
+                      className="ml-2"
+                    >
+                      {verifyingInami ? "Vérification..." : "Confirmer la vérification manuelle"}
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-gray-400" />
+                  <span>N° entreprise BCE : {client.numero_entreprise || "Non renseigné"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Shield className="h-4 w-4 text-gray-400" />
+                  <span>
+                    TVA : {client.assujetti_tva === true
+                      ? `Assujetti · ${client.numero_tva || "N° à vérifier"}`
+                      : client.assujetti_tva === false
+                        ? "Non assujetti"
+                        : "À préciser"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-gray-400" />
@@ -401,9 +590,7 @@ export function ClientDetail({
                         </td>
                         <td className="py-2 pr-4 text-gray-500">
                           {c.items
-                            ?.map((i: any) =>
-                              i.type_travail?.replace(/_/g, " ")
-                            )
+                            ?.map((i) => i.type_travail?.replace(/_/g, " "))
                             .join(", ") || "—"}
                         </td>
                         <td className="py-2 pr-4">

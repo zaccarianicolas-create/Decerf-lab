@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, Save } from "lucide-react";
 
-type Params = Record<string, any>;
+type ParamValue = string | number | boolean | null | undefined;
+type Params = Record<string, ParamValue>;
 
 export function BrandingPanel({ initial }: { initial: Params | null }) {
   const supabase = createClient();
@@ -17,11 +18,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
   const logoInput = useRef<HTMLInputElement>(null);
   const sigInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (initial) setForm(initial);
-  }, [initial]);
-
-  const setField = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+  const setField = (k: string, v: ParamValue) => setForm((p) => ({ ...p, [k]: v }));
 
   const upload = async (file: File, kind: "logo" | "signature") => {
     const path = `${kind}/${Date.now()}-${file.name}`;
@@ -57,6 +54,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
         title: "Identité",
         fields: [
           { k: "nom_labo", label: "Nom du laboratoire" },
+          { k: "numero_entreprise", label: "N° d’entreprise (BCE/KBO)" },
           { k: "tva_numero", label: "N° TVA" },
           { k: "numero_agrement", label: "N° d'agrément" },
           { k: "site_web", label: "Site web" },
@@ -111,7 +109,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {(["logo", "signature"] as const).map((k) => {
-            const url = form[k === "logo" ? "logo_url" : "signature_url"];
+            const url = String(form[k === "logo" ? "logo_url" : "signature_url"] ?? "");
             const ref = k === "logo" ? logoInput : sigInput;
             return (
               <div key={k} className="space-y-2">
@@ -151,12 +149,12 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
             <div className="flex items-center gap-3">
               <input
                 type="color"
-                value={form.couleur_primaire || "#0284c7"}
+                value={String(form.couleur_primaire || "#0284c7")}
                 onChange={(e) => setField("couleur_primaire", e.target.value)}
                 className="h-10 w-16 cursor-pointer rounded border border-gray-200"
               />
               <Input
-                value={form.couleur_primaire || ""}
+                value={String(form.couleur_primaire || "")}
                 onChange={(e) => setField("couleur_primaire", e.target.value)}
                 className="flex-1"
               />
@@ -177,7 +175,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
                   <Input
                     label={f.label}
                     type={f.type || "text"}
-                    value={form[f.k] ?? ""}
+                    value={String(form[f.k] ?? "")}
                     onChange={(e) => setField(f.k, e.target.value)}
                   />
                 </div>
@@ -186,6 +184,56 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           </CardContent>
         </Card>
       ))}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Régime de TVA du laboratoire</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label htmlFor="regime_tva" className="mb-1 block text-sm font-medium text-gray-700">
+              Régime TVA
+            </label>
+            <select
+              id="regime_tva"
+              value={String(form.regime_tva ?? "franchise")}
+              onChange={(e) => setField("regime_tva", e.target.value)}
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+            >
+              <option value="franchise">Franchise de TVA</option>
+              <option value="normal">Régime normal</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              En franchise, les lignes sont émises sans TVA et identifiées comme exonérées. Vérifiez le régime et la mention avec votre comptable.
+            </p>
+          </div>
+          {form.regime_tva === "normal" && (
+            <Input
+              label="Taux TVA de repli (%)"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={Number(form.taux_tva_defaut ?? 21)}
+              onChange={(e) => setField("taux_tva_defaut", Number(e.target.value))}
+            />
+          )}
+          {form.regime_tva !== "normal" && (
+            <div>
+              <label htmlFor="mention_franchise_tva" className="mb-1 block text-sm font-medium text-gray-700">
+                Mention de franchise portée sur les factures
+              </label>
+              <textarea
+                id="mention_franchise_tva"
+                value={String(form.mention_franchise_tva ?? "Régime particulier de franchise des petites entreprises")}
+                onChange={(e) => setField("mention_franchise_tva", e.target.value)}
+                rows={2}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -203,7 +251,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
                 {label}
               </label>
               <textarea
-                value={form[k] ?? ""}
+                value={String(form[k] ?? "")}
                 onChange={(e) => setField(k, e.target.value)}
                 rows={3}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"

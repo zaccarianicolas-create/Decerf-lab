@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
     email,
     telephone,
     cabinet_nom,
+    numero_inami,
+    numero_entreprise,
+    assujetti_tva,
+    numero_tva,
     mode = "sans_compte",
     type_compte_client = "dentiste_independant",
   } = body as {
@@ -50,9 +54,18 @@ export async function POST(request: NextRequest) {
     email?: string;
     telephone?: string;
     cabinet_nom?: string;
+    numero_inami?: string;
+    numero_entreprise?: string;
+    assujetti_tva?: "oui" | "non" | "";
+    numero_tva?: string;
     mode?: "compte" | "invitation" | "sans_compte";
     type_compte_client?: "dentiste_independant" | "clinique";
   };
+  const assujettiTva = assujetti_tva === "oui"
+    ? true
+    : assujetti_tva === "non"
+      ? false
+      : null;
 
   if (!nom || !prenom) {
     return NextResponse.json(
@@ -63,6 +76,12 @@ export async function POST(request: NextRequest) {
   if (mode !== "sans_compte" && !email) {
     return NextResponse.json(
       { error: "Email requis pour ce mode" },
+      { status: 400 }
+    );
+  }
+  if (assujettiTva === true && !numero_tva?.trim()) {
+    return NextResponse.json(
+      { error: "Le numéro TVA est requis si le client est déclaré assujetti." },
       { status: 400 }
     );
   }
@@ -92,7 +111,15 @@ export async function POST(request: NextRequest) {
         await admin.auth.admin.createUser({
           email: email!,
           email_confirm: true,
-          user_metadata: { nom, prenom, role: "dentiste" },
+          user_metadata: {
+            nom,
+            prenom,
+            role: "dentiste",
+            numero_inami: numero_inami?.trim() || null,
+            numero_entreprise: numero_entreprise?.trim() || null,
+            assujetti_tva: assujettiTva,
+            numero_tva: numero_tva?.trim() || null,
+          },
         });
       if (authError || !authUser.user) {
         return NextResponse.json(
@@ -104,6 +131,10 @@ export async function POST(request: NextRequest) {
         .from("profiles")
         .update({
           telephone: telephone || null,
+          numero_inami: numero_inami?.trim() || null,
+          numero_entreprise: numero_entreprise?.trim() || null,
+          assujetti_tva: assujettiTva,
+          numero_tva: numero_tva?.trim() || null,
           statut_compte: "approuve",
           actif: true,
           cabinet_id: cabinetId,
@@ -112,7 +143,30 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", authUser.user.id);
 
-      await admin.auth.admin.generateLink({ type: "magiclink", email: email! });
+      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: email!,
+      });
+      let emailSent = false;
+      let emailError = linkError?.message || null;
+      if (linkData.properties?.action_link) {
+        const template = emailTemplates.compte_acces({
+          prenom,
+          url: linkData.properties.action_link,
+        });
+        const result = await sendEmail({
+          to: email!,
+          toUserId: authUser.user.id,
+          template: "compte_acces",
+          subject: template.subject,
+          html: template.html,
+          payload: { profile_id: authUser.user.id },
+        });
+        emailSent = result.ok;
+        emailError = result.ok ? null : result.error || "Échec d’envoi";
+      } else if (!emailError) {
+        emailError = "Lien de connexion indisponible";
+      }
 
       const meta = extractRequestMeta(request);
       await logAudit({
@@ -129,6 +183,9 @@ export async function POST(request: NextRequest) {
         success: true,
         mode: "compte",
         profile_id: authUser.user.id,
+        email_sent: emailSent,
+        email_error: emailError,
+        email_link: emailSent ? null : linkData.properties?.action_link ?? null,
       });
     }
 
@@ -142,6 +199,10 @@ export async function POST(request: NextRequest) {
           nom,
           prenom,
           telephone: telephone || null,
+          numero_inami: numero_inami?.trim() || null,
+          numero_entreprise: numero_entreprise?.trim() || null,
+          assujetti_tva: assujettiTva,
+          numero_tva: numero_tva?.trim() || null,
           cabinet_nom: cabinet_nom || null,
           cabinet_id: cabinetId,
           role_cible: "dentiste",
@@ -165,12 +226,13 @@ export async function POST(request: NextRequest) {
         email: email!,
         token: inv.token,
       });
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: email!,
         template: "invitation",
         subject: tpl.subject,
         html: tpl.html,
         prefKey: "email_invitation",
+        payload: { invitation_id: inv.id },
       });
 
       const meta = extractRequestMeta(request);
@@ -189,6 +251,8 @@ export async function POST(request: NextRequest) {
         mode: "invitation",
         invitation_id: inv.id,
         url: `${request.nextUrl.origin}/register?invitation=${encodeURIComponent(inv.token)}`,
+        email_sent: emailResult.ok,
+        email_error: emailResult.ok ? null : emailResult.error || "Échec d’envoi",
       });
     }
 
@@ -202,6 +266,10 @@ export async function POST(request: NextRequest) {
         nom,
         prenom,
         telephone: telephone || null,
+        numero_inami: numero_inami?.trim() || null,
+        numero_entreprise: numero_entreprise?.trim() || null,
+        assujetti_tva: assujettiTva,
+        numero_tva: numero_tva?.trim() || null,
         role: "dentiste",
         statut_compte: "approuve",
         actif: true,

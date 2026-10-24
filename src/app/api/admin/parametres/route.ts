@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
+import { invalidateParametresCache } from "@/lib/parametres-labo";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -45,7 +46,10 @@ const ALLOWED_KEYS = [
   "telephone",
   "email_contact",
   "site_web",
+  "numero_entreprise",
   "tva_numero",
+  "regime_tva",
+  "mention_franchise_tva",
   "numero_agrement",
   "iban",
   "bic",
@@ -72,6 +76,15 @@ export async function PATCH(request: NextRequest) {
   if (auth.error) return auth.error;
   const { admin, userId } = auth;
   const body = await request.json();
+  if ("regime_tva" in body && !["franchise", "normal"].includes(body.regime_tva)) {
+    return NextResponse.json({ error: "Régime TVA invalide." }, { status: 400 });
+  }
+  if (
+    "taux_tva_defaut" in body &&
+    (!Number.isFinite(Number(body.taux_tva_defaut)) || Number(body.taux_tva_defaut) < 0 || Number(body.taux_tva_defaut) > 100)
+  ) {
+    return NextResponse.json({ error: "Taux TVA par défaut invalide." }, { status: 400 });
+  }
   const patch: Record<string, unknown> = {};
   for (const k of ALLOWED_KEYS) if (k in body) patch[k] = body[k];
   patch.updated_by = userId;
@@ -101,6 +114,7 @@ export async function PATCH(request: NextRequest) {
   if (result.error) {
     return NextResponse.json({ error: result.error.message }, { status: 400 });
   }
+  invalidateParametresCache();
 
   const meta = extractRequestMeta(request);
   await logAudit({

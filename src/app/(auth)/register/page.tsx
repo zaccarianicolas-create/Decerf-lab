@@ -18,6 +18,10 @@ const registerSchema = z
     prenom: z.string().min(2, "Minimum 2 caractères"),
     email: z.string().email("Email invalide"),
     telephone: z.string().optional(),
+    numero_inami: z.string().trim().optional(),
+    numero_entreprise: z.string().trim().optional(),
+    assujetti_tva: z.enum(["", "oui", "non"]),
+    numero_tva: z.string().trim().optional(),
     type_compte_client: z.enum(["dentiste_independant", "clinique"]),
     cabinet_nom: z.string().optional(),
     mode_travail_prefere: z.enum(["scan", "empreinte", "hybride"]),
@@ -47,6 +51,14 @@ const registerSchema = z
         path: ["modele_scanner"],
       });
     }
+
+    if (data.assujetti_tva === "oui" && !data.numero_tva?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Indiquez le numéro TVA de l'entreprise assujettie",
+        path: ["numero_tva"],
+      });
+    }
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -73,11 +85,14 @@ function RegisterForm() {
     defaultValues: {
       type_compte_client: "dentiste_independant",
       mode_travail_prefere: "scan",
+      numero_inami: "",
+      assujetti_tva: "",
     },
   });
 
   const typeCompte = watch("type_compte_client");
   const modeTravail = watch("mode_travail_prefere");
+  const assujettiTva = watch("assujetti_tva");
 
   useEffect(() => {
     if (!invitationToken) return;
@@ -96,6 +111,10 @@ function RegisterForm() {
             nom: string | null;
             prenom: string | null;
             telephone: string | null;
+            numero_inami: string | null;
+            numero_entreprise: string | null;
+            assujetti_tva: boolean | null;
+            numero_tva: string | null;
             cabinet_nom: string | null;
             type_compte_client: "dentiste_independant" | "clinique";
           };
@@ -111,6 +130,15 @@ function RegisterForm() {
         setValue("nom", payload.invitation.nom || "");
         setValue("prenom", payload.invitation.prenom || "");
         setValue("telephone", payload.invitation.telephone || "");
+        setValue("numero_inami", payload.invitation.numero_inami || "");
+        setValue("numero_entreprise", payload.invitation.numero_entreprise || "");
+        setValue(
+          "assujetti_tva",
+          payload.invitation.assujetti_tva === null
+            ? ""
+            : payload.invitation.assujetti_tva ? "oui" : "non"
+        );
+        setValue("numero_tva", payload.invitation.numero_tva || "");
         setValue("cabinet_nom", payload.invitation.cabinet_nom || "");
         setValue("type_compte_client", payload.invitation.type_compte_client);
       } catch {
@@ -135,6 +163,13 @@ function RegisterForm() {
           nom: data.nom,
           prenom: data.prenom,
           telephone: data.telephone || null,
+          numero_inami: data.numero_inami?.trim() || null,
+          numero_entreprise: data.numero_entreprise?.trim() || null,
+          assujetti_tva:
+            data.assujetti_tva === ""
+              ? null
+              : data.assujetti_tva === "oui",
+          numero_tva: data.numero_tva?.trim() || null,
           cabinet_nom: data.cabinet_nom || null,
           type_compte_client: data.type_compte_client,
           onboarding_source: invitationToken
@@ -304,6 +339,47 @@ function RegisterForm() {
             error={errors.cabinet_nom?.message}
             {...register("cabinet_nom")}
           />
+          <div>
+            <Input
+              label="N° INAMI/RIZIV (facultatif)"
+              placeholder="À renseigner si disponible"
+              {...register("numero_inami")}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Non bloquant à l’inscription; le laboratoire pourra le vérifier ensuite.
+            </p>
+          </div>
+          <Input
+            label="N° d’entreprise (BCE/KBO, facultatif)"
+            placeholder="0123.456.789"
+            error={errors.numero_entreprise?.message}
+            {...register("numero_entreprise")}
+          />
+          <div>
+            <label
+              htmlFor="assujetti_tva"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Assujetti à la TVA ?
+            </label>
+            <select
+              id="assujetti_tva"
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              {...register("assujetti_tva")}
+            >
+              <option value="">À préciser</option>
+              <option value="oui">Oui</option>
+              <option value="non">Non</option>
+            </select>
+          </div>
+          {assujettiTva === "oui" && (
+            <Input
+              label="N° TVA"
+              placeholder="BE0123456789"
+              error={errors.numero_tva?.message}
+              {...register("numero_tva")}
+            />
+          )}
 
           <div className="rounded-lg border border-gray-200 p-4">
             <p className="mb-2 text-sm font-medium text-gray-700">
@@ -386,7 +462,7 @@ function RegisterForm() {
               {...register("acceptCGU")}
             />
             <label htmlFor="acceptCGU" className="flex-1 text-sm text-gray-700">
-              J'accepte les{" "}
+              J&apos;accepte les{" "}
               <a
                 href="/conditions-generales"
                 target="_blank"

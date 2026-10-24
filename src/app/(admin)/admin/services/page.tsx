@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ServicesList } from "./services-list";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export default async function AdminServicesPage() {
   const supabase = await createClient();
@@ -17,6 +18,7 @@ export default async function AdminServicesPage() {
     admin.from("service_tarifs").select("service_id, prix_base_ht"),
     admin.from("service_options").select("*").order("ordre"),
   ]);
+  const parametres = await getParametresLabo();
   const tarifsParService = new Map(
     (tarifs ?? []).map((tarif) => [tarif.service_id, tarif.prix_base_ht])
   );
@@ -29,6 +31,9 @@ export default async function AdminServicesPage() {
   const servicesAvecTarifs = (services ?? []).map((service) => ({
     ...service,
     prix_base_ht: tarifsParService.get(service.id) ?? null,
+    taux_tva: Number(service.taux_tva ?? 21),
+    categorie_tva_peppol: service.categorie_tva_peppol ?? "S",
+    motif_exoneration_tva: service.motif_exoneration_tva ?? null,
     options: optionsParService.get(service.id) ?? [],
   }));
 
@@ -42,7 +47,10 @@ export default async function AdminServicesPage() {
           Gérez les travaux et services proposés aux praticiens
         </p>
       </div>
-      <ServicesList initialServices={servicesAvecTarifs} />
+      <ServicesList
+        initialServices={servicesAvecTarifs}
+        defaultTva={Number(parametres.taux_tva_defaut ?? 21)}
+      />
     </div>
   );
 }

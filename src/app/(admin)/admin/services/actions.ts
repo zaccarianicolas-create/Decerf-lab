@@ -62,12 +62,18 @@ export async function saveService(
     materiaux_disponibles: string[];
     mode_fourniture: string;
     prix_base_ht: number | null;
+    taux_tva: number;
+    categorie_tva_peppol: "S" | "Z" | "E";
+    motif_exoneration_tva: string | null;
     duree_estimee_jours: number | null;
     instructions: string | null;
     options: {
       id?: string;
       nom: string;
       prix_ht: number;
+      taux_tva: number | null;
+      categorie_tva_peppol: "S" | "Z" | "E" | null;
+      motif_exoneration_tva: string | null;
       actif: boolean;
       ordre: number;
     }[];
@@ -78,6 +84,32 @@ export async function saveService(
   if (!admin) return { success: false, error: "Non autorisé", data: null };
 
   const { options, prix_base_ht, ...servicePayload } = payload;
+  if (servicePayload.taux_tva < 0 || servicePayload.taux_tva > 100) {
+    return { success: false, error: "Taux TVA invalide", data: null };
+  }
+  if (
+    (servicePayload.categorie_tva_peppol === "S" && servicePayload.taux_tva === 0) ||
+    (servicePayload.categorie_tva_peppol !== "S" && servicePayload.taux_tva !== 0)
+  ) {
+    return { success: false, error: "Le taux doit être supérieur à 0 pour S et égal à 0 pour Z/E", data: null };
+  }
+  if (servicePayload.categorie_tva_peppol === "E" && !servicePayload.motif_exoneration_tva?.trim()) {
+    return { success: false, error: "Un motif d’exonération est requis", data: null };
+  }
+  if (options.some((option) =>
+    option.categorie_tva_peppol === "E" && !option.motif_exoneration_tva?.trim()
+  )) {
+    return { success: false, error: "Un motif d’exonération est requis pour chaque option classée E", data: null };
+  }
+  if (options.some((option) =>
+    option.taux_tva !== null && (
+      option.taux_tva < 0 || option.taux_tva > 100 ||
+      (option.categorie_tva_peppol === "S" && option.taux_tva === 0) ||
+      ((option.categorie_tva_peppol === "E" || option.categorie_tva_peppol === "Z") && option.taux_tva !== 0)
+    )
+  )) {
+    return { success: false, error: "Taux incohérent avec la catégorie TVA d’une option", data: null };
+  }
   let serviceId = editingId;
   let serviceData: Record<string, unknown>;
 
@@ -158,7 +190,7 @@ export async function saveService(
 
   const { data: savedOptions, error: savedOptionsError } = await admin
     .from("service_options")
-    .select("id, nom, prix_ht, actif, ordre")
+    .select("id, nom, prix_ht, taux_tva, categorie_tva_peppol, motif_exoneration_tva, actif, ordre")
     .eq("service_id", serviceId)
     .order("ordre");
   if (savedOptionsError) {

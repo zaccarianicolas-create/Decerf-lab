@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await admin
     .from("invitations_inscription")
-    .select("email, nom, prenom, telephone, cabinet_nom, type_compte_client, expire_at, accepte_at, annule_at")
+    .select("email, nom, prenom, telephone, numero_inami, numero_entreprise, assujetti_tva, numero_tva, cabinet_nom, type_compte_client, expire_at, accepte_at, annule_at")
     .eq("token", token)
     .maybeSingle();
 
@@ -46,6 +46,10 @@ export async function GET(request: NextRequest) {
       nom: data.nom,
       prenom: data.prenom,
       telephone: data.telephone,
+      numero_inami: data.numero_inami,
+      numero_entreprise: data.numero_entreprise,
+      assujetti_tva: data.assujetti_tva,
+      numero_tva: data.numero_tva,
       cabinet_nom: data.cabinet_nom,
       type_compte_client: data.type_compte_client,
       expire_at: data.expire_at,

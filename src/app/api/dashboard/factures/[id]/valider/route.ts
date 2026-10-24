@@ -62,7 +62,7 @@ export async function POST(
       .single(),
     admin
       .from("facture_lignes")
-      .select("description, quantite, prix_unitaire, taux_tva, total_ligne_ht, total_ligne_tva, total_ligne_ttc")
+      .select("description, quantite, prix_unitaire, taux_tva, categorie_tva_peppol, motif_exoneration_tva, total_ligne_ht, total_ligne_tva, total_ligne_ttc")
       .eq("facture_id", facture.id)
       .order("created_at"),
   ]);

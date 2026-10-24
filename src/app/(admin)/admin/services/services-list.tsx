@@ -39,10 +39,16 @@ type Service = {
   materiaux_disponibles: string[];
   mode_fourniture: string;
   prix_base_ht: number | null;
+  taux_tva: number;
+  categorie_tva_peppol: "S" | "Z" | "E";
+  motif_exoneration_tva: string | null;
   options: {
     id: string;
     nom: string;
     prix_ht: number;
+    taux_tva: number | null;
+    categorie_tva_peppol: "S" | "Z" | "E" | null;
+    motif_exoneration_tva: string | null;
     actif: boolean;
     ordre: number;
   }[];
@@ -102,7 +108,7 @@ const CATEGORIE_COLORS: Record<string, string> = {
   autre: "bg-gray-50 text-gray-700 border-gray-200",
 };
 
-const emptyForm = {
+const createEmptyForm = (defaultTva = 21) => ({
   nom: "",
   description: "",
   categorie: "prothese_fixe",
@@ -110,21 +116,26 @@ const emptyForm = {
   materiaux_disponibles: [] as string[],
   mode_fourniture: "les_deux",
   prix_base_ht: "",
+  taux_tva: String(defaultTva),
+  categorie_tva_peppol: "S" as "S" | "Z" | "E",
+  motif_exoneration_tva: "",
   duree_estimee_jours: "",
   instructions: "",
-  options: [] as { id?: string; nom: string; prix_ht: string; actif: boolean; ordre: number }[],
-};
+  options: [] as { id?: string; nom: string; prix_ht: string; taux_tva: string; categorie_tva_peppol: "" | "S" | "Z" | "E"; motif_exoneration_tva: string; actif: boolean; ordre: number }[],
+});
 
 export function ServicesList({
   initialServices,
+  defaultTva,
 }: {
   initialServices: Service[];
+  defaultTva: number;
 }) {
   const [services, setServices] = useState(initialServices);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => createEmptyForm(defaultTva));
   const [filterCat, setFilterCat] = useState<string>("all");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +159,7 @@ export function ServicesList({
   };
 
   const resetForm = () => {
-    setForm(emptyForm);
+    setForm(createEmptyForm(defaultTva));
     setEditingId(null);
     setShowForm(false);
   };
@@ -162,12 +173,18 @@ export function ServicesList({
       materiaux_disponibles: s.materiaux_disponibles || [],
       mode_fourniture: s.mode_fourniture,
       prix_base_ht: s.prix_base_ht?.toString() || "",
+      taux_tva: String(s.taux_tva ?? 21),
+      categorie_tva_peppol: s.categorie_tva_peppol ?? "S",
+      motif_exoneration_tva: s.motif_exoneration_tva || "",
       duree_estimee_jours: s.duree_estimee_jours?.toString() || "",
       instructions: s.instructions || "",
       options: (s.options ?? []).map((option) => ({
         id: option.id,
         nom: option.nom,
         prix_ht: String(option.prix_ht),
+        taux_tva: option.taux_tva === null ? "" : String(option.taux_tva),
+        categorie_tva_peppol: option.categorie_tva_peppol ?? "",
+        motif_exoneration_tva: option.motif_exoneration_tva || "",
         actif: option.actif,
         ordre: option.ordre,
       })),
@@ -182,9 +199,28 @@ export function ServicesList({
       !option.nom.trim() ||
       option.prix_ht === "" ||
       !Number.isFinite(Number(option.prix_ht)) ||
-      Number(option.prix_ht) < 0
+      Number(option.prix_ht) < 0 ||
+      (option.taux_tva !== "" && (!Number.isFinite(Number(option.taux_tva)) || Number(option.taux_tva) < 0 || Number(option.taux_tva) > 100)) ||
+      (option.categorie_tva_peppol === "E" && !option.motif_exoneration_tva.trim()) ||
+      (option.taux_tva !== "" && option.categorie_tva_peppol === "S" && Number(option.taux_tva) === 0) ||
+      (option.taux_tva !== "" && (option.categorie_tva_peppol === "E" || option.categorie_tva_peppol === "Z") && Number(option.taux_tva) !== 0)
     )) {
-      showError("Chaque option doit avoir un nom et un prix HT valide.");
+      showError("Vérifiez le nom, le prix et les informations TVA de chaque option.");
+      return;
+    }
+    if (!Number.isFinite(Number(form.taux_tva)) || Number(form.taux_tva) < 0 || Number(form.taux_tva) > 100) {
+      showError("Le taux TVA du service doit être compris entre 0 et 100 %.");
+      return;
+    }
+    if (
+      (form.categorie_tva_peppol === "S" && Number(form.taux_tva) === 0) ||
+      (form.categorie_tva_peppol !== "S" && Number(form.taux_tva) !== 0)
+    ) {
+      showError("Le taux doit être supérieur à 0 pour S et égal à 0 pour Z/E.");
+      return;
+    }
+    if (form.categorie_tva_peppol === "E" && !form.motif_exoneration_tva.trim()) {
+      showError("Un motif d’exonération est requis pour la catégorie TVA E.");
       return;
     }
 
@@ -199,6 +235,9 @@ export function ServicesList({
       prix_base_ht: form.prix_base_ht
         ? parseFloat(form.prix_base_ht)
         : null,
+      taux_tva: Number(form.taux_tva),
+      categorie_tva_peppol: form.categorie_tva_peppol,
+      motif_exoneration_tva: form.motif_exoneration_tva.trim() || null,
       duree_estimee_jours: form.duree_estimee_jours
         ? parseInt(form.duree_estimee_jours)
         : null,
@@ -206,6 +245,9 @@ export function ServicesList({
       options: form.options.map((option, index) => ({
         ...option,
         prix_ht: Number(option.prix_ht || 0),
+        taux_tva: option.taux_tva === "" ? null : Number(option.taux_tva),
+        categorie_tva_peppol: option.categorie_tva_peppol || null,
+        motif_exoneration_tva: option.motif_exoneration_tva.trim() || null,
         ordre: index + 1,
       })),
     };
@@ -510,7 +552,7 @@ export function ServicesList({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700">
                     Type de travail (enum)
@@ -541,6 +583,27 @@ export function ServicesList({
                   }
                 />
                 <Input
+                  label="Taux TVA (%)"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={form.taux_tva}
+                  onChange={(e) => setForm({ ...form, taux_tva: e.target.value })}
+                />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Catégorie Peppol</label>
+                  <select
+                    value={form.categorie_tva_peppol}
+                    onChange={(e) => setForm({ ...form, categorie_tva_peppol: e.target.value as "S" | "Z" | "E" })}
+                    className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="S">S · Taxable</option>
+                    <option value="Z">Z · Taux zéro</option>
+                    <option value="E">E · Exonéré</option>
+                  </select>
+                </div>
+                <Input
                   label="Durée estimée (jours)"
                   type="number"
                   placeholder="7"
@@ -550,6 +613,13 @@ export function ServicesList({
                   }
                 />
               </div>
+              {form.categorie_tva_peppol === "E" && (
+                <Input
+                  label="Motif d’exonération TVA"
+                  value={form.motif_exoneration_tva}
+                  onChange={(e) => setForm({ ...form, motif_exoneration_tva: e.target.value })}
+                />
+              )}
 
               <div className="space-y-3">
                 <div>
@@ -561,10 +631,8 @@ export function ServicesList({
                   </p>
                 </div>
                 {form.options.map((option, index) => (
-                  <div
-                    key={option.id ?? `option-${index}`}
-                    className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_160px_auto_auto]"
-                  >
+                  <div key={option.id ?? `option-${index}`} className="space-y-3">
+                    <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_120px_110px_130px_auto_auto]">
                     <Input
                       label="Nom de l’option"
                       value={option.nom}
@@ -588,6 +656,39 @@ export function ServicesList({
                         ),
                       }))}
                     />
+                    <Input
+                      label="TVA (%)"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder={`Hérite : ${form.taux_tva}%`}
+                      value={option.taux_tva}
+                      onChange={(e) => setForm((current) => ({
+                        ...current,
+                        options: current.options.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, taux_tva: e.target.value } : item
+                        ),
+                      }))}
+                    />
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Catégorie</label>
+                      <select
+                        value={option.categorie_tva_peppol}
+                        onChange={(e) => setForm((current) => ({
+                          ...current,
+                          options: current.options.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, categorie_tva_peppol: e.target.value as "" | "S" | "Z" | "E" } : item
+                          ),
+                        }))}
+                        className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                      >
+                        <option value="">Hériter du service</option>
+                        <option value="S">S · Taxable</option>
+                        <option value="Z">Z · Taux zéro</option>
+                        <option value="E">E · Exonéré</option>
+                      </select>
+                    </div>
                     <label className="flex h-10 items-center gap-2 text-sm text-gray-600">
                       <input
                         type="checkbox"
@@ -613,6 +714,19 @@ export function ServicesList({
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
+                  {option.categorie_tva_peppol === "E" && (
+                    <Input
+                      label="Motif d’exonération de l’option"
+                      value={option.motif_exoneration_tva}
+                      onChange={(e) => setForm((current) => ({
+                        ...current,
+                        options: current.options.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, motif_exoneration_tva: e.target.value } : item
+                        ),
+                      }))}
+                    />
+                  )}
+                  </div>
                 ))}
                 <Button
                   type="button"
@@ -620,7 +734,7 @@ export function ServicesList({
                   size="sm"
                   onClick={() => setForm((current) => ({
                     ...current,
-                    options: [...current.options, { nom: "", prix_ht: "", actif: true, ordre: current.options.length + 1 }],
+                    options: [...current.options, { nom: "", prix_ht: "", taux_tva: "", categorie_tva_peppol: "", motif_exoneration_tva: "", actif: true, ordre: current.options.length + 1 }],
                   }))}
                 >
                   <Plus className="mr-1 h-4 w-4" /> Ajouter une option

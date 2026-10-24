@@ -6,6 +6,8 @@ type FacturePdfLine = {
   quantite: number;
   prix_unitaire: number;
   taux_tva: number;
+  categorie_tva_peppol?: string;
+  motif_exoneration_tva?: string | null;
   total_ligne_ht: number;
   total_ligne_tva: number;
   total_ligne_ttc: number;
@@ -102,6 +104,7 @@ export async function createFacturePdf(data: FacturePdfData) {
   for (const detail of [
     data.snapshot.issuer.telephone,
     data.snapshot.issuer.email,
+    data.snapshot.issuer.numero_entreprise ? `BCE : ${data.snapshot.issuer.numero_entreprise}` : "",
     data.snapshot.issuer.tva_numero ? `TVA : ${data.snapshot.issuer.tva_numero}` : "",
   ].filter(Boolean)) {
     y = drawWrapped(detail, MARGIN, y, 245);
@@ -115,6 +118,9 @@ export async function createFacturePdf(data: FacturePdfData) {
   clientY = drawWrapped(data.snapshot.client.email, 340, clientY, 210);
   if (data.snapshot.client.tva_numero) {
     drawWrapped(`TVA : ${data.snapshot.client.tva_numero}`, 340, clientY, 210);
+  }
+  if (data.snapshot.client.numero_entreprise) {
+    drawWrapped(`BCE : ${data.snapshot.client.numero_entreprise}`, 340, clientY - 13, 210);
   }
 
   y = Math.min(y, clientY) - 18;
@@ -146,21 +152,42 @@ export async function createFacturePdf(data: FacturePdfData) {
     descriptionLines.forEach((text, index) => draw(text, MARGIN + 7, y - 1 - index * 12, 9, regular, TEXT));
     draw(String(line.quantite), 350, y - 1, 8, regular, MUTED);
     draw(euro(line.prix_unitaire), 390, y - 1, 8, regular, MUTED);
-    draw(`${Number(line.taux_tva).toFixed(0)}%`, 458, y - 1, 8, regular, MUTED);
+    draw(
+      line.categorie_tva_peppol === "E"
+        ? "Exon."
+        : `${Number(line.taux_tva).toFixed(2).replace(/\.00$/, "")}%`,
+      458,
+      y - 1,
+      8,
+      regular,
+      MUTED
+    );
     draw(euro(line.total_ligne_ht), 494, y - 1, 8, regular, TEXT);
     y -= rowHeight;
     drawRule(y + 5);
   }
 
-  ensureRoom(116);
+  const tvaParCategorie = new Map<string, number>();
+  for (const line of data.lignes) {
+    const label = line.categorie_tva_peppol === "E"
+      ? "Exonération"
+      : line.categorie_tva_peppol === "Z"
+        ? "Taux zéro"
+        : `${Number(line.taux_tva).toFixed(2).replace(/\.00$/, "")}%`;
+    tvaParCategorie.set(label, (tvaParCategorie.get(label) ?? 0) + line.total_ligne_tva);
+  }
+
+  ensureRoom(98 + tvaParCategorie.size * 16);
   y -= 10;
   const totalX = 390;
   draw("Total HT", totalX, y, 9, regular, MUTED);
   draw(euro(data.montant_ht), 494, y, 9, regular, TEXT);
   y -= 18;
-  draw("TVA", totalX, y, 9, regular, MUTED);
-  draw(euro(data.montant_tva), 494, y, 9, regular, TEXT);
-  y -= 20;
+  for (const [category, amount] of tvaParCategorie) {
+    draw(`TVA ${category}`, totalX, y, 9, regular, MUTED);
+    draw(euro(amount), 494, y, 9, regular, TEXT);
+    y -= 16;
+  }
   drawRule(y + 8);
   draw("Total TTC", totalX, y, 11, bold, TEXT);
   draw(euro(data.montant_ttc), 494, y, 11, bold, TEXT);

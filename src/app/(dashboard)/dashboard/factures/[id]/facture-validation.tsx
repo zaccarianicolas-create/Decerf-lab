@@ -29,13 +29,22 @@ export function FactureValidation({
 
   const estimatedTotals = useMemo(
     () => snapshot.items.reduce((totals, item) => {
-      const optionsTotal = item.options.reduce((optionSum, option) =>
-        selectedOptions.has(`${item.commande_item_id}:${option.id}`)
-          ? optionSum + option.prix_ht
-          : optionSum, 0);
-      const lineHt = (item.prix_base_ht + optionsTotal) * item.quantite;
-      const lineTva = Math.round(lineHt * snapshot.taux_tva) / 100;
-      return { ht: totals.ht + lineHt, tva: totals.tva + lineTva };
+      const itemRate = item.taux_tva ?? snapshot.taux_tva;
+      const lineHt = item.prix_base_ht * item.quantite;
+      const itemTva = Math.round(lineHt * itemRate) / 100;
+      const options = item.options.reduce((optionTotals, option) => {
+        if (!selectedOptions.has(`${item.commande_item_id}:${option.id}`)) return optionTotals;
+        const optionHt = option.prix_ht * item.quantite;
+        const optionTva = Math.round(optionHt * (option.taux_tva ?? itemRate)) / 100;
+        return {
+          ht: optionTotals.ht + optionHt,
+          tva: optionTotals.tva + optionTva,
+        };
+      }, { ht: 0, tva: 0 });
+      return {
+        ht: totals.ht + lineHt + options.ht,
+        tva: totals.tva + itemTva + options.tva,
+      };
     }, { ht: 0, tva: 0 }),
     [snapshot.items, snapshot.taux_tva, selectedOptions]
   );
@@ -120,6 +129,11 @@ export function FactureValidation({
               <span>{item.service_nom}</span>
               <span className="text-sm font-medium text-gray-700">
                 {item.prix_base_ht.toFixed(2)} € HT / unité × {item.quantite}
+                <span className="ml-2 text-xs text-gray-500">
+                  TVA {item.categorie_tva_peppol === "E"
+                    ? "exonérée"
+                    : `${item.taux_tva ?? snapshot.taux_tva}%`}
+                </span>
               </span>
             </CardTitle>
           </CardHeader>
@@ -142,7 +156,9 @@ export function FactureValidation({
                         {option.nom}
                       </span>
                       <span className="whitespace-nowrap text-sm font-medium text-gray-900">
-                        {option.prix_ht.toFixed(2)} € HT
+                        {option.prix_ht.toFixed(2)} € HT · TVA {option.categorie_tva_peppol === "E"
+                          ? "exonérée"
+                          : `${option.taux_tva ?? item.taux_tva ?? snapshot.taux_tva}%`}
                       </span>
                     </label>
                   );
@@ -159,8 +175,13 @@ export function FactureValidation({
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
             <p className="text-xs text-gray-500">
-              {estimatedTotals.ht.toFixed(2)} € HT + {estimatedTotals.tva.toFixed(2)} € TVA ({snapshot.taux_tva}%)
+              {estimatedTotals.ht.toFixed(2)} € HT + {estimatedTotals.tva.toFixed(2)} € TVA
             </p>
+            {snapshot.regime_tva === "franchise" && (
+              <p className="mt-1 text-xs text-amber-700">
+                Franchise de TVA. {snapshot.mention_franchise_tva}
+              </p>
+            )}
             <p className="text-2xl font-bold text-gray-900">{estimatedTtc.toFixed(2)} €</p>
             <p className="mt-1 text-xs text-gray-500">
               Les conditions de règlement et coordonnées bancaires figurent sur la facture.

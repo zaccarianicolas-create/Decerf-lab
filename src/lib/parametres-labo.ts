@@ -14,7 +14,10 @@ export type ParametresLabo = {
   telephone: string | null;
   email_contact: string | null;
   site_web: string | null;
+  numero_entreprise: string | null;
   tva_numero: string | null;
+  regime_tva: "franchise" | "normal";
+  mention_franchise_tva: string;
   numero_agrement: string | null;
   iban: string | null;
   bic: string | null;
@@ -40,7 +43,10 @@ const DEFAULTS: ParametresLabo = {
   telephone: null,
   email_contact: null,
   site_web: null,
+  numero_entreprise: null,
   tva_numero: null,
+  regime_tva: "franchise",
+  mention_franchise_tva: "Régime particulier de franchise des petites entreprises",
   numero_agrement: null,
   iban: null,
   bic: null,

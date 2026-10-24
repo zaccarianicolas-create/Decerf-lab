@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,11 @@ type Client = {
   nom: string;
   prenom: string;
   telephone: string | null;
+  numero_inami?: string | null;
+  numero_inami_verifie?: boolean;
+  numero_entreprise?: string | null;
+  assujetti_tva?: boolean | null;
+  numero_tva?: string | null;
   role: string;
   actif: boolean;
   statut_compte: "en_attente" | "approuve" | "rejete";
@@ -51,21 +55,29 @@ function statutBadge(statut: string) {
 
 export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
   const [clients, setClients] = useState(initialClients);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createNotice, setCreateNotice] = useState<string | null>(null);
+  const [createInviteUrl, setCreateInviteUrl] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [inviteEmailSent, setInviteEmailSent] = useState<boolean | null>(null);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [inviteFormData, setInviteFormData] = useState({
     nom: "",
     prenom: "",
     email: "",
     telephone: "",
     cabinet_nom: "",
+    numero_inami: "",
+    numero_entreprise: "",
+    assujetti_tva: "" as "" | "oui" | "non",
+    numero_tva: "",
     type_compte_client: "dentiste_independant" as
       | "dentiste_independant"
       | "clinique",
@@ -76,6 +88,10 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     email: "",
     telephone: "",
     cabinet_nom: "",
+    numero_inami: "",
+    numero_entreprise: "",
+    assujetti_tva: "" as "" | "oui" | "non",
+    numero_tva: "",
     mode: "sans_compte" as "compte" | "invitation" | "sans_compte",
   });
 
@@ -84,14 +100,22 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     statut: "approuve" | "rejete"
   ) => {
     setLoadingId(clientId);
-    const supabase = createClient();
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ statut_compte: statut, actif: statut === "approuve" })
-      .eq("id", clientId);
-
-    if (!error) {
+    setStatusNotice(null);
+    try {
+      const response = await fetch(`/api/admin/clients/${clientId}/statut`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        email_sent?: boolean | null;
+        email_error?: string | null;
+      };
+      if (!response.ok) {
+        setStatusNotice(result.error || "Impossible de modifier le statut.");
+        return;
+      }
       startTransition(() => {
         setClients((prev) =>
           prev.map((c) =>
@@ -101,14 +125,26 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
           )
         );
       });
+      setStatusNotice(
+        statut === "approuve" && result.email_sent === false
+          ? `Compte approuvé, mais e-mail non envoyé : ${result.email_error || "copiez et transmettez l'accès manuellement"}.`
+          : statut === "approuve"
+            ? "Compte approuvé et e-mail envoyé."
+            : "Compte refusé."
+      );
+    } catch {
+      setStatusNotice("Erreur réseau pendant la mise à jour du compte.");
+    } finally {
+      setLoadingId(null);
     }
-    setLoadingId(null);
   };
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setCreateError(null);
+    setCreateNotice(null);
+    setCreateInviteUrl(null);
 
     try {
       const res = await fetch("/api/admin/clients", {
@@ -116,9 +152,25 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        email_sent?: boolean;
+        email_error?: string | null;
+        email_link?: string | null;
+        url?: string;
+      };
       if (!res.ok) {
         setCreateError(data.error || "Erreur lors de la création");
+        return;
+      }
+      if (formData.mode === "invitation" && data.email_sent === false) {
+        setCreateNotice(`Invitation créée, mais l’e-mail n’a pas été envoyé : ${data.email_error || "échec d’envoi"}. Copiez le lien pour le transmettre.`);
+        setCreateInviteUrl(data.url || null);
+        return;
+      }
+      if (formData.mode === "compte" && data.email_sent === false) {
+        setCreateNotice(`Compte créé, mais le magic link n’a pas été envoyé : ${data.email_error || "échec d’envoi"}.${data.email_link ? " Copiez le lien pour le transmettre." : " Aucun lien de connexion n’a pu être généré."}`);
+        setCreateInviteUrl(data.email_link || null);
         return;
       }
       // Reload page to get fresh data
@@ -145,7 +197,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
 
       const data = (await res.json()) as {
         error?: string;
-        invitation?: { url: string };
+        invitation?: { url: string; email_sent?: boolean; email_error?: string | null };
       };
 
       if (!res.ok || !data.invitation?.url) {
@@ -154,6 +206,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
       }
 
       setInviteUrl(data.invitation.url);
+  setInviteEmailSent(data.invitation.email_sent ?? false);
     } catch {
       setInviteError("Erreur réseau");
     } finally {
@@ -170,11 +223,25 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
     }
   };
 
+  const copyCreateInviteUrl = async () => {
+    if (!createInviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(createInviteUrl);
+    } catch {
+      setCreateNotice("Impossible de copier le lien d’invitation.");
+    }
+  };
+
   const pendingClients = clients.filter((c) => c.statut_compte === "en_attente");
   const otherClients = clients.filter((c) => c.statut_compte !== "en_attente");
 
   return (
     <div className="space-y-8">
+      {statusNotice && (
+        <p className="rounded-lg bg-sky-50 p-3 text-sm text-sky-800" role="status">
+          {statusNotice}
+        </p>
+      )}
       {/* Bouton + Formulaire de création */}
       <div>
         {!showCreateForm && !showInviteForm ? (
@@ -266,6 +333,39 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                     setFormData({ ...formData, cabinet_nom: e.target.value })
                   }
                 />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="N° INAMI/RIZIV (facultatif)"
+                    value={formData.numero_inami}
+                    onChange={(e) => setFormData({ ...formData, numero_inami: e.target.value })}
+                  />
+                  <Input
+                    label="N° d’entreprise BCE/KBO (facultatif)"
+                    value={formData.numero_entreprise}
+                    onChange={(e) => setFormData({ ...formData, numero_entreprise: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Assujetti à la TVA ?
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                    value={formData.assujetti_tva}
+                    onChange={(e) => setFormData({ ...formData, assujetti_tva: e.target.value as "" | "oui" | "non" })}
+                  >
+                    <option value="">À préciser</option>
+                    <option value="oui">Oui</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+                {formData.assujetti_tva === "oui" && (
+                  <Input
+                    label="N° TVA"
+                    value={formData.numero_tva}
+                    onChange={(e) => setFormData({ ...formData, numero_tva: e.target.value })}
+                  />
+                )}
 
                 {/* Toggle mode de création */}
                 <div className="rounded-lg border border-gray-200 p-4">
@@ -311,6 +411,19 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
 
                 {createError && (
                   <p className="text-sm text-red-600">{createError}</p>
+                )}
+                {createNotice && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+                    <p>{createNotice}</p>
+                    {createInviteUrl && (
+                      <>
+                        <p className="mt-2 break-all text-xs">{createInviteUrl}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={copyCreateInviteUrl} className="mt-2 gap-1">
+                          <Copy className="h-3.5 w-3.5" /> Copier le lien
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex justify-end gap-2">
@@ -407,6 +520,50 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                     setInviteFormData({ ...inviteFormData, cabinet_nom: e.target.value })
                   }
                 />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="N° INAMI/RIZIV (facultatif)"
+                    value={inviteFormData.numero_inami}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, numero_inami: e.target.value })
+                    }
+                  />
+                  <Input
+                    label="N° d’entreprise BCE/KBO (facultatif)"
+                    value={inviteFormData.numero_entreprise}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, numero_entreprise: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Assujetti à la TVA ?
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                    value={inviteFormData.assujetti_tva}
+                    onChange={(e) =>
+                      setInviteFormData({
+                        ...inviteFormData,
+                        assujetti_tva: e.target.value as "" | "oui" | "non",
+                      })
+                    }
+                  >
+                    <option value="">À préciser</option>
+                    <option value="oui">Oui</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+                {inviteFormData.assujetti_tva === "oui" && (
+                  <Input
+                    label="N° TVA"
+                    value={inviteFormData.numero_tva}
+                    onChange={(e) =>
+                      setInviteFormData({ ...inviteFormData, numero_tva: e.target.value })
+                    }
+                  />
+                )}
 
                 <div className="rounded-lg border border-gray-200 p-4">
                   <p className="mb-2 text-sm font-medium text-gray-700">
@@ -453,11 +610,13 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                 )}
 
                 {inviteUrl && (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                    <p className="mb-2 text-xs font-medium text-green-700">
-                      Lien d&apos;invitation créé
+                  <div className={`rounded-lg border p-3 ${inviteEmailSent ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}`}>
+                    <p className={`mb-2 text-xs font-medium ${inviteEmailSent ? "text-green-700" : "text-amber-800"}`}>
+                      {inviteEmailSent
+                        ? "Invitation créée et e-mail envoyé."
+                        : "Invitation créée, mais l’e-mail n’a pas été envoyé. Copiez le lien pour le transmettre."}
                     </p>
-                    <p className="break-all text-xs text-green-800">{inviteUrl}</p>
+                    <p className="break-all text-xs text-gray-800">{inviteUrl}</p>
                     <Button
                       type="button"
                       size="sm"
@@ -524,6 +683,15 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                           {client.telephone}
                         </p>
                       )}
+                      <p className="text-xs text-gray-500">
+                        INAMI : {client.numero_inami
+                          ? client.numero_inami_verifie ? "Vérifié" : "À vérifier"
+                          : "Non renseigné (non bloquant)"}
+                        {client.numero_entreprise ? ` · BCE ${client.numero_entreprise}` : ""}
+                        {client.assujetti_tva === true
+                          ? ` · TVA ${client.numero_tva || "à renseigner"}`
+                          : client.assujetti_tva === false ? " · Non assujetti TVA" : " · TVA à préciser"}
+                      </p>
                       <p className="text-xs text-gray-400">
                         Inscrit le{" "}
                         {new Date(client.created_at).toLocaleDateString(
@@ -603,7 +771,7 @@ export function ClientsTable({ initialClients }: { initialClients: Client[] }) {
                           {client.telephone || "—"}
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          {(client.cabinet as any)?.nom || "—"}
+                          {client.cabinet?.nom || "—"}
                         </td>
                         <td className="px-6 py-4">
                           {statutBadge(client.statut_compte)}

@@ -80,6 +80,11 @@ export interface Profile {
   avatar_url: string | null;
   cabinet_id: string | null;
   numero_inami: string | null;
+  numero_inami_verifie?: boolean;
+  numero_inami_verifie_le?: string | null;
+  numero_entreprise?: string | null;
+  assujetti_tva?: boolean | null;
+  numero_tva?: string | null;
   actif: boolean;
   created_at: string;
   updated_at: string;

@@ -20,7 +20,8 @@ export type EmailTemplate =
   | "nouveau_message"
   | "assignation_tache"
   | "rgpd_recu"
-  | "compte_approuve";
+  | "compte_approuve"
+  | "compte_acces";
 
 type SendArgs = {
   to: string;
@@ -155,8 +156,9 @@ function btn(label: string, href: string): string {
 }
 
 export const emailTemplates = {
-  invitation(p: { prenom?: string; email: string; token: string }) {
+  invitation(p: { prenom?: string; email: string; token: string; expireJours?: number }) {
     const url = `${APP_URL}/register?invitation=${p.token}`;
+    const expireJours = p.expireJours ?? 14;
     return {
       subject: "Invitation à rejoindre DECERF LAB",
       html: wrap(
@@ -164,7 +166,7 @@ export const emailTemplates = {
         `<p>Bonjour ${p.prenom ?? ""},</p>
          <p>Vous êtes invité·e à rejoindre la plateforme DECERF LAB pour gérer vos commandes de prothèses.</p>
          ${btn("Activer mon compte", url)}
-         <p style="color:#64748b;font-size:12px;">Ce lien expire dans 7 jours.</p>`
+         <p style="color:#64748b;font-size:12px;">Ce lien expire dans ${expireJours} jours.</p>`
       ),
     };
   },
@@ -265,6 +267,18 @@ export const emailTemplates = {
         `<p>Bonjour ${p.prenom ?? ""},</p>
          <p>Votre compte DECERF LAB a été approuvé. Vous pouvez désormais accéder à votre espace.</p>
          ${btn("Accéder à mon espace", `${APP_URL}/dashboard`)}`
+      ),
+    };
+  },
+  compte_acces(p: { prenom?: string; url: string }) {
+    return {
+      subject: "Votre accès DECERF LAB",
+      html: wrap(
+        "Activer mon accès",
+        `<p>Bonjour ${p.prenom ?? ""},</p>
+         <p>Votre compte DECERF LAB a été créé par le laboratoire.</p>
+         ${btn("Accéder à mon compte", p.url)}
+         <p style="color:#64748b;font-size:12px;">Ce lien de connexion est personnel et à usage unique.</p>`
       ),
     };
   },

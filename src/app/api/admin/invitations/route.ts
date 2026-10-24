@@ -11,6 +11,10 @@ type InvitationBody = {
   email?: string;
   telephone?: string;
   cabinet_nom?: string;
+  numero_inami?: string;
+  numero_entreprise?: string;
+  assujetti_tva?: "oui" | "non" | "";
+  numero_tva?: string;
   type_compte_client?: "dentiste_independant" | "clinique";
 };
 
@@ -46,7 +50,7 @@ export async function GET() {
   const { admin } = auth;
   const { data, error } = await admin
     .from("invitations_inscription")
-    .select("id,email,nom,prenom,type_compte_client,cabinet_nom,expire_at,accepte_at,annule_at,created_at")
+    .select("id,email,nom,prenom,telephone,numero_inami,numero_entreprise,assujetti_tva,numero_tva,type_compte_client,cabinet_nom,expire_at,accepte_at,annule_at,created_at")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -78,6 +82,14 @@ export async function POST(request: NextRequest) {
   const prenom = body.prenom?.trim() || null;
   const telephone = body.telephone?.trim() || null;
   const cabinetNom = body.cabinet_nom?.trim() || null;
+  const numeroInami = body.numero_inami?.trim() || null;
+  const numeroEntreprise = body.numero_entreprise?.trim() || null;
+  const assujettiTva = body.assujetti_tva === "oui"
+    ? true
+    : body.assujetti_tva === "non"
+      ? false
+      : null;
+  const numeroTva = body.numero_tva?.trim() || null;
   const typeCompte = body.type_compte_client || "dentiste_independant";
 
   if (!email) {
@@ -120,6 +132,10 @@ export async function POST(request: NextRequest) {
       prenom,
       telephone,
       cabinet_nom: cabinetNom,
+      numero_inami: numeroInami,
+      numero_entreprise: numeroEntreprise,
+      assujetti_tva: assujettiTva,
+      numero_tva: numeroTva,
       cabinet_id: cabinetId,
       role_cible: "dentiste",
       onboarding_source: "invitation_labo",
@@ -150,7 +166,7 @@ export async function POST(request: NextRequest) {
   });
 
   const tpl = emailTemplates.invitation({ prenom: prenom ?? undefined, email, token: data.token });
-  await sendEmail({
+  const emailResult = await sendEmail({
     to: email,
     template: "invitation",
     subject: tpl.subject,
@@ -165,6 +181,8 @@ export async function POST(request: NextRequest) {
       id: data.id,
       expire_at: data.expire_at,
       url: invitationUrl,
+      email_sent: emailResult.ok,
+      email_error: emailResult.ok ? null : emailResult.error ?? "Échec d’envoi",
     },
   });
 }
