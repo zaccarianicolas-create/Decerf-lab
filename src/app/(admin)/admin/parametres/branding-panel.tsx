@@ -207,30 +207,36 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
               En franchise, les lignes sont émises sans TVA et identifiées comme exonérées. Vérifiez le régime et la mention avec votre comptable.
             </p>
           </div>
-          {form.regime_tva === "normal" && (
-            <Input
-              label="Taux TVA de repli (%)"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={Number(form.taux_tva_defaut ?? 21)}
-              onChange={(e) => setField("taux_tva_defaut", Number(e.target.value))}
-            />
-          )}
+          <Input
+            label="Taux TVA normal / de repli (%)"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={Number(form.taux_tva_defaut ?? 21)}
+            onChange={(e) => setField("taux_tva_defaut", Number(e.target.value))}
+          />
           {form.regime_tva !== "normal" && (
-            <div>
-              <label htmlFor="mention_franchise_tva" className="mb-1 block text-sm font-medium text-gray-700">
-                Mention de franchise portée sur les factures
-              </label>
-              <textarea
-                id="mention_franchise_tva"
-                value={String(form.mention_franchise_tva ?? "Régime particulier de franchise des petites entreprises")}
-                onChange={(e) => setField("mention_franchise_tva", e.target.value)}
-                rows={2}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            <>
+              <Input
+                label="Date d’entrée en vigueur"
+                type="date"
+                value={String(form.date_debut_regime_tva ?? "2027-01-01")}
+                onChange={(e) => setField("date_debut_regime_tva", e.target.value)}
               />
-            </div>
+              <div>
+                <label htmlFor="mention_franchise_tva" className="mb-1 block text-sm font-medium text-gray-700">
+                  Mention de franchise portée sur les factures
+                </label>
+                <textarea
+                  id="mention_franchise_tva"
+                  value={String(form.mention_franchise_tva ?? "Régime particulier de franchise des petites entreprises")}
+                  onChange={(e) => setField("mention_franchise_tva", e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

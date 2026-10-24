@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE public.parametres_labo
+  ADD COLUMN IF NOT EXISTS date_debut_regime_tva DATE NOT NULL DEFAULT DATE '2027-01-01';
+
+COMMIT;
