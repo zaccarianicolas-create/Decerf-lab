@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ServicesList } from "./services-list";
 import { getParametresLabo } from "@/lib/parametres-labo";
+import { Download } from "lucide-react";
 
 export default async function AdminServicesPage() {
   const supabase = await createClient();
@@ -39,13 +40,22 @@ export default async function AdminServicesPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Services du laboratoire
-        </h1>
-        <p className="text-sm text-gray-500">
-          Gérez les travaux et services proposés aux praticiens
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Services du laboratoire
+          </h1>
+          <p className="text-sm text-gray-500">
+            Gérez les travaux et services proposés aux praticiens
+          </p>
+        </div>
+        <a
+          href="/api/admin/services/tarifs-pdf"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <Download className="h-4 w-4" />
+          Télécharger les tarifs PDF
+        </a>
       </div>
       <ServicesList
         initialServices={servicesAvecTarifs}
