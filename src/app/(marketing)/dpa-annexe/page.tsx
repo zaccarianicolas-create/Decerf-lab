@@ -4,6 +4,7 @@ import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 export const metadata: Metadata = {
   title: "Annexe DPA (RGPD) | DECERF LAB",
   description: "Annexe de traitement des données personnelles (DPA) de DECERF LAB.",
+  alternates: { canonical: "/dpa-annexe" },
 };
 
 export default async function DpaAnnexePage() {

@@ -57,6 +57,15 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
         ],
       },
       {
+        title: "Réseaux sociaux",
+        fields: [
+          { k: "reseau_facebook_url", label: "Facebook", type: "url" },
+          { k: "reseau_instagram_url", label: "Instagram", type: "url" },
+          { k: "reseau_linkedin_url", label: "LinkedIn", type: "url" },
+          { k: "reseau_x_url", label: "X (Twitter)", type: "url" },
+        ],
+      },
+      {
         title: "Bancaire",
         fields: [
           { k: "iban", label: "IBAN" },

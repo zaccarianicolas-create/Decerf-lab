@@ -4,6 +4,7 @@ import { getParametresLabo } from "@/lib/parametres-labo";
 export const metadata: Metadata = {
   title: "Politique cookies | DECERF LAB",
   description: "Politique d'utilisation des cookies DECERF LAB",
+  alternates: { canonical: "/politique-cookies" },
 };
 
 export default async function PolitiqueCookies() {

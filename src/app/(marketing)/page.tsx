@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,16 @@ import {
   Clock,
   Award,
 } from "lucide-react";
+import { formatAdresseLabo, getParametresLabo, safeHttpsUrl } from "@/lib/parametres-labo";
+
+const homeTitle = "Laboratoire dentaire à Clavier | DECERF LAB";
+const homeDescription = "Laboratoire dentaire et orthodontique à Clavier, Belgique. Prothèses dentaires et appareils sur mesure, flux numérique et accompagnement des praticiens.";
+
+export const metadata: Metadata = {
+  title: homeTitle,
+  description: homeDescription,
+  alternates: { canonical: "/" },
+};
 
 export const dynamic = "force-dynamic";
 
@@ -96,9 +107,55 @@ const steps = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const labo = await getParametresLabo();
+  const siteUrl = safeHttpsUrl(labo.site_web) || "https://www.decerf-lab.be";
+  const address = formatAdresseLabo(labo);
+  const sameAs = [
+    labo.reseau_facebook_url,
+    labo.reseau_instagram_url,
+    labo.reseau_linkedin_url,
+    labo.reseau_x_url,
+  ].map(safeHttpsUrl).filter((url): url is string => Boolean(url));
+  const localBusiness = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: labo.nom_labo || "DECERF LAB",
+    description: homeDescription,
+    url: siteUrl,
+    logo: `${siteUrl}/images/logod.png`,
+    image: `${siteUrl}/images/bann%20site.png`,
+    ...(labo.email_contact ? { email: labo.email_contact } : {}),
+    ...(labo.telephone ? { telephone: labo.telephone } : {}),
+    ...(address ? {
+      address: {
+        "@type": "PostalAddress",
+        ...(labo.adresse ? { streetAddress: labo.adresse } : {}),
+        ...(labo.code_postal ? { postalCode: labo.code_postal } : {}),
+        ...(labo.ville ? { addressLocality: labo.ville } : {}),
+        ...(labo.pays ? { addressCountry: labo.pays } : {}),
+      },
+    } : {}),
+    ...(sameAs.length ? { sameAs } : {}),
+    areaServed: labo.pays || "Belgique",
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Services du laboratoire dentaire",
+      itemListElement: services.map((service) => ({
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: service.title,
+          description: service.description,
+        },
+      })),
+    },
+  };
+  const safeJsonLd = JSON.stringify(localBusiness).replace(/</g, "\\u003c");
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd }} />
       {/* Hero */}
       <section className="relative min-h-[560px] overflow-hidden bg-slate-950 sm:min-h-[600px] lg:min-h-[min(72vh,660px)]">
         <Image

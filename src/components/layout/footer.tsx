@@ -1,11 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, MapPin } from "lucide-react";
-import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
+import { formatAdresseLabo, getParametresLabo, safeHttpsUrl } from "@/lib/parametres-labo";
 
 export async function Footer() {
   const labo = await getParametresLabo();
   const adresse = formatAdresseLabo(labo);
+  const socialLinks = [
+    { label: "Facebook", href: safeHttpsUrl(labo.reseau_facebook_url), Icon: Facebook },
+    { label: "Instagram", href: safeHttpsUrl(labo.reseau_instagram_url), Icon: Instagram },
+    { label: "LinkedIn", href: safeHttpsUrl(labo.reseau_linkedin_url), Icon: Linkedin },
+    { label: "X (Twitter)", href: safeHttpsUrl(labo.reseau_x_url), Icon: Twitter },
+  ].filter((social) => social.href);
 
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
@@ -30,6 +36,23 @@ export async function Footer() {
               qualité. Technologie de pointe et savoir-faire artisanal au service
               de votre pratique.
             </p>
+            {socialLinks.length > 0 && (
+              <nav aria-label="Réseaux sociaux du laboratoire" className="mt-5 flex items-center gap-2">
+                {socialLinks.map(({ label, href, Icon }) => href && (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    title={label}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition-colors hover:border-sky-300 hover:text-sky-700"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </a>
+                ))}
+              </nav>
+            )}
           </div>
 
           {/* Liens rapides */}

@@ -4,6 +4,7 @@ import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 export const metadata: Metadata = {
   title: "Mentions légales | DECERF LAB",
   description: "Mentions légales du laboratoire dentaire DECERF LAB",
+  alternates: { canonical: "/mentions-legales" },
 };
 
 export default async function MentionsLegales() {

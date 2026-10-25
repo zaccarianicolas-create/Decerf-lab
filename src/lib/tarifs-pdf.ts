@@ -70,8 +70,7 @@ export async function createTarifsPdf(
       width: logoSize.width,
       height: logoSize.height,
     });
-    draw("TARIFS PROFESSIONNELS", 168, PAGE_HEIGHT - 27, 11, bold, ACCENT);
-    draw(params.nom_labo || "DECERF LAB", 168, PAGE_HEIGHT - 43, 8, regular, MUTED);
+    draw("TARIFS", 168, PAGE_HEIGHT - 35, 12, bold, ACCENT);
     y = PAGE_HEIGHT - 78;
   };
   const nextPage = () => {
@@ -92,9 +91,8 @@ export async function createTarifsPdf(
       width: logoSize.width,
       height: logoSize.height,
     });
-    draw("TARIFS PROFESSIONNELS", 218, PAGE_HEIGHT - 42, 15, bold, ACCENT);
-    draw(params.nom_labo || "DECERF LAB", 218, PAGE_HEIGHT - 62, 10, bold, TEXT);
-    draw(`Mis à jour le ${formatDate}`, 218, PAGE_HEIGHT - 79, 8, regular, MUTED);
+    draw("TARIFS", 218, PAGE_HEIGHT - 53, 18, bold, ACCENT);
+    draw(`Mis à jour le ${formatDate}`, 218, PAGE_HEIGHT - 78, 8, regular, MUTED);
 
     const address = [params.adresse, [params.code_postal, params.ville].filter(Boolean).join(" "), params.pays]
       .filter((part): part is string => Boolean(part?.trim()))
@@ -185,7 +183,7 @@ export async function createTarifsPdf(
 
   for (const [index, pdfPage] of pages.entries()) {
     pdfPage.drawLine({ start: { x: MARGIN, y: 28 }, end: { x: PAGE_WIDTH - MARGIN, y: 28 }, thickness: 0.6, color: RULE });
-    pdfPage.drawText(`${params.nom_labo || "DECERF LAB"} · Tarifs professionnels · ${index + 1}/${pages.length}`, {
+    pdfPage.drawText(`${params.nom_labo || "DECERF LAB"} · Tarifs · ${index + 1}/${pages.length}`, {
       x: MARGIN,
       y: 15,
       size: 7,

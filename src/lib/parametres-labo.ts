@@ -16,6 +16,10 @@ export type ParametresLabo = {
   telephone: string | null;
   email_contact: string | null;
   site_web: string | null;
+  reseau_facebook_url: string | null;
+  reseau_instagram_url: string | null;
+  reseau_linkedin_url: string | null;
+  reseau_x_url: string | null;
   numero_entreprise: string | null;
   tva_numero: string | null;
   regime_tva: "franchise" | "normal";
@@ -47,6 +51,10 @@ const DEFAULTS: ParametresLabo = {
   telephone: null,
   email_contact: "contact@decerf-lab.be",
   site_web: "https://www.decerf-lab.be",
+  reseau_facebook_url: null,
+  reseau_instagram_url: null,
+  reseau_linkedin_url: null,
+  reseau_x_url: null,
   numero_entreprise: null,
   tva_numero: null,
   regime_tva: "franchise",
@@ -96,6 +104,16 @@ export function formatAdresseLabo(
   return [rue, `${codePostal} ${ville}`, params.pays?.trim()]
     .filter(Boolean)
     .join(", ");
+}
+
+export function safeHttpsUrl(value: string | null | undefined): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 export function invalidateParametresCache() {

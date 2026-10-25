@@ -4,6 +4,7 @@ import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 export const metadata: Metadata = {
   title: "Politique de confidentialité | DECERF LAB",
   description: "Politique de confidentialité et protection des données DECERF LAB",
+  alternates: { canonical: "/politique-confidentialite" },
 };
 
 export default async function PolitiqueConfidentialite() {

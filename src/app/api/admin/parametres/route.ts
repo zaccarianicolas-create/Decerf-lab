@@ -48,6 +48,10 @@ const ALLOWED_KEYS = [
   "telephone",
   "email_contact",
   "site_web",
+  "reseau_facebook_url",
+  "reseau_instagram_url",
+  "reseau_linkedin_url",
+  "reseau_x_url",
   "numero_entreprise",
   "tva_numero",
   "regime_tva",
@@ -88,7 +92,36 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Taux TVA par défaut invalide." }, { status: 400 });
   }
   const patch: Record<string, unknown> = {};
-  for (const k of ALLOWED_KEYS) if (k in body) patch[k] = body[k];
+  const socialUrlKeys = [
+    "reseau_facebook_url",
+    "reseau_instagram_url",
+    "reseau_linkedin_url",
+    "reseau_x_url",
+  ];
+  for (const key of socialUrlKeys) {
+    if (!(key in body)) continue;
+    const value = body[key];
+    if (value === "" || value === null) {
+      patch[key] = null;
+      continue;
+    }
+    if (typeof value !== "string") {
+      return NextResponse.json({ error: `URL invalide : ${key}` }, { status: 400 });
+    }
+    let url: URL;
+    try {
+      url = new URL(value.trim());
+    } catch {
+      return NextResponse.json({ error: `URL invalide : ${key}` }, { status: 400 });
+    }
+    if (url.protocol !== "https:") {
+      return NextResponse.json({ error: "Les liens de réseaux sociaux doivent commencer par https://" }, { status: 400 });
+    }
+    patch[key] = url.toString();
+  }
+  for (const key of ALLOWED_KEYS) {
+    if (!socialUrlKeys.includes(key) && key in body) patch[key] = body[key];
+  }
   patch.updated_by = userId;
 
   const { data: existing } = await admin

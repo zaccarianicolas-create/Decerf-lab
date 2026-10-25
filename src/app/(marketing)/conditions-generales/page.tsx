@@ -4,6 +4,7 @@ import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 export const metadata: Metadata = {
   title: "Conditions générales de vente | Decerf lab",
   description: "Conditions générales de vente et d’utilisation B2B de Decerf lab.",
+  alternates: { canonical: "/conditions-generales" },
 };
 
 const sections = [

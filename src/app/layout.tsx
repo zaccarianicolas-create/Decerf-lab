@@ -11,12 +11,13 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.decerf-lab.be"),
   title: {
-    default: "DECERF LAB | Laboratoire dentaire et orthodontique",
+    default: "Laboratoire dentaire à Clavier | DECERF LAB",
     template: "%s | DECERF LAB",
   },
   description:
-    "Laboratoire dentaire et orthodontique DECERF LAB. Prothèses dentaires de haute qualité, technologie de pointe et savoir-faire artisanal.",
+    "Laboratoire dentaire et orthodontique à Clavier, Belgique. Prothèses dentaires et appareils sur mesure, flux numérique et accompagnement des praticiens.",
   keywords: [
     "laboratoire dentaire",
     "prothèse dentaire",
@@ -25,7 +26,23 @@ export const metadata: Metadata = {
     "bridge",
     "implant",
     "DECERF LAB",
+    "Clavier",
+    "Belgique",
   ],
+  openGraph: {
+    type: "website",
+    locale: "fr_BE",
+    siteName: "DECERF LAB",
+    title: "Laboratoire dentaire à Clavier | DECERF LAB",
+    description: "Prothèses dentaires et appareils orthodontiques sur mesure pour les praticiens en Belgique.",
+    images: [{ url: "/images/bann%20site.png", alt: "Laboratoire dentaire DECERF LAB" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Laboratoire dentaire à Clavier | DECERF LAB",
+    description: "Prothèses dentaires et appareils orthodontiques sur mesure pour les praticiens en Belgique.",
+    images: ["/images/bann%20site.png"],
+  },
   icons: {
     icon: "/images/favicon.png",
     shortcut: "/images/favicon.png",
