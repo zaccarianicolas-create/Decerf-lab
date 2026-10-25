@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import QRCode from "qrcode";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -60,7 +61,15 @@ export async function GET() {
   }));
   const params = await getParametresLabo();
   const logo = await readFile(join(process.cwd(), "public", "images", "logod.png"));
-  const pdf = await createTarifsPdf(params, catalog, logo);
+  const siteUrl = params.site_web?.trim() || null;
+  const qrCode = siteUrl
+    ? await QRCode.toBuffer(siteUrl, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 240,
+      })
+    : null;
+  const pdf = await createTarifsPdf(params, catalog, logo, qrCode);
 
   return new NextResponse(Buffer.from(pdf), {
     headers: {

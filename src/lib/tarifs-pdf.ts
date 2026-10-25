@@ -38,12 +38,14 @@ function wrapText(text: string, font: PDFFont, size: number, width: number) {
 export async function createTarifsPdf(
   params: ParametresLabo,
   services: TarifPdfService[],
-  logoBytes: Uint8Array
+  logoBytes: Uint8Array,
+  qrCodeBytes: Uint8Array | null
 ) {
   const document = await PDFDocument.create();
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
   const logo = await document.embedPng(logoBytes);
+  const qrCode = qrCodeBytes ? await document.embedPng(qrCodeBytes) : null;
   const pages = [document.addPage([PAGE_WIDTH, PAGE_HEIGHT])];
   let page = pages[0];
   let y = PAGE_HEIGHT - MARGIN;
@@ -83,11 +85,10 @@ export async function createTarifsPdf(
 
   const drawHeader = () => {
     page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 100, width: PAGE_WIDTH, height: 100, color: PALE });
-    page.drawRectangle({ x: MARGIN, y: PAGE_HEIGHT - 82, width: 148, height: 58, color: rgb(1, 1, 1) });
-    const logoSize = logo.scaleToFit(136, 48);
+    const logoSize = logo.scaleToFit(160, 62);
     page.drawImage(logo, {
-      x: MARGIN + (148 - logoSize.width) / 2,
-      y: PAGE_HEIGHT - 76 + (48 - logoSize.height) / 2,
+      x: MARGIN,
+      y: PAGE_HEIGHT - 82 + (62 - logoSize.height) / 2,
       width: logoSize.width,
       height: logoSize.height,
     });
@@ -95,31 +96,42 @@ export async function createTarifsPdf(
     draw(params.nom_labo || "DECERF LAB", 218, PAGE_HEIGHT - 62, 10, bold, TEXT);
     draw(`Mis à jour le ${formatDate}`, 218, PAGE_HEIGHT - 79, 8, regular, MUTED);
 
-    let detailsY = PAGE_HEIGHT - 119;
     const address = [params.adresse, [params.code_postal, params.ville].filter(Boolean).join(" "), params.pays]
       .filter((part): part is string => Boolean(part?.trim()))
       .join(", ");
-    const details = [
+    let leftY = PAGE_HEIGHT - 119;
+    const contactDetails = [
       address,
-      params.telephone,
-      params.email_contact,
-      params.site_web,
+      params.telephone ? `Tél. : ${params.telephone}` : null,
+      params.email_contact ? `E-mail : ${params.email_contact}` : null,
+    ].filter((detail): detail is string => Boolean(detail?.trim()));
+    contactDetails.forEach((detail) => {
+      leftY = drawWrapped(detail, MARGIN, leftY, 225, 8, MUTED);
+    });
+    let legalY = PAGE_HEIGHT - 119;
+    const legalDetails = [
+      params.titulaire_legal ? `Titulaire : ${params.titulaire_legal}` : null,
+      params.forme_juridique,
       params.numero_entreprise ? `BCE : ${params.numero_entreprise}` : null,
       params.tva_numero ? `TVA : ${params.tva_numero}` : null,
+      params.site_web ? `Site : ${params.site_web}` : null,
     ].filter((detail): detail is string => Boolean(detail?.trim()));
-    const leftColumn = details.slice(0, 3);
-    const rightColumn = details.slice(3);
-    leftColumn.forEach((detail) => {
-      detailsY = drawWrapped(detail, MARGIN, detailsY, 245, 8, MUTED);
+    legalDetails.forEach((detail) => {
+      legalY = drawWrapped(detail, 282, legalY, 171, 7.5, MUTED);
     });
-    let rightY = PAGE_HEIGHT - 119;
-    rightColumn.forEach((detail) => {
-      rightY = drawWrapped(detail, 315, rightY, PAGE_WIDTH - MARGIN - 315, 8, MUTED);
-    });
-    y = Math.min(detailsY, rightY) - 15;
+    let qrBottom = PAGE_HEIGHT - 119;
+    if (qrCode) {
+      const qrSize = 64;
+      const qrX = PAGE_WIDTH - MARGIN - qrSize;
+      const qrTop = PAGE_HEIGHT - 117;
+      page.drawImage(qrCode, { x: qrX, y: qrTop - qrSize, width: qrSize, height: qrSize });
+      draw("Site du labo", qrX - 2, qrTop - qrSize - 5, 7, regular, MUTED);
+      qrBottom = qrTop - qrSize - 15;
+    }
+    y = Math.min(leftY, legalY, qrBottom) - 9;
     page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.8, color: RULE });
     y -= 20;
-    draw("Tarifs exprimés en euros. Les options s’ajoutent au tarif de base lorsqu’elles sont sélectionnées.", MARGIN, y, 8, regular, MUTED);
+    draw("Tarifs exprimés en euros HT. Les options s’ajoutent au tarif de base lorsqu’elles sont sélectionnées.", MARGIN, y, 8, regular, MUTED);
     y -= 18;
     draw(`Régime TVA : ${params.regime_tva === "franchise" ? "franchise" : "normal"}. Le traitement de la TVA est indiqué sur la facture.`, MARGIN, y, 8, regular, MUTED);
     y -= 20;
