@@ -30,9 +30,6 @@ const emptyTemplate = {
 };
 
 const DEMO_CERTIFICATE_VALUES: Record<string, string> = {
-  "labo.nom": "Laboratoire Exemple",
-  "labo.adresse": "1 rue de Démonstration, 0000 Ville Exemple",
-  "labo.site_fabrication": "Site de fabrication — exemple",
   "dispositifs.liste": "Couronne unitaire — exemple fictif",
   "patient.identifiant": "PATIENT-DEMO-001",
   "dentiste.nom": "Dr Exemple",
@@ -50,7 +47,13 @@ const DEMO_CERTIFICATE_VALUES: Record<string, string> = {
   "document.numero": "APERÇU-DEMO-0000",
 };
 
-export function CertificatModelesManager({ initialTemplates }: { initialTemplates: CertificateTemplate[] }) {
+export function CertificatModelesManager({
+  initialTemplates,
+  laboratoryPreview,
+}: {
+  initialTemplates: CertificateTemplate[];
+  laboratoryPreview: { nom: string; adresse: string; site_fabrication: string };
+}) {
   const supabase = createClient();
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
   const [selected, setSelected] = useState<CertificateTemplate | typeof emptyTemplate>(emptyTemplate);
@@ -63,7 +66,13 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [pdfRenderError, setPdfRenderError] = useState<string | null>(null);
   const pdfPagesRef = useRef<HTMLDivElement>(null);
-  const demoContent = renderCertificateTemplate(selected.contenu_template, DEMO_CERTIFICATE_VALUES);
+  const demoValues = {
+    ...DEMO_CERTIFICATE_VALUES,
+    "labo.nom": laboratoryPreview.nom,
+    "labo.adresse": laboratoryPreview.adresse,
+    "labo.site_fabrication": laboratoryPreview.site_fabrication,
+  };
+  const demoContent = renderCertificateTemplate(selected.contenu_template, demoValues);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -280,7 +289,7 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
               <div>
                 <h3 className="text-sm font-semibold text-gray-800">Aperçu PDF en direct</h3>
-                <p className="text-xs text-amber-700">Données entièrement fictives — document de démonstration, non valable.</p>
+                <p className="text-xs text-amber-700">Coordonnées du labo réelles; patient, prescripteur et numéro fictifs. Document de démonstration, non valable.</p>
               </div>
               <span className="flex items-center gap-1.5 text-xs text-gray-500" role="status">
                 {previewStatus === "Génération du PDF…" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
