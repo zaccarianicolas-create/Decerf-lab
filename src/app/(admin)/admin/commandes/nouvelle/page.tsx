@@ -78,6 +78,21 @@ function AdminNouvelleCommandeInner() {
     searchParams.get("patient_id") || ""
   );
   const [patientRef, setPatientRef] = useState("");
+  const [showCreateDentist, setShowCreateDentist] = useState(false);
+  const [creatingDentist, setCreatingDentist] = useState(false);
+  const [dentistMessage, setDentistMessage] = useState<string | null>(null);
+  const [dentistForm, setDentistForm] = useState({
+    nom: "",
+    prenom: "",
+    email: "",
+    telephone: "",
+    cabinet_nom: "",
+    creerAcces: false,
+  });
+  const [showCreatePatient, setShowCreatePatient] = useState(false);
+  const [creatingPatient, setCreatingPatient] = useState(false);
+  const [patientMessage, setPatientMessage] = useState<string | null>(null);
+  const [patientForm, setPatientForm] = useState({ nom: "", prenom: "", date_naissance: "" });
   const [priorite, setPriorite] = useState("normale");
   const [dateLivraison, setDateLivraison] = useState("");
   const [notes, setNotes] = useState("");
@@ -151,6 +166,90 @@ function AdminNouvelleCommandeInner() {
 
   const updateItem = (idx: number, patch: Partial<Item>) =>
     setItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+
+  const createDentist = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreatingDentist(true);
+    setDentistMessage(null);
+    try {
+      const response = await fetch("/api/admin/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: dentistForm.nom.trim(),
+          prenom: dentistForm.prenom.trim(),
+          email: dentistForm.email.trim() || undefined,
+          telephone: dentistForm.telephone.trim() || undefined,
+          cabinet_nom: dentistForm.cabinet_nom.trim() || undefined,
+          mode: dentistForm.creerAcces ? "compte" : "sans_compte",
+        }),
+      });
+      const result = await response.json() as {
+        error?: string;
+        profile_id?: string;
+        email_sent?: boolean;
+        email_error?: string | null;
+      };
+      if (!response.ok || !result.profile_id) {
+        setDentistMessage(result.error || "Impossible de créer le dentiste.");
+        return;
+      }
+      const newDentist: Client = {
+        id: result.profile_id,
+        nom: dentistForm.nom.trim(),
+        prenom: dentistForm.prenom.trim(),
+        email: dentistForm.email.trim() || null,
+        sans_compte: !dentistForm.creerAcces,
+      };
+      setClients((current) => [newDentist, ...current]);
+      setDentisteId(newDentist.id);
+      setPatientId("");
+      setDentistForm({ nom: "", prenom: "", email: "", telephone: "", cabinet_nom: "", creerAcces: false });
+      setShowCreateDentist(false);
+      if (dentistForm.creerAcces && result.email_sent === false) {
+        setDentistMessage(`Dentiste créé et sélectionné, mais le lien de connexion n’a pas été envoyé : ${result.email_error || "échec d’envoi"}.`);
+      }
+    } catch {
+      setDentistMessage("Erreur réseau lors de la création du dentiste.");
+    } finally {
+      setCreatingDentist(false);
+    }
+  };
+
+  const createPatient = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!dentisteId) return;
+    setCreatingPatient(true);
+    setPatientMessage(null);
+    try {
+      const response = await fetch("/api/admin/patients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dentiste_id: dentisteId,
+          nom: patientForm.nom.trim(),
+          prenom: patientForm.prenom.trim(),
+          date_naissance: patientForm.date_naissance || null,
+        }),
+      });
+      const result = await response.json() as {
+        error?: string;
+        patient?: PatientLite;
+      };
+      if (!response.ok || !result.patient) {
+        setPatientMessage(result.error || "Impossible de créer le patient.");
+        return;
+      }
+      setPatients((current) => [...current, result.patient!].sort((a, b) => a.nom.localeCompare(b.nom)));
+      setPatientId(result.patient.id);
+      setPatientForm({ nom: "", prenom: "", date_naissance: "" });
+      setShowCreatePatient(false);
+    } catch {
+      setPatientMessage("Erreur réseau lors de la création du patient.");
+    } finally {
+      setCreatingPatient(false);
+    }
+  };
 
   const total = items.reduce(
     (sum, item) => {
@@ -299,6 +398,42 @@ function AdminNouvelleCommandeInner() {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateDentist((current) => !current);
+                setDentistMessage(null);
+              }}
+              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline"
+            >
+              <Plus className="h-4 w-4" /> Ajouter un dentiste sans quitter la commande
+            </button>
+            {dentistMessage && <p role="status" className="mt-2 text-sm text-amber-700">{dentistMessage}</p>}
+            {showCreateDentist && (
+              <form onSubmit={createDentist} className="mt-3 space-y-3 rounded-md border border-sky-200 bg-sky-50/50 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">Nouveau dentiste</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input label="Prénom *" required value={dentistForm.prenom} onChange={(event) => setDentistForm({ ...dentistForm, prenom: event.target.value })} />
+                  <Input label="Nom *" required value={dentistForm.nom} onChange={(event) => setDentistForm({ ...dentistForm, nom: event.target.value })} />
+                  <Input label="E-mail (facultatif)" type="email" value={dentistForm.email} onChange={(event) => setDentistForm({ ...dentistForm, email: event.target.value })} />
+                  <Input label="Téléphone" type="tel" value={dentistForm.telephone} onChange={(event) => setDentistForm({ ...dentistForm, telephone: event.target.value })} />
+                  <Input label="Cabinet" value={dentistForm.cabinet_nom} onChange={(event) => setDentistForm({ ...dentistForm, cabinet_nom: event.target.value })} />
+                </div>
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={dentistForm.creerAcces}
+                    onChange={(event) => setDentistForm({ ...dentistForm, creerAcces: event.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <span>Créer son accès au tableau de bord et lui envoyer un lien de connexion{!dentistForm.email.trim() ? " (e-mail requis)" : ""}</span>
+                </label>
+                <p className="text-xs text-gray-500">Sans cette option, une fiche client sans accès est créée; tu pourras lui ajouter un e-mail et proposer l’accès plus tard.</p>
+                <Button type="submit" size="sm" disabled={creatingDentist || (dentistForm.creerAcces && !dentistForm.email.trim())}>
+                  {creatingDentist ? "Création…" : "Créer et sélectionner le dentiste"}
+                </Button>
+              </form>
+            )}
           </div>
 
           <div>
@@ -320,6 +455,34 @@ function AdminNouvelleCommandeInner() {
             <p className="mt-1 text-xs text-gray-500">
               Patients du dentiste sélectionné + patients orphelins du labo.
             </p>
+            {dentisteId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreatePatient((current) => !current);
+                    setPatientMessage(null);
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:underline"
+                >
+                  <Plus className="h-4 w-4" /> Ajouter un patient à ce dentiste
+                </button>
+                {patientMessage && <p role="status" className="mt-2 text-sm text-red-600">{patientMessage}</p>}
+                {showCreatePatient && (
+                  <form onSubmit={createPatient} className="mt-3 space-y-3 rounded-md border border-sky-200 bg-sky-50/50 p-4">
+                    <h3 className="text-sm font-semibold text-gray-900">Nouveau patient</h3>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Input label="Prénom *" required value={patientForm.prenom} onChange={(event) => setPatientForm({ ...patientForm, prenom: event.target.value })} />
+                      <Input label="Nom *" required value={patientForm.nom} onChange={(event) => setPatientForm({ ...patientForm, nom: event.target.value })} />
+                      <Input label="Date de naissance" type="date" value={patientForm.date_naissance} onChange={(event) => setPatientForm({ ...patientForm, date_naissance: event.target.value })} />
+                    </div>
+                    <Button type="submit" size="sm" disabled={creatingPatient}>
+                      {creatingPatient ? "Création…" : "Créer et sélectionner le patient"}
+                    </Button>
+                  </form>
+                )}
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
