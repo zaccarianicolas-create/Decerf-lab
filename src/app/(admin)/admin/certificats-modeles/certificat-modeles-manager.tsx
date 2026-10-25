@@ -58,11 +58,10 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<Uint8Array | null>(null);
   const [previewStatus, setPreviewStatus] = useState("Préparation de l’aperçu…");
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [pdfRenderError, setPdfRenderError] = useState<string | null>(null);
-  const previewUrlRef = useRef<string | null>(null);
   const pdfPagesRef = useRef<HTMLDivElement>(null);
   const demoContent = renderCertificateTemplate(selected.contenu_template, DEMO_CERTIFICATE_VALUES);
 
@@ -86,14 +85,9 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
           const result = await response.json().catch(() => ({}));
           throw new Error(result.error || "Aperçu PDF indisponible.");
         }
-        const nextUrl = URL.createObjectURL(await response.blob());
-        if (controller.signal.aborted) {
-          URL.revokeObjectURL(nextUrl);
-          return;
-        }
-        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = nextUrl;
-        setPreviewUrl(nextUrl);
+        const pdfData = new Uint8Array(await response.arrayBuffer());
+        if (controller.signal.aborted) return;
+        setPreviewData(pdfData);
         setPreviewStatus("Aperçu à jour");
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -108,13 +102,9 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
     };
   }, [demoContent]);
 
-  useEffect(() => () => {
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-  }, []);
-
   useEffect(() => {
     const container = pdfPagesRef.current;
-    if (!previewUrl || !container) return;
+    if (!previewData || !container) return;
 
     let cancelled = false;
     let cancelLoading: (() => void) | null = null;
@@ -128,10 +118,7 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url
         ).toString();
-        const response = await fetch(previewUrl);
-        if (!response.ok) throw new Error("Impossible de lire le PDF de démonstration.");
-        const data = new Uint8Array(await response.arrayBuffer());
-        const loadingTask = pdfjs.getDocument({ data });
+        const loadingTask = pdfjs.getDocument({ data: previewData });
         cancelLoading = () => { void loadingTask.destroy(); };
         const pdf = await loadingTask.promise;
 
@@ -173,7 +160,7 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
       cancelled = true;
       cancelLoading?.();
     };
-  }, [previewUrl]);
+  }, [previewData]);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -302,7 +289,7 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
             </div>
             {previewError ? (
               <p role="alert" className="p-4 text-sm text-red-700">{previewError}</p>
-            ) : previewUrl ? (
+            ) : previewData ? (
               <div className="max-h-[70vh] overflow-y-auto p-3">
                 {pdfRenderError ? (
                   <p role="alert" className="text-sm text-red-700">{pdfRenderError}</p>
