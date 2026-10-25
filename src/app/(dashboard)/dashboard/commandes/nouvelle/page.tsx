@@ -156,6 +156,7 @@ export default function NouvelleCommandePage() {
   }, [setValue, supabase]);
 
   const modeReception = useWatch({ control, name: "mode_reception" });
+  const selectedPatientId = useWatch({ control, name: "patient_id" });
   const watchedItems = useWatch({ control, name: "items" });
 
   const { fields, append, remove } = useFieldArray({
@@ -325,6 +326,7 @@ export default function NouvelleCommandePage() {
                 <select
                   className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
                   {...register("patient_id")}
+                  value={selectedPatientId ?? ""}
                 >
                   <option value="">Choisir un patient...</option>
                   {patients.map((p) => (
