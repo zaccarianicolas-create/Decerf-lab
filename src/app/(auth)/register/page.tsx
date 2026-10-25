@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const CGV_VERSION = "1.0-2026-10-25";
+
 const registerSchema = z
   .object({
     nom: z.string().min(2, "Minimum 2 caractères"),
@@ -176,6 +178,8 @@ function RegisterForm() {
           onboarding_source: invitationToken
             ? "invitation_labo"
             : "inscription_site",
+          cgv_accepted: data.acceptCGU,
+          cgv_version_acceptation: CGV_VERSION,
           invitation_token: hasValidInvitation ? invitationToken : null,
           role: "dentiste",
           mode_travail_prefere:
@@ -485,9 +489,9 @@ function RegisterForm() {
                 rel="noopener noreferrer"
                 className="font-medium text-sky-600 hover:underline"
               >
-                conditions générales
+                CGV et conditions d&apos;utilisation
               </a>
-              {" "}et la{" "}
+              . Je reconnais avoir pris connaissance de la{" "}
               <a
                 href="/politique-confidentialite"
                 target="_blank"
@@ -496,7 +500,7 @@ function RegisterForm() {
               >
                 politique de confidentialité
               </a>
-              {" "}et l{"'"}annexe{" "}
+              {" "}et de l&apos;annexe{" "}
               <a
                 href="/dpa-annexe"
                 target="_blank"
