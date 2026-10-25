@@ -22,6 +22,7 @@ import {
   Clock,
   AlertCircle,
   Loader2,
+  Copy,
 } from "lucide-react";
 import {
   toggleServiceActif,
@@ -164,9 +165,9 @@ export function ServicesList({
     setShowForm(false);
   };
 
-  const startEdit = (s: Service) => {
+  const startEdit = (s: Service, duplicate = false) => {
     setForm({
-      nom: s.nom,
+      nom: duplicate ? `Copie de ${s.nom}` : s.nom,
       description: s.description || "",
       categorie: s.categorie,
       type_travail: s.type_travail || "",
@@ -179,7 +180,7 @@ export function ServicesList({
       duree_estimee_jours: s.duree_estimee_jours?.toString() || "",
       instructions: s.instructions || "",
       options: (s.options ?? []).map((option) => ({
-        id: option.id,
+        ...(duplicate ? {} : { id: option.id }),
         nom: option.nom,
         prix_ht: String(option.prix_ht),
         taux_tva: option.taux_tva === null ? "" : String(option.taux_tva),
@@ -189,7 +190,7 @@ export function ServicesList({
         ordre: option.ordre,
       })),
     });
-    setEditingId(s.id);
+    setEditingId(duplicate ? null : s.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -988,6 +989,14 @@ export function ServicesList({
                       title="Modifier"
                     >
                       <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => startEdit(s, true)}
+                      className="rounded-lg p-2 text-gray-400 hover:bg-sky-50 hover:text-sky-600"
+                      title="Dupliquer"
+                      aria-label={`Dupliquer ${s.nom}`}
+                    >
+                      <Copy className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(s.id)}
