@@ -114,23 +114,21 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           <CardTitle>Régime de TVA du laboratoire</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label htmlFor="regime_tva" className="mb-1 block text-sm font-medium text-gray-700">
-              Régime TVA
-            </label>
-            <select
-              id="regime_tva"
-              value={String(form.regime_tva ?? "franchise")}
-              onChange={(e) => setField("regime_tva", e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
-            >
-              <option value="franchise">Franchise de TVA</option>
-              <option value="normal">Régime normal</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              En franchise, les lignes sont émises sans TVA et identifiées comme exonérées. Vérifiez le régime et la mention avec votre comptable.
-            </p>
-          </div>
+          <label className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Activer la franchise de TVA</p>
+              <p className="mt-1 text-xs text-gray-500">
+                Activée : les nouveaux brouillons sont exonérés, quel que soit le taux des services. Désactivée : les taux du catalogue s’appliquent. Vérifiez le régime et sa mention avec votre comptable.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={String(form.regime_tva ?? "franchise") === "franchise"}
+              onChange={(e) => setField("regime_tva", e.target.checked ? "franchise" : "normal")}
+              className="h-4 w-4 shrink-0"
+              aria-label="Activer la franchise de TVA"
+            />
+          </label>
           <Input
             label="Taux TVA normal / de repli (%)"
             type="number"
@@ -142,12 +140,6 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           />
           {form.regime_tva !== "normal" && (
             <>
-              <Input
-                label="Date d’entrée en vigueur"
-                type="date"
-                value={String(form.date_debut_regime_tva ?? "2027-01-01")}
-                onChange={(e) => setField("date_debut_regime_tva", e.target.value)}
-              />
               <div>
                 <label htmlFor="mention_franchise_tva" className="mb-1 block text-sm font-medium text-gray-700">
                   Mention de franchise portée sur les factures

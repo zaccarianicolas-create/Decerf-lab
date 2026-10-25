@@ -51,7 +51,6 @@ const ALLOWED_KEYS = [
   "numero_entreprise",
   "tva_numero",
   "regime_tva",
-  "date_debut_regime_tva",
   "mention_franchise_tva",
   "numero_agrement",
   "iban",
@@ -81,14 +80,6 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   if ("regime_tva" in body && !["franchise", "normal"].includes(body.regime_tva)) {
     return NextResponse.json({ error: "Régime TVA invalide." }, { status: 400 });
-  }
-  if (
-    "date_debut_regime_tva" in body &&
-    (typeof body.date_debut_regime_tva !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(body.date_debut_regime_tva) ||
-      Number.isNaN(Date.parse(`${body.date_debut_regime_tva}T00:00:00Z`)))
-  ) {
-    return NextResponse.json({ error: "Date d’entrée en vigueur TVA invalide." }, { status: 400 });
   }
   if (
     "taux_tva_defaut" in body &&

@@ -7,7 +7,6 @@ export type FactureBillingSnapshot = {
   version: 1 | 2;
   taux_tva: number;
   regime_tva?: "franchise" | "normal";
-  date_debut_regime_tva?: string;
   mention_franchise_tva?: string;
   issuer: {
     nom: string;
@@ -108,12 +107,7 @@ export async function createFactureDraft(
   }
 
   const params = await getParametresLabo();
-  const dateLocale = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Brussels",
-  }).format(new Date());
-  const regimeFranchise =
-    params.regime_tva === "franchise" &&
-    dateLocale >= params.date_debut_regime_tva;
+  const regimeFranchise = params.regime_tva === "franchise";
   const tauxTvaDefaut = regimeFranchise ? 0 : Number(params.taux_tva_defaut ?? 21);
   const snapshotItems: FactureBillingSnapshot["items"] = [];
   for (const item of items) {
@@ -167,7 +161,6 @@ export async function createFactureDraft(
     version: 2,
     taux_tva: tauxTvaDefaut,
     regime_tva: regimeFranchise ? "franchise" : "normal",
-    date_debut_regime_tva: params.date_debut_regime_tva,
     mention_franchise_tva: params.mention_franchise_tva,
     issuer: {
       nom: params.nom_labo,
