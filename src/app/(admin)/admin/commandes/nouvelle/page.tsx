@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Paperclip } from "lucide-react";
 import Link from "next/link";
+import { FILE_BUCKET, detectFileKind, getScanFormat, isPreviewable3D } from "@/lib/commande-files";
 
 type Client = {
   id: string;
@@ -25,6 +26,9 @@ type PatientLite = {
 };
 
 type Item = {
+  service_labo_id: string;
+  item_label: string;
+  options_selectionnees: string[];
   type_travail: string;
   description: string;
   dents: string;
@@ -35,7 +39,20 @@ type Item = {
   prix_unitaire: number;
 };
 
+type CatalogOption = { id: string; nom: string; prix_ht: number };
+type CatalogService = {
+  id: string;
+  nom: string;
+  categorie: string;
+  type_travail: string | null;
+  prix_base_ht: number | null;
+  options: CatalogOption[];
+};
+
 const EMPTY_ITEM: Item = {
+  service_labo_id: "",
+  item_label: "",
+  options_selectionnees: [],
   type_travail: "couronne",
   description: "",
   dents: "",
@@ -49,9 +66,11 @@ const EMPTY_ITEM: Item = {
 function AdminNouvelleCommandeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
+  const isPaperOrder = searchParams.get("source") === "papier";
+  const [supabase] = useState(() => createClient());
   const [clients, setClients] = useState<Client[]>([]);
   const [patients, setPatients] = useState<PatientLite[]>([]);
+  const [services, setServices] = useState<CatalogService[]>([]);
   const [dentisteId, setDentisteId] = useState<string>(
     searchParams.get("dentiste_id") || ""
   );
@@ -63,6 +82,7 @@ function AdminNouvelleCommandeInner() {
   const [dateLivraison, setDateLivraison] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<Item[]>([{ ...EMPTY_ITEM }]);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +95,38 @@ function AdminNouvelleCommandeInner() {
         .eq("actif", true)
         .order("nom");
       setClients((data as Client[]) ?? []);
+    })();
+  }, [supabase]);
+
+  useEffect(() => {
+    (async () => {
+      const [serviceResult, tariffResult, optionResult] = await Promise.all([
+        supabase
+          .from("services_labo")
+          .select("id, nom, categorie, type_travail")
+          .eq("actif", true)
+          .order("ordre"),
+        supabase.from("service_tarifs").select("service_id, prix_base_ht"),
+        supabase
+          .from("service_options")
+          .select("id, service_id, nom, prix_ht, ordre")
+          .eq("actif", true)
+          .order("ordre"),
+      ]);
+      const tariffByService = new Map(
+        (tariffResult.data ?? []).map((tariff) => [tariff.service_id, Number(tariff.prix_base_ht)])
+      );
+      const optionsByService = new Map<string, CatalogOption[]>();
+      for (const option of optionResult.data ?? []) {
+        const serviceOptions = optionsByService.get(option.service_id) ?? [];
+        serviceOptions.push({ id: option.id, nom: option.nom, prix_ht: Number(option.prix_ht) });
+        optionsByService.set(option.service_id, serviceOptions);
+      }
+      setServices((serviceResult.data ?? []).map((service) => ({
+        ...service,
+        prix_base_ht: tariffByService.get(service.id) ?? null,
+        options: optionsByService.get(service.id) ?? [],
+      })) as CatalogService[]);
     })();
   }, [supabase]);
 
@@ -101,7 +153,13 @@ function AdminNouvelleCommandeInner() {
     setItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
 
   const total = items.reduce(
-    (s, it) => s + Number(it.quantite || 0) * Number(it.prix_unitaire || 0),
+    (sum, item) => {
+      const service = services.find((entry) => entry.id === item.service_labo_id);
+      const optionsTotal = service?.options
+        .filter((option) => item.options_selectionnees.includes(option.id))
+        .reduce((subtotal, option) => subtotal + option.prix_ht, 0) ?? 0;
+      return sum + Number(item.quantite || 0) * (Number(item.prix_unitaire || 0) + optionsTotal);
+    },
     0
   );
 
@@ -123,6 +181,9 @@ function AdminNouvelleCommandeInner() {
         date_livraison: dateLivraison || null,
         notes: notes || null,
         items: items.map((it) => ({
+          service_labo_id: it.service_labo_id || null,
+          item_label: it.item_label.trim() || null,
+          options_selectionnees: it.options_selectionnees,
           type_travail: it.type_travail,
           description: it.description,
           dents: it.dents
@@ -142,6 +203,46 @@ function AdminNouvelleCommandeInner() {
       setError(json.error || "Erreur");
       return;
     }
+    if (proofFiles.length > 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      let uploadFailures = 0;
+      if (user) {
+        for (const file of proofFiles) {
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+          const path = `${json.commande.id}/commande-papier/${crypto.randomUUID()}_${safeName}`;
+          const fileKind = detectFileKind(file.name, file.type);
+          const format3d = getScanFormat(file.name, file.type);
+          const { data: uploaded, error: uploadError } = await supabase.storage
+            .from(FILE_BUCKET)
+            .upload(path, file);
+          if (uploadError || !uploaded) {
+            uploadFailures += 1;
+            continue;
+          }
+          const { error: recordError } = await supabase.from("fichiers").insert({
+            commande_id: json.commande.id,
+            nom_fichier: path,
+            nom_original: file.name,
+            type_mime: file.type || null,
+            taille: file.size,
+            storage_bucket: FILE_BUCKET,
+            storage_path: uploaded.path,
+            uploaded_by: user.id,
+            uploaded_via: "inscription_site",
+            file_kind: fileKind,
+            format_3d: format3d,
+            version: 1,
+            apercu_disponible: Boolean(format3d && isPreviewable3D(file.name, file.type)),
+          });
+          if (recordError) uploadFailures += 1;
+        }
+      } else {
+        uploadFailures = proofFiles.length;
+      }
+      if (uploadFailures > 0) {
+        window.alert(`Commande créée, mais ${uploadFailures} fichier(s) n’ont pas pu être joints. Tu pourras les ajouter depuis le détail de la commande.`);
+      }
+    }
     router.push(`/admin/travaux/${json.commande.id}`);
   };
 
@@ -155,9 +256,13 @@ function AdminNouvelleCommandeInner() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nouvelle commande</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isPaperOrder ? "Saisir une commande papier" : "Nouvelle commande"}
+          </h1>
           <p className="text-sm text-gray-500">
-            Créer une commande pour un client (avec ou sans compte).
+            {isPaperOrder
+              ? "Encode la prescription reçue sur papier; la commande sera liée au dentiste, au patient et au suivi du laboratoire."
+              : "Créer une commande pour un client (avec ou sans compte)."}
           </p>
         </div>
       </div>
@@ -258,6 +363,32 @@ function AdminNouvelleCommandeInner() {
         </CardContent>
       </Card>
 
+      {isPaperOrder && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Fiche papier / pièces jointes (facultatif)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+              <Paperclip className="h-4 w-4 text-gray-500" />
+              <span>Joindre un scan PDF ou une photo de la prescription</span>
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                multiple
+                className="sr-only"
+                onChange={(event) => setProofFiles(Array.from(event.target.files ?? []))}
+              />
+            </label>
+            {proofFiles.length > 0 && (
+              <ul className="mt-3 space-y-1 text-xs text-gray-600">
+                {proofFiles.map((file, index) => <li key={`${file.name}-${index}`}>{file.name}</li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -293,32 +424,54 @@ function AdminNouvelleCommandeInner() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Type
+                    Service du catalogue (facultatif)
                   </label>
                   <select
-                    value={it.type_travail}
-                    onChange={(e) =>
-                      updateItem(idx, { type_travail: e.target.value })
-                    }
+                    value={it.service_labo_id}
+                    onChange={(event) => {
+                      const service = services.find((entry) => entry.id === event.target.value);
+                      updateItem(idx, {
+                        service_labo_id: event.target.value,
+                        item_label: "",
+                        options_selectionnees: [],
+                        type_travail: service?.type_travail || it.type_travail,
+                        prix_unitaire: event.target.value ? service?.prix_base_ht ?? 0 : 0,
+                      });
+                    }}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    {[
-                      "couronne",
-                      "bridge",
-                      "implant",
-                      "prothese_amovible",
-                      "facette",
-                      "inlay_onlay",
-                      "guide_chirurgical",
-                      "gouttiere",
-                      "autre",
-                    ].map((t) => (
-                      <option key={t} value={t}>
-                        {t.replace(/_/g, " ")}
-                      </option>
+                    <option value="">Hors catalogue / saisie libre</option>
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>{service.nom}</option>
                     ))}
                   </select>
                 </div>
+                {!it.service_labo_id && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Type de travail
+                    </label>
+                    <select
+                      value={it.type_travail}
+                      onChange={(event) => updateItem(idx, { type_travail: event.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      {[
+                        "couronne", "bridge", "implant", "prothese_amovible", "facette",
+                        "inlay_onlay", "guide_chirurgical", "gouttiere", "autre",
+                      ].map((type) => (
+                        <option key={type} value={type}>{type.replace(/_/g, " ")}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {!it.service_labo_id && (
+                  <Input
+                    label="Intitulé du travail (si hors catalogue)"
+                    value={it.item_label}
+                    onChange={(event) => updateItem(idx, { item_label: event.target.value })}
+                  />
+                )}
                 <Input
                   label="Description"
                   value={it.description}
@@ -363,11 +516,52 @@ function AdminNouvelleCommandeInner() {
                   type="number"
                   step="0.01"
                   value={it.prix_unitaire}
+                  readOnly={Boolean(it.service_labo_id && services.find((service) => service.id === it.service_labo_id)?.prix_base_ht !== null)}
                   onChange={(e) =>
                     updateItem(idx, { prix_unitaire: Number(e.target.value) })
                   }
                 />
               </div>
+              {it.service_labo_id && (() => {
+                const service = services.find((entry) => entry.id === it.service_labo_id);
+                if (!service) return null;
+                return (
+                  <div className="mt-3 rounded-md bg-sky-50 px-3 py-2 text-sm">
+                    <p className="font-medium text-sky-900">
+                      Tarif de base : {service.prix_base_ht === null ? "sur devis" : `${service.prix_base_ht.toFixed(2)} € HT`}
+                    </p>
+                    {service.prix_base_ht === null && (
+                      <p className="mt-1 text-xs text-sky-800">Saisis le prix convenu dans le champ Prix unitaire.</p>
+                    )}
+                    {service.options.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs font-medium uppercase text-sky-800">Options facturables</p>
+                        {service.options.map((option) => {
+                          const checked = it.options_selectionnees.includes(option.id);
+                          return (
+                            <label key={option.id} className="flex cursor-pointer items-center justify-between gap-3 text-sky-900">
+                              <span className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => updateItem(idx, {
+                                    options_selectionnees: checked
+                                      ? it.options_selectionnees.filter((id) => id !== option.id)
+                                      : [...it.options_selectionnees, option.id],
+                                  })}
+                                />
+                                {option.nom}
+                              </span>
+                              <span className="whitespace-nowrap font-medium">+ {option.prix_ht.toFixed(2)} € HT / unité</span>
+                            </label>
+                          );
+                        })}
+                        <p className="pt-1 text-xs text-sky-800">Ces options seront précochées sur la facture; le dentiste pourra les vérifier.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
           <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2 text-sm">

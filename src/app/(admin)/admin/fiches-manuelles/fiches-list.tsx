@@ -138,8 +138,8 @@ export function FichesManuellsList({
       const data = await res.json();
       router.push(`/admin/fiches-manuelles/${data.id}`);
     } else {
-      const json = await res.json().catch(() => ({}));
-      setError((json as any).error || "Erreur");
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      setError(json.error || "Erreur");
     }
   };
 
@@ -148,25 +148,31 @@ export function FichesManuellsList({
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fiches manuelles</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Fiches de travail internes</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Ordres de travail internes sans commande client
+            Suivi interne sans commande client. Pour encoder une fiche papier reçue d’un dentiste, crée une commande papier.
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreate((v) => !v)}
-          className="gap-1.5 bg-sky-600 hover:bg-sky-700"
-        >
-          <Plus className="h-4 w-4" />
-          Nouvelle fiche
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link
+            href="/admin/commandes/nouvelle?source=papier"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700"
+          >
+            <Plus className="h-4 w-4" />
+            Saisir une commande papier
+          </Link>
+          <Button variant="outline" onClick={() => setShowCreate((value) => !value)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Nouvelle fiche interne
+          </Button>
+        </div>
       </div>
 
       {/* Formulaire rapide de création */}
       {showCreate && (
         <Card className="mb-6 border-sky-200 bg-sky-50/40">
           <CardContent className="p-5 space-y-4">
-            <h2 className="font-semibold text-gray-800">Nouvelle fiche de travail</h2>
+            <h2 className="font-semibold text-gray-800">Nouvelle fiche de travail interne</h2>
 
             {error && (
               <p className="rounded-lg bg-red-50 p-2 text-sm text-red-600">{error}</p>
@@ -243,7 +249,7 @@ export function FichesManuellsList({
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Date d'échéance</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Date d&apos;échéance</label>
                 <Input
                   type="date"
                   value={dateEcheance}

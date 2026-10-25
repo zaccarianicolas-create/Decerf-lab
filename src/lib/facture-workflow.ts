@@ -39,6 +39,7 @@ export type FactureBillingSnapshot = {
     description: string;
     quantite: number;
     prix_base_ht: number;
+    options_preselectionnees?: string[];
     taux_tva?: number;
     categorie_tva_peppol?: "S" | "Z" | "E";
     motif_exoneration_tva?: string | null;
@@ -71,7 +72,7 @@ export async function createFactureDraft(
   const { data: commande, error: commandeError } = await admin
     .from("commandes")
     .select(
-      "id, numero, dentiste_id, cabinet_id, patient_ref, items:commande_items(id, service_labo_id, type_travail, description, quantite, prix_unitaire, service:services_labo(id, nom, taux_tva, categorie_tva_peppol, motif_exoneration_tva))"
+      "id, numero, dentiste_id, cabinet_id, patient_ref, items:commande_items(id, service_labo_id, type_travail, item_label, description, quantite, prix_unitaire, options_selectionnees, service:services_labo(id, nom, taux_tva, categorie_tva_peppol, motif_exoneration_tva))"
     )
     .eq("id", commandeId)
     .single();
@@ -112,30 +113,42 @@ export async function createFactureDraft(
   const snapshotItems: FactureBillingSnapshot["items"] = [];
   for (const item of items) {
     const service = Array.isArray(item.service) ? item.service[0] : item.service;
-    const basePrice = item.service_labo_id
+    const catalogBasePrice = item.service_labo_id
       ? tariffByService.get(item.service_labo_id)
       : undefined;
-    if (basePrice === undefined) {
+    const manualBasePrice = item.prix_unitaire === null || item.prix_unitaire === undefined
+      ? undefined
+      : Number(item.prix_unitaire);
+    const basePrice = catalogBasePrice ?? manualBasePrice;
+    if (basePrice === undefined || !Number.isFinite(basePrice) || basePrice < 0) {
       return {
-        error: `Aucun service tarifé associé à ${service?.nom || item.type_travail}. Associe un service du catalogue avant de terminer le travail.`,
+        error: `Aucun tarif saisi ou associé à ${service?.nom || item.item_label || item.type_travail}.`,
       };
     }
 
     const serviceTaux = Number(service?.taux_tva ?? tauxTvaDefaut);
     const serviceCategorie = service?.categorie_tva_peppol ?? (serviceTaux === 0 ? "Z" : "S");
+    const itemOptions = item.service_labo_id
+      ? optionsByService.get(item.service_labo_id) ?? []
+      : [];
     snapshotItems.push({
       commande_item_id: item.id,
       service_id: item.service_labo_id,
-      service_nom: service?.nom || String(item.type_travail).replace(/_/g, " "),
-      description: item.description?.trim() || service?.nom || String(item.type_travail).replace(/_/g, " "),
+      service_nom: service?.nom || item.item_label || String(item.type_travail).replace(/_/g, " "),
+      description: item.description?.trim() || service?.nom || item.item_label || String(item.type_travail).replace(/_/g, " "),
       quantite: Math.max(1, Number(item.quantite || 1)),
       prix_base_ht: basePrice,
+      options_preselectionnees: Array.isArray(item.options_selectionnees)
+        ? (item.options_selectionnees as unknown[]).filter((optionId): optionId is string =>
+            typeof optionId === "string" && itemOptions.some((option) => option.id === optionId)
+          )
+        : [],
       taux_tva: regimeFranchise ? 0 : serviceTaux,
       categorie_tva_peppol: regimeFranchise ? "E" : serviceCategorie,
       motif_exoneration_tva: regimeFranchise
         ? params.mention_franchise_tva
         : service?.motif_exoneration_tva ?? null,
-      options: (item.service_labo_id ? optionsByService.get(item.service_labo_id) ?? [] : []).map((option) => ({
+      options: itemOptions.map((option) => ({
         id: option.id,
         nom: option.nom,
         prix_ht: Number(option.prix_ht),

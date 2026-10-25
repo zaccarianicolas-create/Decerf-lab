@@ -18,7 +18,11 @@ export function FactureValidation({
   snapshot: FactureBillingSnapshot;
 }) {
   const router = useRouter();
-  const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
+  const [selectedOptions, setSelectedOptions] = useState<Set<string>>(() => new Set(
+    snapshot.items.flatMap((item) => (item.options_preselectionnees ?? []).map(
+      (optionId) => `${item.commande_item_id}:${optionId}`
+    ))
+  ));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{

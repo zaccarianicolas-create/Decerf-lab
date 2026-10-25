@@ -3,6 +3,21 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAudit, extractRequestMeta } from "@/lib/audit";
 
+type AdminCommandeItem = {
+  service_labo_id?: string | null;
+  options_selectionnees?: unknown;
+  type_travail?: string;
+  description?: string;
+  item_label?: string | null;
+  quantite?: number;
+  prix_unitaire?: number;
+  dents?: string[] | null;
+  materiau?: string | null;
+  teinte?: string | null;
+  mode_fabrication?: string | null;
+  infos_travail?: string | null;
+};
+
 async function requireAdmin() {
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -56,7 +71,7 @@ export async function POST(request: NextRequest) {
     priorite?: "normale" | "urgente" | "express";
     date_livraison?: string;
     notes?: string;
-    items?: Array<Record<string, any>>;
+    items?: AdminCommandeItem[];
   };
 
   if (!dentiste_id) {
@@ -64,6 +79,40 @@ export async function POST(request: NextRequest) {
   }
   if (!Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Au moins une ligne requise" }, { status: 400 });
+  }
+
+  const optionsByItem: number[] = [];
+  for (const item of items) {
+    const serviceId = typeof item.service_labo_id === "string" ? item.service_labo_id : null;
+    if (item.options_selectionnees !== undefined && !Array.isArray(item.options_selectionnees)) {
+      return NextResponse.json({ error: "Sélection d’options invalide." }, { status: 400 });
+    }
+    const selectedOptionIds = Array.isArray(item.options_selectionnees)
+      ? item.options_selectionnees
+      : [];
+    const selectedOptionIdsAsStrings = selectedOptionIds.filter(
+      (id): id is string => typeof id === "string"
+    );
+    if (selectedOptionIdsAsStrings.length !== selectedOptionIds.length) {
+      return NextResponse.json({ error: "Sélection d’options invalide." }, { status: 400 });
+    }
+    if (selectedOptionIds.length > 0 && !serviceId) {
+      return NextResponse.json({ error: "Les options facturables nécessitent un service du catalogue." }, { status: 400 });
+    }
+    if (!serviceId || selectedOptionIds.length === 0) {
+      optionsByItem.push(0);
+      continue;
+    }
+    const { data: selectedOptions, error: optionsError } = await admin
+      .from("service_options")
+      .select("id, prix_ht")
+      .eq("service_id", serviceId)
+      .eq("actif", true)
+      .in("id", selectedOptionIdsAsStrings);
+    if (optionsError || (selectedOptions ?? []).length !== selectedOptionIds.length) {
+      return NextResponse.json({ error: optionsError?.message || "Une option sélectionnée n’appartient pas à ce service." }, { status: 400 });
+    }
+    optionsByItem.push((selectedOptions ?? []).reduce((sum, option) => sum + Number(option.prix_ht), 0));
   }
 
   const { data: dentiste } = await admin
@@ -76,8 +125,8 @@ export async function POST(request: NextRequest) {
   }
 
   const montantTotal = items.reduce(
-    (s, it) =>
-      s + Number(it.quantite || 1) * Number(it.prix_unitaire || 0),
+    (sum, item, index) =>
+      sum + Number(item.quantite || 1) * (Number(item.prix_unitaire || 0) + optionsByItem[index]),
     0
   );
 
@@ -107,6 +156,7 @@ export async function POST(request: NextRequest) {
 
   const itemsPayload = items.map((it) => ({
     commande_id: cmd.id,
+    service_labo_id: it.service_labo_id || null,
     type_travail: it.type_travail || "autre",
     description: it.description || null,
     item_label: it.item_label || null,
@@ -117,6 +167,9 @@ export async function POST(request: NextRequest) {
     teinte: it.teinte || null,
     mode_fabrication: it.mode_fabrication || null,
     infos_travail: it.infos_travail || null,
+    options_selectionnees: Array.isArray(it.options_selectionnees)
+      ? it.options_selectionnees.filter((id): id is string => typeof id === "string")
+      : [],
   }));
 
   const { error: itemsError } = await admin
