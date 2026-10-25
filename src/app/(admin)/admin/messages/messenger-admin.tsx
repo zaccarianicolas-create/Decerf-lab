@@ -136,12 +136,20 @@ export function MessengerAdmin({
   const createConv = async (dentisteId: string) => {
     const d = dentistes.find((x) => x.id === dentisteId);
     if (!d) return;
+    const existingConversation = conversations.find(
+      (conversation) => conversation.dentiste_id === dentisteId && !conversation.commande_id
+    );
+    if (existingConversation) {
+      open(existingConversation.id);
+      setShowNew(false);
+      return;
+    }
     setCreating(true);
     setCreateError(null);
     const { data: conv, error } = await supabase
       .from("conversations")
       .insert({
-        titre: `Conversation avec Dr ${d.prenom ?? ""} ${d.nom ?? ""}`.trim(),
+        titre: "Conversation avec DECERF LAB",
         dentiste_id: dentisteId,
       })
       .select(

@@ -15,12 +15,15 @@ export function ChatFab({ href }: { href: string }) {
   useEffect(() => {
     let isMounted = true;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let refreshInterval: number | null = null;
+    let refreshOnFocus: (() => void) | null = null;
+    let refreshOnVisibility: (() => void) | null = null;
 
     const start = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!isMounted || !user) return;
 
       const refreshUnread = async () => {
         const { count } = await supabase
@@ -35,6 +38,13 @@ export function ChatFab({ href }: { href: string }) {
       };
 
       await refreshUnread();
+      refreshOnFocus = () => void refreshUnread();
+      refreshOnVisibility = () => {
+        if (document.visibilityState === "visible") void refreshUnread();
+      };
+      refreshInterval = window.setInterval(refreshUnread, 30000);
+      window.addEventListener("focus", refreshOnFocus);
+      document.addEventListener("visibilitychange", refreshOnVisibility);
 
       channel = supabase
         .channel(`chat-fab-unread-${user.id}`)
@@ -52,6 +62,9 @@ export function ChatFab({ href }: { href: string }) {
 
     return () => {
       isMounted = false;
+      if (refreshInterval !== null) window.clearInterval(refreshInterval);
+      if (refreshOnFocus) window.removeEventListener("focus", refreshOnFocus);
+      if (refreshOnVisibility) document.removeEventListener("visibilitychange", refreshOnVisibility);
       if (channel) supabase.removeChannel(channel);
     };
   }, [supabase]);

@@ -46,7 +46,11 @@ export function MessengerDentiste({
   const [activeId, setActiveId] = useState<string | null>(
     initialConversations[0]?.id ?? null
   );
-  const [unread, setUnread] = useState(initialUnread);
+  const [unread, setUnread] = useState(() => {
+    const unreadByConversation = { ...initialUnread };
+    if (initialConversations[0]) unreadByConversation[initialConversations[0].id] = 0;
+    return unreadByConversation;
+  });
   const [conversations, setConversations] = useState(initialConversations);
   const [search, setSearch] = useState("");
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
@@ -78,10 +82,8 @@ export function MessengerDentiste({
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
-            const conv = conversations.find((c) => c.id === m.conversation_id);
-            const convLabel = conv?.titre || "DECERF LAB";
             new Notification("Nouveau message", {
-              body: `${convLabel} vous a écrit`,
+              body: "DECERF LAB vous a écrit",
             });
           }
 
@@ -116,6 +118,12 @@ export function MessengerDentiste({
   };
 
   const createConversation = async () => {
+    const existingConversation = conversations.find((conversation) => !conversation.commande_id);
+    if (existingConversation) {
+      open(existingConversation.id);
+      return;
+    }
+
     setCreating(true);
     setError(null);
     const { data, error: createError } = await supabase
@@ -134,6 +142,7 @@ export function MessengerDentiste({
   };
 
   const active = conversations.find((c) => c.id === activeId);
+  const activeCommande = Array.isArray(active?.commande) ? active.commande[0] : active?.commande;
   const filtered = conversations.filter((c) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -247,7 +256,7 @@ export function MessengerDentiste({
             <button
               key={c.id}
               onClick={() => open(c.id)}
-              title={c.titre || "Conversation avec DECERF LAB"}
+              title="Conversation avec DECERF LAB"
               className={`flex w-full items-start gap-3 border-b border-gray-50 px-4 py-3 text-left ${
                 activeId === c.id ? "bg-sky-50" : "hover:bg-gray-50"
               } ${isEmbed && isConversationListCollapsed ? "justify-center px-2 md:items-center" : ""}`}
@@ -261,7 +270,7 @@ export function MessengerDentiste({
               <div className={`min-w-0 flex-1 ${isEmbed && isConversationListCollapsed ? "md:hidden" : ""}`}>
                 <div className="flex items-center justify-between">
                   <p className="truncate text-sm font-medium text-gray-900">
-                    {c.titre || "DECERF LAB"}
+                    DECERF LAB
                   </p>
                   {(unread[c.id] || 0) > 0 && (
                     <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-600 px-1.5 text-xs font-medium text-white">
@@ -272,7 +281,7 @@ export function MessengerDentiste({
                 <p className="truncate text-xs text-gray-500">
                   {commande
                     ? `Commande ${commande.numero}`
-                    : "Conversation générale"}
+                    : "Équipe du laboratoire"}
                 </p>
               </div>
             </button>
@@ -288,7 +297,14 @@ export function MessengerDentiste({
                 <button type="button" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 md:hidden" onClick={() => setActiveId(null)} aria-label="Retour aux conversations">
                   <ArrowLeft className="h-4 w-4" />
                 </button>
-                <p className="truncate text-sm font-medium text-gray-900">{active.titre || "DECERF LAB"}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">DECERF LAB</p>
+                  <p className="truncate text-xs text-gray-500">
+                    {activeCommande?.numero
+                      ? `Commande ${activeCommande.numero}`
+                      : "Équipe du laboratoire"}
+                  </p>
+                </div>
               </div>
               <ChatThread
                 conversationId={active.id}

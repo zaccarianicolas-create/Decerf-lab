@@ -126,13 +126,10 @@ export function ChatThread({
     });
 
     // Mark unread incoming as read
-    await supabase
-      .from("messages")
-      .update({ lu: true })
-      .eq("conversation_id", conversationId)
-      .neq("auteur_id", currentUserId)
-      .eq("lu", false);
-  }, [supabase, conversationId, currentUserId]);
+    await supabase.rpc("mark_conversation_messages_read", {
+      p_conversation_id: conversationId,
+    });
+  }, [supabase, conversationId]);
 
   useEffect(() => {
     load();
@@ -157,10 +154,9 @@ export function ChatThread({
           if (payload.eventType === "INSERT") {
             setMessages((p) => [...p, payload.new as ChatMessage]);
             if ((payload.new as ChatMessage).auteur_id !== currentUserId) {
-              supabase
-                .from("messages")
-                .update({ lu: true })
-                .eq("id", (payload.new as ChatMessage).id);
+              void supabase.rpc("mark_conversation_messages_read", {
+                p_conversation_id: conversationId,
+              });
             }
           } else if (payload.eventType === "UPDATE") {
             setMessages((p) =>
