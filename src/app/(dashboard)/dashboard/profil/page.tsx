@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ const emptyCabinet = (id = ""): CabinetContact => ({
 });
 
 export default function ProfilPage() {
-  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -135,13 +133,6 @@ export default function ProfilPage() {
       setCabinetMessage("Erreur réseau lors de la sauvegarde du cabinet.");
     }
     setSavingCabinet(false);
-  };
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
   };
 
   if (loading) {
@@ -296,17 +287,6 @@ export default function ProfilPage() {
                 </p>
               </form>
             ) : <p className="text-sm text-gray-500">Chargement du cabinet…</p>}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Déconnexion</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" onClick={handleLogout}>
-              Se déconnecter
-            </Button>
           </CardContent>
         </Card>
 

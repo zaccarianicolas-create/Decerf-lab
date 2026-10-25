@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   User,
   Building2,
+  MapPin,
   Phone,
   Mail,
   Shield,
@@ -53,7 +54,14 @@ type ClientDetailRecord = {
   statut_compte: string;
   actif: boolean;
   created_at: string;
-  cabinet: { nom: string } | null;
+  cabinet: {
+    nom: string;
+    adresse: string | null;
+    code_postal: string | null;
+    ville: string | null;
+    telephone: string | null;
+    email: string | null;
+  } | null;
 };
 
 type PatientRow = {
@@ -432,6 +440,33 @@ export function ClientDetail({
                   <Phone className="h-4 w-4 text-gray-400" />
                   <span>{client.telephone || "—"}</span>
                 </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-gray-400" />
+                    <span>{client.cabinet?.nom || "Cabinet non renseigné"}</span>
+                  </div>
+                  <div className="ml-6 flex items-start gap-2 text-gray-600">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                    <span>
+                      {[
+                        client.cabinet?.adresse,
+                        [client.cabinet?.code_postal, client.cabinet?.ville].filter(Boolean).join(" "),
+                      ].filter(Boolean).join(", ") || "Adresse non renseignée"}
+                    </span>
+                  </div>
+                  {client.cabinet?.telephone && (
+                    <div className="ml-6 flex items-center gap-2 text-gray-600">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span>{client.cabinet.telephone}</span>
+                    </div>
+                  )}
+                  {client.cabinet?.email && (
+                    <div className="ml-6 flex items-center gap-2 text-gray-600">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span>{client.cabinet.email}</span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-gray-400" />
                   <span>
@@ -480,12 +515,6 @@ export function ClientDetail({
                     Scanner : {client.modele_scanner || "Non renseigné"}
                   </span>
                 </div>
-                {client.cabinet && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Building2 className="h-4 w-4 text-gray-400" />
-                    <span>{client.cabinet.nom}</span>
-                  </div>
-                )}
                 <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400">
                   Inscrit le{" "}
                   {new Date(client.created_at).toLocaleDateString("fr-FR")}

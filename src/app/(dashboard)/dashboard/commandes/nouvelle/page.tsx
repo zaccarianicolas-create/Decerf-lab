@@ -133,8 +133,13 @@ export default function NouvelleCommandePage() {
           .eq("id", userData.user.id)
           .maybeSingle(),
       ]);
-      setPatients(patientsRes.data ?? []);
+      const loadedPatients = patientsRes.data ?? [];
+      setPatients(loadedPatients);
       setServicesLabo(servicesRes.data ?? []);
+      const requestedPatientId = new URLSearchParams(window.location.search).get("patient_id");
+      if (requestedPatientId && loadedPatients.some((patient) => patient.id === requestedPatientId)) {
+        setValue("patient_id", requestedPatientId);
+      }
       if (profileRes.data?.cabinet_id) {
         const { data: cabinet } = await supabase
           .from("cabinets")

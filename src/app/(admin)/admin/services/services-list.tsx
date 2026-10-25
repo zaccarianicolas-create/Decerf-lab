@@ -749,10 +749,16 @@ export function ServicesList({
                     <button
                       type="button"
                       aria-label="Retirer cette option"
-                      onClick={() => setForm((current) => ({
-                        ...current,
-                        options: current.options.filter((_, itemIndex) => itemIndex !== index),
-                      }))}
+                      onClick={() => {
+                        if (
+                          option.id &&
+                          !window.confirm("Supprimer définitivement cette option du service ? Les anciennes factures conserveront leurs montants.")
+                        ) return;
+                        setForm((current) => ({
+                          ...current,
+                          options: current.options.filter((_, itemIndex) => itemIndex !== index),
+                        }));
+                      }}
                       className="mb-1 rounded p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />

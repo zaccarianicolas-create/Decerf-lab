@@ -389,7 +389,7 @@ export function PatientDetail({
                 <p className="mt-3 text-sm text-gray-500">
                   Aucun travail pour ce patient
                 </p>
-                <Link href="/dashboard/commandes/nouvelle">
+                <Link href={`/dashboard/commandes/nouvelle?patient_id=${encodeURIComponent(patient.id)}`}>
                   <Button
                     variant="outline"
                     size="sm"

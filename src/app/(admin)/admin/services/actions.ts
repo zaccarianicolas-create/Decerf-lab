@@ -187,8 +187,9 @@ export async function saveService(
   if (omittedIds.length) {
     const { error } = await admin
       .from("service_options")
-      .update({ actif: false })
-      .in("id", omittedIds);
+      .delete()
+      .in("id", omittedIds)
+      .eq("service_id", serviceId);
     if (error) return { success: false, error: error.message, data: null };
   }
 

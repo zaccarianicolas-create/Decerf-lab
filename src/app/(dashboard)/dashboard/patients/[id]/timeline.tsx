@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { Briefcase, FileCheck, FileText, ScrollText } from "lucide-react";
 
 type Item = {
@@ -41,6 +42,7 @@ export function PatientTimeline({
         type: "certificat",
         titre: `Certificat ${c.numero_certificat ?? ""}`,
         description: c.statut ?? "",
+        href: c.commande_id ? `/dashboard/commandes/${c.commande_id}` : undefined,
       });
     }
     for (const f of factures ?? []) {
@@ -91,7 +93,13 @@ export function PatientTimeline({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-900">{it.titre}</p>
+              {it.href ? (
+                <Link href={it.href} className="text-sm font-medium text-gray-900 hover:text-sky-700 hover:underline">
+                  {it.titre}
+                </Link>
+              ) : (
+                <p className="text-sm font-medium text-gray-900">{it.titre}</p>
+              )}
               <p className="text-xs text-gray-400">
                 {new Date(it.date).toLocaleDateString("fr-FR")}
               </p>
