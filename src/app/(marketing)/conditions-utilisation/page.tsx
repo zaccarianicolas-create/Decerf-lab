@@ -159,12 +159,18 @@ export default async function ConditionsUtilisationPage() {
         </p>
         <div className="prose prose-lg max-w-none space-y-8 text-gray-700">
           <section>
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">1. Éditeur</h2>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              1. Identification de l&apos;éditeur
+            </h2>
             <p>
-              {identity.titulaire_legal}, {identity.forme_juridique.toLowerCase()}, exerçant sous le nom commercial {identity.nom_labo}, dont le siège est situé {identity.adresse}.
-            </p>
-            <p>
-              Numéro BCE : {identity.numero_entreprise}. TVA : {identity.tva_numero}. Contact : {identity.email_contact}. Téléphone : {identity.telephone}. Adresse du portail : {identity.site_web}.
+              <strong>Nom commercial :</strong> {identity.nom_labo}<br />
+              <strong>Titulaire :</strong> {identity.titulaire_legal} ({identity.forme_juridique})<br />
+              <strong>Numéro BCE :</strong> {identity.numero_entreprise}<br />
+              <strong>Numéro TVA :</strong> {identity.tva_numero}<br />
+              <strong>Adresse :</strong> {identity.adresse}<br />
+              <strong>Téléphone :</strong> {identity.telephone}<br />
+              <strong>Email :</strong> {identity.email_contact}<br />
+              <strong>Site du portail :</strong> {identity.site_web}<br />
             </p>
           </section>
           {sections.map((section) => (

@@ -227,10 +227,14 @@ export default async function ConditionsGenerales() {
               1. Identification du Laboratoire
             </h2>
             <p>
-              {labo.titulaire_legal}, {labo.forme_juridique.toLowerCase()}, exerçant sous le nom commercial {labo.nom_labo}, dont le siège est situé {adresse || "à compléter dans les paramètres du laboratoire"}.
-            </p>
-            <p>
-              Numéro BCE : {labo.numero_entreprise || "à compléter dès attribution"}. Numéro TVA : {labo.tva_numero || "à compléter"}. Téléphone : {labo.telephone || "à compléter"}. Email : {labo.email_contact || "à compléter"}. Site : {labo.site_web || "à compléter"}.
+              <strong>Nom commercial :</strong> {labo.nom_labo}<br />
+              <strong>Titulaire :</strong> {labo.titulaire_legal} ({labo.forme_juridique})<br />
+              <strong>Numéro BCE :</strong> {labo.numero_entreprise || "À compléter dès attribution"}<br />
+              <strong>Numéro TVA :</strong> {labo.tva_numero || "À compléter"}<br />
+              <strong>Adresse :</strong> {adresse || "À compléter dans les paramètres du laboratoire"}<br />
+              <strong>Téléphone :</strong> {labo.telephone || "À compléter"}<br />
+              <strong>Email :</strong> {labo.email_contact || "À compléter"}<br />
+              <strong>Site :</strong> {labo.site_web || "À compléter"}<br />
             </p>
             <p>Ci-après « {labo.nom_labo} » ou « le Laboratoire ».</p>
           </section>
