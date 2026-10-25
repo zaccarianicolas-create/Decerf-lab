@@ -54,6 +54,8 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
         title: "Identité",
         fields: [
           { k: "nom_labo", label: "Nom du laboratoire" },
+          { k: "titulaire_legal", label: "Nom légal du titulaire" },
+          { k: "forme_juridique", label: "Forme juridique" },
           { k: "numero_entreprise", label: "N° d’entreprise (BCE/KBO)" },
           { k: "tva_numero", label: "N° TVA" },
           { k: "numero_agrement", label: "N° d'agrément" },

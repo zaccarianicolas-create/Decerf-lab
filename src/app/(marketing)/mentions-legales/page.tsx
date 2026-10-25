@@ -1,11 +1,17 @@
 import { Metadata } from "next";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Mentions légales | DECERF LAB",
   description: "Mentions légales du laboratoire dentaire DECERF LAB",
 };
 
-export default function MentionsLegales() {
+export default async function MentionsLegales() {
+  const labo = await getParametresLabo();
+  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <main className="min-h-screen bg-white py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -14,14 +20,17 @@ export default function MentionsLegales() {
         <div className="prose prose-lg max-w-none space-y-8 text-gray-700">
           <section>
             <h2 className="mb-4 text-xl font-semibold text-gray-900">
-              1. Identification de l'entreprise
+              1. Identification de l&apos;entreprise
             </h2>
             <p>
-              <strong>Raison sociale:</strong> DECERF LAB<br />
-              <strong>Adresse:</strong> Rue des Claveaux 1, 4560 Clavier, Belgique<br />
-              <strong>Téléphone:</strong> +32 (0)4 xxx xx xx<br />
-              <strong>Email:</strong> contact@decerf-lab.be<br />
-              <strong>Responsable:</strong> Julie Decerf<br />
+              <strong>Nom commercial:</strong> {labo.nom_labo}<br />
+              <strong>Titulaire:</strong> {labo.titulaire_legal} ({labo.forme_juridique})<br />
+              <strong>Numéro BCE:</strong> {labo.numero_entreprise || "À compléter dès attribution"}<br />
+              <strong>Numéro TVA:</strong> {labo.tva_numero || "À compléter"}<br />
+              <strong>Adresse:</strong> {adresse || "À compléter dans les paramètres du laboratoire"}<br />
+              <strong>Téléphone:</strong> {labo.telephone || "À compléter"}<br />
+              <strong>Email:</strong> {labo.email_contact || "À compléter"}<br />
+              <strong>Site:</strong> {labo.site_web || "À compléter"}<br />
             </p>
           </section>
 
@@ -41,8 +50,8 @@ export default function MentionsLegales() {
               3. Directeur de la publication
             </h2>
             <p>
-              Le site est publié sous la responsabilité de Julie Decerf,
-              directrice du laboratoire dentaire DECERF LAB.
+              Le site est publié sous la responsabilité de {labo.titulaire_legal},
+              titulaire de {labo.nom_labo}.
             </p>
           </section>
 
@@ -62,9 +71,9 @@ export default function MentionsLegales() {
               5. Responsabilité
             </h2>
             <p>
-              DECERF LAB s'efforce d'assurer l'exactitude et la mise à jour des
+              DECERF LAB s&apos;efforce d&apos;assurer l&apos;exactitude et la mise à jour des
               informations du site. Cependant, DECERF LAB ne peut garantir
-              l'absence d'erreurs ou d'omissions. Les utilisateurs utilisent le
+              l&apos;absence d&apos;erreurs ou d&apos;omissions. Les utilisateurs utilisent le
               site à leurs propres risques.
             </p>
           </section>
@@ -74,8 +83,8 @@ export default function MentionsLegales() {
               6. Liens externes
             </h2>
             <p>
-              DECERF LAB n'est pas responsable du contenu des sites externes
-              accessibles via des liens hypertextes. L'établissement de liens
+              DECERF LAB n&apos;est pas responsable du contenu des sites externes
+              accessibles via des liens hypertextes. L&apos;établissement de liens
               externes ne constitue pas une approbation des contenus de ces sites.
             </p>
           </section>
@@ -96,7 +105,7 @@ export default function MentionsLegales() {
             </h2>
             <p>
               Pour toute question relative aux mentions légales, veuillez
-              contacter: <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
+              contacter: <a href={`mailto:${labo.email_contact || "contact@decerf-lab.be"}`} className="text-sky-600 hover:underline">{labo.email_contact || "contact@decerf-lab.be"}</a>
             </p>
           </section>
         </div>

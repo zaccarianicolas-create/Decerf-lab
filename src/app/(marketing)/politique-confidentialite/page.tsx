@@ -1,11 +1,18 @@
 import { Metadata } from "next";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité | DECERF LAB",
   description: "Politique de confidentialité et protection des données DECERF LAB",
 };
 
-export default function PolitiqueConfidentialite() {
+export default async function PolitiqueConfidentialite() {
+  const labo = await getParametresLabo();
+  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
+    .filter(Boolean)
+    .join(", ");
+  const emailContact = labo.email_contact || "contact@decerf-lab.be";
+
   return (
     <main className="min-h-screen bg-white py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -19,14 +26,14 @@ export default function PolitiqueConfidentialite() {
               1. Collecte de données
             </h2>
             <p>
-              DECERF LAB collecte les données personnelles suivantes:
+              {labo.nom_labo} collecte les données personnelles suivantes:
             </p>
             <ul className="ml-6 list-disc space-y-2">
               <li>Données de contact (nom, email, téléphone)</li>
               <li>Données professionnelles (cabinet dentaire, qualifications)</li>
               <li>Données de facturation (adresse, données IBAN)</li>
-              <li>Données d'utilisation (logs d'accès, interactions)</li>
-              <li>Données de communication (messages, demandes de renseignements)</li>
+                    <li>L&apos;exécution d&apos;un contrat</li>
+                    <li>Le respect d&apos;obligations légales</li>
             </ul>
           </section>
 
@@ -39,9 +46,9 @@ export default function PolitiqueConfidentialite() {
             </p>
             <ul className="ml-6 list-disc space-y-2">
               <li>Votre consentement explicite</li>
-              <li>L'exécution d'un contrat</li>
-              <li>Le respect d'obligations légales</li>
-              <li>Les intérêts légitimes de DECERF LAB</li>
+              <li>L&apos;exécution d&apos;un contrat</li>
+              <li>Le respect d&apos;obligations légales</li>
+              <li>Les intérêts légitimes de {labo.nom_labo}</li>
             </ul>
           </section>
 
@@ -97,13 +104,13 @@ export default function PolitiqueConfidentialite() {
             <ul className="ml-6 list-disc space-y-2">
               <li>Accéder à vos données personnelles</li>
               <li>Rectifier les données inexactes</li>
-              <li>Obtenir l'effacement de vos données</li>
+              <li>Obtenir l&apos;effacement de vos données</li>
               <li>Demander une limitation du traitement</li>
-              <li>Demander l'exportation de vos données</li>
+              <li>Demander l&apos;exportation de vos données</li>
               <li>Retirer votre consentement</li>
             </ul>
             <p className="mt-4">
-              Pour exercer ces droits, contactez: <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
+              Pour exercer ces droits, contactez : <a href={`mailto:${emailContact}`} className="text-sky-600 hover:underline">{emailContact}</a>
             </p>
           </section>
 
@@ -112,8 +119,8 @@ export default function PolitiqueConfidentialite() {
               7. Sécurité des données
             </h2>
             <p>
-              DECERF LAB met en place des mesures de sécurité appropriées pour
-              protéger vos données contre l'accès non autorisé, la modification
+              {labo.nom_labo} met en place des mesures de sécurité appropriées pour
+              protéger vos données contre l&apos;accès non autorisé, la modification
               ou la divulgation:
             </p>
             <ul className="ml-6 list-disc space-y-2">
@@ -129,7 +136,7 @@ export default function PolitiqueConfidentialite() {
               8. Cookies
             </h2>
             <p>
-              Ce site utilise des cookies. Pour plus d'informations, consultez
+              Ce site utilise des cookies. Pour plus d&apos;informations, consultez
               notre <a href="/politique-cookies" className="text-sky-600 hover:underline">politique cookies</a>.
             </p>
           </section>
@@ -151,9 +158,9 @@ export default function PolitiqueConfidentialite() {
             <p>
               Pour toute question sur cette politique, contactez:
               <br />
-              <strong>Email:</strong> <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
+              <strong>Email:</strong> <a href={`mailto:${emailContact}`} className="text-sky-600 hover:underline">{emailContact}</a>
               <br />
-              <strong>Adresse:</strong> Rue des Claveaux 1, 4560 Clavier, Belgique
+              <strong>Adresse:</strong> {adresse || "À compléter dans les paramètres du laboratoire"}
             </p>
           </section>
         </div>

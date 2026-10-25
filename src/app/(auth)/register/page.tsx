@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const CGV_VERSION = "1.0-2026-10-25";
+const CGU_VERSION = "1.0-2026-10-25";
 
 const registerSchema = z
   .object({
@@ -31,7 +32,7 @@ const registerSchema = z
     password: z.string().min(6, "Minimum 6 caractères"),
     confirmPassword: z.string(),
     acceptCGU: z.boolean().refine((val) => val === true, {
-      message: "Vous devez accepter les conditions générales",
+      message: "Vous devez accepter les CGV et les CGU",
     }),
   })
   .superRefine((data, ctx) => {
@@ -180,6 +181,8 @@ function RegisterForm() {
             : "inscription_site",
           cgv_accepted: data.acceptCGU,
           cgv_version_acceptation: CGV_VERSION,
+          cgu_accepted: data.acceptCGU,
+          cgu_version_acceptation: CGU_VERSION,
           invitation_token: hasValidInvitation ? invitationToken : null,
           role: "dentiste",
           mode_travail_prefere:
@@ -490,6 +493,15 @@ function RegisterForm() {
                 className="font-medium text-sky-600 hover:underline"
               >
                 CGV et conditions d&apos;utilisation
+              </a>
+              {" "}et les{" "}
+              <a
+                href="/conditions-utilisation"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-sky-600 hover:underline"
+              >
+                CGU du portail
               </a>
               . Je reconnais avoir pris connaissance de la{" "}
               <a

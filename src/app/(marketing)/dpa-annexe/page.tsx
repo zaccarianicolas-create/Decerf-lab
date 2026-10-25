@@ -1,11 +1,18 @@
 import { Metadata } from "next";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Annexe DPA (RGPD) | DECERF LAB",
   description: "Annexe de traitement des données personnelles (DPA) de DECERF LAB.",
 };
 
-export default function DpaAnnexePage() {
+export default async function DpaAnnexePage() {
+  const labo = await getParametresLabo();
+  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
+    .filter(Boolean)
+    .join(", ");
+  const emailContact = labo.email_contact || "contact@decerf-lab.be";
+
   return (
     <main className="min-h-screen bg-white py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -21,14 +28,14 @@ export default function DpaAnnexePage() {
             <h2 className="mb-3 text-xl font-semibold text-gray-900">1. Objet</h2>
             <p>
               Cette annexe encadre le traitement des données personnelles réalisé dans le cadre
-              des services fournis par DECERF LAB, conformément au RGPD et au droit belge.
+              des services fournis par {labo.nom_labo}, conformément au RGPD et au droit belge.
             </p>
           </section>
 
           <section>
             <h2 className="mb-3 text-xl font-semibold text-gray-900">2. Parties</h2>
             <p>
-              <strong>Prestataire:</strong> DECERF LAB, Rue des Claveaux 1, 4560 Clavier, Belgique.
+              <strong>Prestataire:</strong> {labo.nom_labo}, {labo.titulaire_legal}, {adresse || "adresse à compléter"}.
               <br />
               <strong>Client:</strong> praticien, cabinet ou clinique utilisant la plateforme.
             </p>
@@ -67,7 +74,7 @@ export default function DpaAnnexePage() {
           <section>
             <h2 className="mb-3 text-xl font-semibold text-gray-900">6. Sous-traitants ultérieurs</h2>
             <p>
-              DECERF LAB peut recourir à des sous-traitants techniques (hébergement, email,
+              {labo.nom_labo} peut recourir à des sous-traitants techniques (hébergement, email,
               paiements), soumis à des obligations contractuelles de protection des données.
             </p>
           </section>
@@ -84,16 +91,16 @@ export default function DpaAnnexePage() {
             <h2 className="mb-3 text-xl font-semibold text-gray-900">8. Droits des personnes concernées</h2>
             <p>
               Les demandes d&apos;accès, rectification, effacement, limitation ou export peuvent être
-              adressées à <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>.
+              adressées à <a href={`mailto:${emailContact}`} className="text-sky-600 hover:underline">{emailContact}</a>.
             </p>
           </section>
 
           <section>
             <h2 className="mb-3 text-xl font-semibold text-gray-900">9. Contact RGPD</h2>
             <p>
-              DECERF LAB - Rue des Claveaux 1, 4560 Clavier, Belgique
+              {labo.nom_labo} - {adresse || "adresse à compléter"}
               <br />
-              Email: <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
+              Email: <a href={`mailto:${emailContact}`} className="text-sky-600 hover:underline">{emailContact}</a>
             </p>
           </section>
 

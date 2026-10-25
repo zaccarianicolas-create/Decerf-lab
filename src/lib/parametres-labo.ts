@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type ParametresLabo = {
   id?: string;
   nom_labo: string;
+  titulaire_legal: string;
+  forme_juridique: string;
   adresse: string | null;
   code_postal: string | null;
   ville: string | null;
@@ -37,6 +39,8 @@ export type ParametresLabo = {
 
 const DEFAULTS: ParametresLabo = {
   nom_labo: "DECERF LAB",
+  titulaire_legal: "Julie Decerf",
+  forme_juridique: "Personne physique",
   adresse: null,
   code_postal: null,
   ville: null,

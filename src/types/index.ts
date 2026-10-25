@@ -86,6 +86,10 @@ export interface Profile {
   numero_entreprise?: string | null;
   assujetti_tva?: boolean | null;
   numero_tva?: string | null;
+  cgv_version_acceptation?: string | null;
+  cgv_acceptees_at?: string | null;
+  cgu_version_acceptation?: string | null;
+  cgu_acceptees_at?: string | null;
   actif: boolean;
   created_at: string;
   updated_at: string;

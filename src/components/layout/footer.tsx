@@ -104,6 +104,13 @@ export function Footer() {
               href="/conditions-generales"
               className="hover:text-sky-600 transition-colors"
             >
+              CGV
+            </Link>
+            <span>•</span>
+            <Link
+              href="/conditions-utilisation"
+              className="hover:text-sky-600 transition-colors"
+            >
               CGU
             </Link>
             <span>•</span>

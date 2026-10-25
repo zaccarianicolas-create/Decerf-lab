@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente | Decerf lab",
@@ -6,14 +7,6 @@ export const metadata: Metadata = {
 };
 
 const sections = [
-  {
-    title: "1. Identification du Laboratoire",
-    paragraphs: [
-      "Julie Decerf, personne physique exerçant sous le nom commercial Decerf lab, dont l’adresse professionnelle est Rue des Claveaux 1, 4560 Clavier, Belgique.",
-      "Numéro BCE : à compléter dès attribution. Numéro d’identification TVA : à compléter. Téléphone : à compléter. Email : contact@decerf-lab.be. Site : www.decerf-lab.be.",
-      "Ci-après « Decerf lab » ou « le Laboratoire ».",
-    ],
-  },
   {
     title: "2. Champ d’application",
     paragraphs: [
@@ -214,7 +207,12 @@ const sections = [
   },
 ];
 
-export default function ConditionsGenerales() {
+export default async function ConditionsGenerales() {
+  const labo = await getParametresLabo();
+  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <main className="min-h-screen bg-white py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -226,6 +224,18 @@ export default function ConditionsGenerales() {
         </p>
 
         <div className="prose prose-lg max-w-none space-y-8 text-gray-700">
+          <section>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">
+              1. Identification du Laboratoire
+            </h2>
+            <p>
+              {labo.titulaire_legal}, {labo.forme_juridique.toLowerCase()}, exerçant sous le nom commercial {labo.nom_labo}, dont le siège est situé {adresse || "à compléter dans les paramètres du laboratoire"}.
+            </p>
+            <p>
+              Numéro BCE : {labo.numero_entreprise || "à compléter dès attribution"}. Numéro TVA : {labo.tva_numero || "à compléter"}. Téléphone : {labo.telephone || "à compléter"}. Email : {labo.email_contact || "à compléter"}. Site : {labo.site_web || "à compléter"}.
+            </p>
+            <p>Ci-après « {labo.nom_labo} » ou « le Laboratoire ».</p>
+          </section>
           {sections.map((section) => (
             <section key={section.title}>
               <h2 className="mb-4 text-xl font-semibold text-gray-900">

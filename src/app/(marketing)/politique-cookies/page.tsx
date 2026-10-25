@@ -1,28 +1,31 @@
 import { Metadata } from "next";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Politique cookies | DECERF LAB",
   description: "Politique d'utilisation des cookies DECERF LAB",
 };
 
-export default function PolitiqueCookies() {
+export default async function PolitiqueCookies() {
+  const labo = await getParametresLabo();
+  const emailContact = labo.email_contact || "contact@decerf-lab.be";
   return (
     <main className="min-h-screen bg-white py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h1 className="mb-8 text-3xl font-bold text-gray-900">
-          Politique d'utilisation des cookies
+          Politique d&apos;utilisation des cookies
         </h1>
 
         <div className="prose prose-lg max-w-none space-y-8 text-gray-700">
           <section>
             <h2 className="mb-4 text-xl font-semibold text-gray-900">
-              1. Qu'est-ce qu'un cookie?
+              1. Qu&apos;est-ce qu&apos;un cookie ?
             </h2>
             <p>
               Un cookie est un petit fichier texte stocké sur votre appareil
               (ordinateur, tablette, téléphone) quand vous visitez un site web.
               Les cookies permettent au site de se souvenir de vos préférences
-              et d'améliorer votre expérience utilisateur.
+              et d&apos;améliorer votre expérience utilisateur.
             </p>
           </section>
 
@@ -52,10 +55,10 @@ export default function PolitiqueCookies() {
 
             <p className="mt-4">
               <strong>Cookies analytiques:</strong><br />
-              Ces cookies nous aident à comprendre comment vous utilisez le site:
+              Ces cookies nous aident à comprendre comment vous utilisez le site :
             </p>
             <ul className="ml-6 list-disc space-y-2">
-              <li>Statistiques d'utilisation</li>
+              <li>Statistiques d&apos;utilisation</li>
               <li>Pages consultées</li>
               <li>Temps de visite</li>
             </ul>
@@ -74,7 +77,7 @@ export default function PolitiqueCookies() {
               <li><strong>cookie-consent:</strong> Votre préférence de cookies (1 année)</li>
             </ul>
             <p className="mt-4">
-              Ces cookies sont nécessaires pour vous permettre d'accéder aux
+              Ces cookies sont nécessaires pour vous permettre d&apos;accéder aux
               services sécurisés.
             </p>
           </section>
@@ -96,15 +99,15 @@ export default function PolitiqueCookies() {
               5. Gestion des cookies
             </h2>
             <p>
-              <strong>Via notre banneau:</strong><br />
-              Cliquez sur "Accepter tout" ou "Refuser tout" dans le banneau cookies
+              <strong>Via notre banneau :</strong><br />
+              Cliquez sur &quot;Accepter tout&quot; ou &quot;Refuser tout&quot; dans le banneau cookies
               au bas de la page. Vous pouvez modifier vos préférences à tout moment.
             </p>
 
             <p className="mt-4">
               <strong>Via votre navigateur:</strong><br />
               Vous pouvez accepter ou refuser les cookies dans les paramètres
-              de votre navigateur. Les instructions sont disponibles sur:
+              de votre navigateur. Les instructions sont disponibles sur :
             </p>
             <ul className="ml-6 list-disc space-y-2">
               <li>Chrome: www.google.com/intl/fr/policies/technologies/managing/</li>
@@ -135,7 +138,7 @@ export default function PolitiqueCookies() {
             <p>
               Les cookies ne contiennent pas vos données personnelles sensibles
               (mots de passe, numéros de carte). Consultez notre
-              <a href="/politique-confidentialite" className="text-sky-600 hover:underline"> politique de confidentialité</a> pour plus d'informations.
+              <a href="/politique-confidentialite" className="text-sky-600 hover:underline"> politique de confidentialité</a> pour plus d&apos;informations.
             </p>
           </section>
 
@@ -156,7 +159,7 @@ export default function PolitiqueCookies() {
             <p>
               Pour toute question sur nos cookies:
               <br />
-              <a href="mailto:contact@decerf-lab.be" className="text-sky-600 hover:underline">contact@decerf-lab.be</a>
+              <a href={`mailto:${emailContact}`} className="text-sky-600 hover:underline">{emailContact}</a>
             </p>
           </section>
         </div>

@@ -39,6 +39,8 @@ export async function GET() {
 
 const ALLOWED_KEYS = [
   "nom_labo",
+  "titulaire_legal",
+  "forme_juridique",
   "adresse",
   "code_postal",
   "ville",
