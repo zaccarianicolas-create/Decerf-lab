@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { renderCertificateTemplate } from "@/lib/certificat-template";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   Send,
   Save,
   FileCheck,
+  FileText,
+  Loader2,
 } from "lucide-react";
 
 type WorkItem = {
@@ -99,9 +101,12 @@ export function CertificatModal({
 }: CertificatModalProps) {
   const supabase = createClient();
   const printRef = useRef<HTMLDivElement>(null);
+  const pdfPreviewUrlRef = useRef<string | null>(null);
   const [cert, setCert] = useState(initialCert);
   const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const [generatingPdfPreview, setGeneratingPdfPreview] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [confirmCustomMade, setConfirmCustomMade] = useState(Boolean(initialCert));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [modeleId, setModeleId] = useState<string>(
@@ -204,6 +209,39 @@ export function CertificatModal({
         "document.numero": cert?.numero_certificat || "Attribué à la création",
       })
     : "Choisissez un modèle pour afficher l’aperçu.";
+
+    useEffect(() => () => {
+      if (pdfPreviewUrlRef.current) URL.revokeObjectURL(pdfPreviewUrlRef.current);
+    }, []);
+
+    const generatePdfPreview = async () => {
+      if (!selectedModel) return;
+      setGeneratingPdfPreview(true);
+      setErrorMessage(null);
+      try {
+        const response = await fetch("/api/admin/certificats/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contenu: previewContent,
+            numero: cert?.numero_certificat || "APERÇU - NUMÉRO PROVISOIRE",
+          }),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          setErrorMessage(result.error || "Impossible de générer l’aperçu PDF.");
+          return;
+        }
+        const nextUrl = URL.createObjectURL(await response.blob());
+        if (pdfPreviewUrlRef.current) URL.revokeObjectURL(pdfPreviewUrlRef.current);
+        pdfPreviewUrlRef.current = nextUrl;
+        setPdfPreviewUrl(nextUrl);
+      } catch {
+        setErrorMessage("Erreur réseau pendant la génération de l’aperçu PDF.");
+      } finally {
+        setGeneratingPdfPreview(false);
+      }
+    };
 
   const generateOrUpdate = async () => {
     setSaving(true);
@@ -749,19 +787,47 @@ export function CertificatModal({
 
           {/* Right: Preview */}
           <div className="max-h-[70vh] overflow-y-auto bg-gray-50 p-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
-              Aperçu du document
-            </h3>
-
-            <div
-              ref={printRef}
-              className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
-                {previewContent}
-              </pre>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Aperçu PDF final
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void generatePdfPreview()}
+                disabled={!selectedModel || generatingPdfPreview}
+                className="gap-2"
+              >
+                {generatingPdfPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {generatingPdfPreview ? "Génération…" : "Générer l’aperçu PDF"}
+              </Button>
             </div>
+            {pdfPreviewUrl ? (
+              <div className="space-y-2">
+                {!cert?.numero_certificat && (
+                  <p className="text-xs text-amber-700">
+                    Numéro provisoire : le numéro définitif sera attribué à la création de la fiche.
+                  </p>
+                )}
+                <iframe
+                  key={pdfPreviewUrl}
+                  src={pdfPreviewUrl}
+                  title="Aperçu du PDF de conformité"
+                  className="h-[70vh] w-full rounded-lg border border-gray-200 bg-white"
+                />
+              </div>
+            ) : (
+              <div
+                ref={printRef}
+                className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
+                style={{ fontFamily: "Georgia, serif" }}
+              >
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
+                  {previewContent}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       </div>
