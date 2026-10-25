@@ -65,7 +65,9 @@ export default async function AdminParametresPage() {
       />
 
       <div className="mt-10">
-        <h2 className="mb-4 text-xl font-bold text-gray-900">Branding & identité labo</h2>
+        <h2 className="mb-4 text-xl font-bold text-gray-900">
+          Identité légale, coordonnées et facturation du laboratoire
+        </h2>
         <BrandingPanel initial={parametres} />
       </div>
 

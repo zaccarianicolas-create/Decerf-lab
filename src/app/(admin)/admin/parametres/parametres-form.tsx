@@ -6,9 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Settings,
   User,
-  Building2,
   Shield,
   Save,
   Database,
@@ -17,7 +15,6 @@ import {
   BookOpen,
   Key,
   Mail,
-  Phone,
 } from "lucide-react";
 
 type Profile = {
@@ -44,24 +41,14 @@ export function ParametresForm({
   const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [laboSaving, setLaboSaving] = useState(false);
-  const [laboSaved, setLaboSaved] = useState(false);
+  const [emailChanging, setEmailChanging] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailChangeMessage, setEmailChangeMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nom: profile?.nom || "",
     prenom: profile?.prenom || "",
     telephone: profile?.telephone || "",
   });
-  const [laboSettings, setLaboSettings] = useState({
-    nom_labo: "DECERF LAB",
-    adresse: "",
-    code_postal: "",
-    ville: "",
-    telephone_labo: "",
-    email_labo: "",
-    siret: "", // BCE number
-    horaires: "Lundi - Vendredi : 8h00 - 18h00",
-  });
-
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -81,37 +68,22 @@ export function ParametresForm({
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleSaveLaboSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLaboSaving(true);
-    setLaboSaved(false);
-
-    // Upsert into labo_parametres table
-    const { error } = await supabase
-      .from("labo_parametres")
-      .upsert(
-        {
-          id: 1, // Single record per labo
-          nom_labo: laboSettings.nom_labo,
-          adresse: laboSettings.adresse,
-          code_postal: laboSettings.code_postal,
-          ville: laboSettings.ville,
-          telephone_labo: laboSettings.telephone_labo,
-          email_labo: laboSettings.email_labo,
-          siret: laboSettings.siret || null, // BCE number
-          horaires: laboSettings.horaires,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
-
-    if (error) {
-      console.error("Erreur sauvegarde:", error);
+  const handleRequestEmailChange = async () => {
+    const email = newEmail.trim().toLowerCase();
+    setEmailChangeMessage(null);
+    if (!email || email === profile?.email?.toLowerCase()) {
+      setEmailChangeMessage("Saisissez une nouvelle adresse email différente de l’adresse actuelle.");
+      return;
     }
 
-    setLaboSaving(false);
-    setLaboSaved(true);
-    setTimeout(() => setLaboSaved(false), 3000);
+    setEmailChanging(true);
+    const { error } = await supabase.auth.updateUser({ email });
+    setEmailChanging(false);
+    setEmailChangeMessage(
+      error
+        ? `Impossible de demander le changement : ${error.message}`
+        : "Demande envoyée. Suivez les instructions de confirmation reçues par email; l’adresse de connexion changera après confirmation."
+    );
   };
 
   return (
@@ -122,7 +94,7 @@ export function ParametresForm({
           <div className="mb-4 flex items-center gap-2">
             <User className="h-5 w-5 text-sky-600" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Profil administrateur
+              Compte administrateur
             </h2>
           </div>
 
@@ -146,12 +118,15 @@ export function ParametresForm({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">
-                  Email
+                  Email de connexion
                 </label>
                 <div className="flex h-10 items-center rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-500">
                   <Mail className="mr-2 h-4 w-4" />
                   {profile?.email}
                 </div>
+                <p className="text-xs text-gray-500">
+                  Cet email sert à se connecter à l’administration. L’email public du laboratoire se règle dans l’identité du labo.
+                </p>
               </div>
               <Input
                 label="Téléphone"
@@ -183,122 +158,6 @@ export function ParametresForm({
         </CardContent>
       </Card>
 
-      {/* Informations du laboratoire */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-sky-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Informations du laboratoire
-            </h2>
-          </div>
-
-          <form onSubmit={handleSaveLaboSettings} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
-                label="Nom du laboratoire"
-                value={laboSettings.nom_labo}
-                onChange={(e) =>
-                  setLaboSettings({
-                    ...laboSettings,
-                    nom_labo: e.target.value,
-                  })
-                }
-              />
-              <Input
-                label="Numéro BCE"
-                value={laboSettings.siret}
-                onChange={(e) =>
-                  setLaboSettings({ ...laboSettings, siret: e.target.value })
-                }
-                placeholder="0123456789"
-              />
-            </div>
-            <Input
-              label="Adresse"
-              value={laboSettings.adresse}
-              onChange={(e) =>
-                setLaboSettings({ ...laboSettings, adresse: e.target.value })
-              }
-              placeholder="Rue des Claveaux 1"
-            />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <Input
-                label="Code postal"
-                value={laboSettings.code_postal}
-                onChange={(e) =>
-                  setLaboSettings({
-                    ...laboSettings,
-                    code_postal: e.target.value,
-                  })
-                }
-                placeholder="4560"
-              />
-              <Input
-                label="Ville"
-                value={laboSettings.ville}
-                onChange={(e) =>
-                  setLaboSettings({ ...laboSettings, ville: e.target.value })
-                }
-                placeholder="Clavier"
-              />
-              <Input
-                label="Téléphone"
-                value={laboSettings.telephone_labo}
-                onChange={(e) =>
-                  setLaboSettings({
-                    ...laboSettings,
-                    telephone_labo: e.target.value,
-                  })
-                }
-                placeholder="+32 (0)4 xx xx xx xx"
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
-                label="Email du laboratoire"
-                type="email"
-                value={laboSettings.email_labo}
-                onChange={(e) =>
-                  setLaboSettings({
-                    ...laboSettings,
-                    email_labo: e.target.value,
-                  })
-                }
-                placeholder="contact@decerf-lab.be"
-              />
-              <Input
-                label="Horaires d'ouverture"
-                value={laboSettings.horaires}
-                onChange={(e) =>
-                  setLaboSettings({
-                    ...laboSettings,
-                    horaires: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <p className="text-xs text-gray-400">
-              Ces informations apparaîtront sur les documents et factures
-              envoyés aux clients.
-            </p>
-
-            <div className="flex gap-3 border-t border-gray-200 pt-4">
-              <Button type="submit" isLoading={laboSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                Enregistrer
-              </Button>
-              {laboSaved && (
-                <span className="text-sm text-green-600">
-                  ✓ Modifications enregistrées
-                </span>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
       {/* Sécurité */}
       <Card>
         <CardContent className="p-6">
@@ -308,6 +167,33 @@ export function ParametresForm({
           </div>
 
           <div className="space-y-4">
+            <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+              <div>
+                <p className="font-medium text-gray-900">Email de connexion</p>
+                <p className="text-sm text-gray-500">Adresse actuelle : {profile?.email}</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Input
+                  label="Nouvelle adresse email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="contact@decerf-lab.be"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={emailChanging}
+                  onClick={handleRequestEmailChange}
+                  className="self-end"
+                >
+                  {emailChanging ? "Envoi…" : "Demander le changement"}
+                </Button>
+              </div>
+              {emailChangeMessage && (
+                <p className="text-sm text-slate-600" role="status">{emailChangeMessage}</p>
+              )}
+            </div>
             <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
               <div>
                 <p className="font-medium text-gray-900">

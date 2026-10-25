@@ -1,38 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, Save } from "lucide-react";
+import { Save } from "lucide-react";
 
 type ParamValue = string | number | boolean | null | undefined;
 type Params = Record<string, ParamValue>;
 
 export function BrandingPanel({ initial }: { initial: Params | null }) {
-  const supabase = createClient();
   const [form, setForm] = useState<Params>(initial ?? {});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const logoInput = useRef<HTMLInputElement>(null);
-  const sigInput = useRef<HTMLInputElement>(null);
 
   const setField = (k: string, v: ParamValue) => setForm((p) => ({ ...p, [k]: v }));
-
-  const upload = async (file: File, kind: "logo" | "signature") => {
-    const path = `${kind}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("branding").upload(path, file, {
-      upsert: true,
-      cacheControl: "3600",
-    });
-    if (error) {
-      setMsg(`Erreur upload : ${error.message}`);
-      return;
-    }
-    const { data } = supabase.storage.from("branding").getPublicUrl(path);
-    setField(kind === "logo" ? "logo_url" : "signature_url", data.publicUrl);
-  };
 
   const save = async () => {
     setSaving(true);
@@ -104,66 +86,6 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           {msg}
         </div>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Logo & signature</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {(["logo", "signature"] as const).map((k) => {
-            const url = String(form[k === "logo" ? "logo_url" : "signature_url"] ?? "");
-            const ref = k === "logo" ? logoInput : sigInput;
-            return (
-              <div key={k} className="space-y-2">
-                <p className="text-sm font-medium capitalize text-gray-700">{k}</p>
-                {url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={url}
-                    alt={k}
-                    className="h-28 rounded-lg border border-gray-200 bg-white object-contain p-2"
-                  />
-                ) : (
-                  <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-gray-300 text-xs text-gray-400">
-                    Aucun fichier
-                  </div>
-                )}
-                <input
-                  ref={ref}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) upload(f, k);
-                  }}
-                />
-                <Button size="sm" variant="outline" onClick={() => ref.current?.click()}>
-                  <Upload className="mr-1 h-4 w-4" /> Choisir un fichier
-                </Button>
-              </div>
-            );
-          })}
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Couleur primaire
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={String(form.couleur_primaire || "#0284c7")}
-                onChange={(e) => setField("couleur_primaire", e.target.value)}
-                className="h-10 w-16 cursor-pointer rounded border border-gray-200"
-              />
-              <Input
-                value={String(form.couleur_primaire || "")}
-                onChange={(e) => setField("couleur_primaire", e.target.value)}
-                className="flex-1"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {sections.map((sec) => (
         <Card key={sec.title}>
