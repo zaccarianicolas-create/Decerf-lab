@@ -60,7 +60,7 @@ export async function GET() {
     options: optionsByService.get(service.id) ?? [],
   }));
   const params = await getParametresLabo();
-  const logo = await readFile(join(process.cwd(), "public", "images", "logod.png"));
+  const logo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
   const siteUrl = params.site_web?.trim() || null;
   const qrCode = siteUrl
     ? await QRCode.toBuffer(siteUrl, {

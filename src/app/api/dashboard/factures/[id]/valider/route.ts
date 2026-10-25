@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -71,6 +73,7 @@ export async function POST(
   }
 
   const snapshot = updatedFacture.billing_snapshot as unknown as FactureBillingSnapshot;
+  const logo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
   const bytes = await createFacturePdf({
     numero: updatedFacture.numero,
     date_emission: updatedFacture.date_emission,
@@ -89,7 +92,7 @@ export async function POST(
       total_ligne_tva: Number(line.total_ligne_tva),
       total_ligne_ttc: Number(line.total_ligne_ttc),
     })),
-  });
+  }, logo);
   const path = `${user.id}/${facture.id}/${updatedFacture.numero}.pdf`;
   const { error: uploadError } = await admin.storage.from("factures").upload(path, bytes, {
     contentType: "application/pdf",

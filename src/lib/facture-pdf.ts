@@ -50,10 +50,11 @@ function wrapText(text: string, font: PDFFont, size: number, width: number) {
   return lines.length ? lines : [""];
 }
 
-export async function createFacturePdf(data: FacturePdfData) {
+export async function createFacturePdf(data: FacturePdfData, logoBytes: Uint8Array) {
   const document = await PDFDocument.create();
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const logo = await document.embedPng(logoBytes);
   let page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = PAGE_HEIGHT - MARGIN;
 
@@ -95,7 +96,13 @@ export async function createFacturePdf(data: FacturePdfData) {
   const date = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("fr-BE");
 
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 92, width: PAGE_WIDTH, height: 92, color: ACCENT });
-  draw(data.snapshot.issuer.nom || "DECERF LAB", MARGIN, PAGE_HEIGHT - 35, 17, bold, rgb(1, 1, 1));
+  const logoSize = logo.scaleToFit(245, 58);
+  page.drawImage(logo, {
+    x: MARGIN,
+    y: PAGE_HEIGHT - 75 + (58 - logoSize.height) / 2,
+    width: logoSize.width,
+    height: logoSize.height,
+  });
   draw("FACTURE", PAGE_WIDTH - 150, PAGE_HEIGHT - 37, 16, bold, rgb(1, 1, 1));
   draw(data.numero, PAGE_WIDTH - 150, PAGE_HEIGHT - 62, 10, regular, rgb(1, 1, 1));
 
