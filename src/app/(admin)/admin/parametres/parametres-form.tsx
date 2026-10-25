@@ -178,7 +178,7 @@ export function ParametresForm({
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="contact@decerf-lab.be"
+                  placeholder="nouvelle-adresse@exemple.be"
                 />
                 <Button
                   type="button"
