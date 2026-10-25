@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const CGV_VERSION = "1.0-2026-10-25";
@@ -68,7 +69,6 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>;
 
 function RegisterForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -462,16 +462,16 @@ function RegisterForm() {
             </div>
           )}
 
-          <Input
+          <PasswordInput
             label="Mot de passe"
-            type="password"
+            autoComplete="new-password"
             placeholder="••••••••"
             error={errors.password?.message}
             {...register("password")}
           />
-          <Input
+          <PasswordInput
             label="Confirmer le mot de passe"
-            type="password"
+            autoComplete="new-password"
             placeholder="••••••••"
             error={errors.confirmPassword?.message}
             {...register("confirmPassword")}

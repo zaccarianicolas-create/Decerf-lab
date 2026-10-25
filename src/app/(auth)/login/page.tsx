@@ -10,6 +10,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const loginSchema = z.object({
@@ -98,9 +99,9 @@ function LoginForm() {
             error={errors.email?.message}
             {...register("email")}
           />
-          <Input
+          <PasswordInput
             label="Mot de passe"
-            type="password"
+            autoComplete="current-password"
             placeholder="••••••••"
             error={errors.password?.message}
             {...register("password")}
@@ -109,6 +110,11 @@ function LoginForm() {
             Se connecter
           </Button>
         </form>
+        <div className="mt-4 text-right text-sm">
+          <Link href="/mot-de-passe-oublie" className="font-medium text-blue-600 hover:text-blue-500">
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <p className="mt-6 text-center text-sm text-gray-500">
           Pas encore de compte ?{" "}
           <Link

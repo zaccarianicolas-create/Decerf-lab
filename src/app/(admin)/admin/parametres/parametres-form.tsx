@@ -209,7 +209,7 @@ export function ParametresForm({
                 onClick={async () => {
                   if (profile?.email) {
                     await supabase.auth.resetPasswordForEmail(profile.email, {
-                      redirectTo: `${window.location.origin}/login`,
+                      redirectTo: `${window.location.origin}/api/auth/callback?next=/modifier-mot-de-passe`,
                     });
                     alert(
                       "Un email de réinitialisation a été envoyé à " +
