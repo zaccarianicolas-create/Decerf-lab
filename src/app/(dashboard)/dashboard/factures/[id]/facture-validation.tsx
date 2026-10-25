@@ -156,7 +156,7 @@ export function FactureValidation({
                         {option.nom}
                       </span>
                       <span className="whitespace-nowrap text-sm font-medium text-gray-900">
-                        {option.prix_ht.toFixed(2)} € HT · TVA {option.categorie_tva_peppol === "E"
+                        + {option.prix_ht.toFixed(2)} € HT / unité × {item.quantite} · TVA {option.categorie_tva_peppol === "E"
                           ? "exonérée"
                           : `${option.taux_tva ?? item.taux_tva ?? snapshot.taux_tva}%`}
                       </span>

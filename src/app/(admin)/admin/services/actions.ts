@@ -61,6 +61,10 @@ export async function saveService(
     type_travail: string | null;
     materiaux_disponibles: string[];
     mode_fourniture: string;
+    demander_dents: boolean;
+    demander_materiau: boolean;
+    demander_teinte: boolean;
+    demander_notes: boolean;
     prix_base_ht: number | null;
     taux_tva: number;
     categorie_tva_peppol: "S" | "Z" | "E";

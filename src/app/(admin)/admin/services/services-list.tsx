@@ -39,6 +39,10 @@ type Service = {
   type_travail: string | null;
   materiaux_disponibles: string[];
   mode_fourniture: string;
+  demander_dents: boolean;
+  demander_materiau: boolean;
+  demander_teinte: boolean;
+  demander_notes: boolean;
   prix_base_ht: number | null;
   taux_tva: number;
   categorie_tva_peppol: "S" | "Z" | "E";
@@ -116,6 +120,10 @@ const createEmptyForm = (defaultTva = 21) => ({
   type_travail: "",
   materiaux_disponibles: [] as string[],
   mode_fourniture: "les_deux",
+  demander_dents: true,
+  demander_materiau: true,
+  demander_teinte: true,
+  demander_notes: true,
   prix_base_ht: "",
   taux_tva: String(defaultTva),
   categorie_tva_peppol: "S" as "S" | "Z" | "E",
@@ -173,6 +181,10 @@ export function ServicesList({
       type_travail: s.type_travail || "",
       materiaux_disponibles: s.materiaux_disponibles || [],
       mode_fourniture: s.mode_fourniture,
+      demander_dents: s.demander_dents ?? true,
+      demander_materiau: s.demander_materiau ?? true,
+      demander_teinte: s.demander_teinte ?? true,
+      demander_notes: s.demander_notes ?? true,
       prix_base_ht: s.prix_base_ht?.toString() || "",
       taux_tva: String(s.taux_tva ?? 21),
       categorie_tva_peppol: s.categorie_tva_peppol ?? "S",
@@ -233,6 +245,10 @@ export function ServicesList({
       type_travail: form.type_travail || null,
       materiaux_disponibles: form.materiaux_disponibles,
       mode_fourniture: form.mode_fourniture,
+      demander_dents: form.demander_dents,
+      demander_materiau: form.demander_materiau,
+      demander_teinte: form.demander_teinte,
+      demander_notes: form.demander_notes,
       prix_base_ht: form.prix_base_ht
         ? parseFloat(form.prix_base_ht)
         : null,
@@ -621,6 +637,33 @@ export function ServicesList({
                   onChange={(e) => setForm({ ...form, motif_exoneration_tva: e.target.value })}
                 />
               )}
+
+              <fieldset className="space-y-2 rounded-lg border border-gray-200 p-4">
+                <legend className="px-1 text-sm font-medium text-gray-800">
+                  Questions à poser au praticien pour ce service
+                </legend>
+                <p className="text-xs text-gray-500">
+                  Seuls les champs cochés apparaîtront dans la commande.
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {([
+                    ["demander_dents", "Dents"],
+                    ["demander_materiau", "Matériau"],
+                    ["demander_teinte", "Teinte"],
+                    ["demander_notes", "Notes complémentaires"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={form[key]}
+                        onChange={(event) => setForm({ ...form, [key]: event.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
               <div className="space-y-3">
                 <div>

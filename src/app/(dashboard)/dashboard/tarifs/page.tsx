@@ -93,7 +93,7 @@ export default async function TarifsPage() {
                         >
                           <span className="text-gray-700">{option.nom}</span>
                           <span className="whitespace-nowrap font-medium text-gray-900">
-                            {Number(option.prix_ht).toFixed(2)} € HT
+                            + {Number(option.prix_ht).toFixed(2)} € HT
                           </span>
                         </div>
                       ))}

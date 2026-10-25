@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
@@ -46,6 +46,23 @@ const commandeSchema = z.object({
 
 type CommandeForm = z.infer<typeof commandeSchema>;
 
+type PatientOption = { id: string; reference: string; nom: string; prenom: string };
+type ServiceOption = {
+  id: string;
+  nom: string;
+  description: string | null;
+  categorie: string;
+  type_travail: string | null;
+  materiaux_disponibles: string[] | null;
+  mode_fourniture: string;
+  demander_dents: boolean;
+  demander_materiau: boolean;
+  demander_teinte: boolean;
+  demander_notes: boolean;
+  duree_estimee_jours: number | null;
+  instructions: string | null;
+};
+
 const MATERIAUX_LABELS: Record<string, string> = {
   zircone: "Zircone",
   emax: "E.max",
@@ -72,41 +89,17 @@ export default function NouvelleCommandePage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [servicesLabo, setServicesLabo] = useState<any[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [servicesLabo, setServicesLabo] = useState<ServiceOption[]>([]);
   const [patientMode, setPatientMode] = useState<"existing" | "new">("existing");
 
-  const supabase = createClient();
-
-  // Load patients & services
-  useEffect(() => {
-    const load = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-      const [patientsRes, servicesRes] = await Promise.all([
-        supabase
-          .from("patients")
-          .select("id, reference, nom, prenom")
-          .eq("dentiste_id", userData.user.id)
-          .eq("actif", true)
-          .order("nom"),
-        supabase
-          .from("services_labo")
-          .select("id, nom, description, categorie, type_travail, materiaux_disponibles, mode_fourniture, duree_estimee_jours, instructions")
-          .eq("actif", true)
-          .order("ordre"),
-      ]);
-      setPatients(patientsRes.data ?? []);
-      setServicesLabo(servicesRes.data ?? []);
-    };
-    load();
-  }, []);
+  const [supabase] = useState(() => createClient());
 
   const {
     register,
     handleSubmit,
     control,
-    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CommandeForm>({
     resolver: zodResolver(commandeSchema),
@@ -117,7 +110,48 @@ export default function NouvelleCommandePage() {
     },
   });
 
-  const modeReception = watch("mode_reception");
+  // Load patients & services
+  useEffect(() => {
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const [patientsRes, servicesRes, profileRes] = await Promise.all([
+        supabase
+          .from("patients")
+          .select("id, reference, nom, prenom")
+          .eq("dentiste_id", userData.user.id)
+          .eq("actif", true)
+          .order("nom"),
+        supabase
+          .from("services_labo")
+          .select("id, nom, description, categorie, type_travail, materiaux_disponibles, mode_fourniture, demander_dents, demander_materiau, demander_teinte, demander_notes, duree_estimee_jours, instructions")
+          .eq("actif", true)
+          .order("ordre"),
+        supabase
+          .from("profiles")
+          .select("cabinet_id")
+          .eq("id", userData.user.id)
+          .maybeSingle(),
+      ]);
+      setPatients(patientsRes.data ?? []);
+      setServicesLabo(servicesRes.data ?? []);
+      if (profileRes.data?.cabinet_id) {
+        const { data: cabinet } = await supabase
+          .from("cabinets")
+          .select("adresse, code_postal, ville")
+          .eq("id", profileRes.data.cabinet_id)
+          .maybeSingle();
+        const cabinetAddress = [cabinet?.adresse, cabinet?.code_postal, cabinet?.ville]
+          .filter(Boolean)
+          .join(", ");
+        if (cabinetAddress) setValue("adresse_enlevement", cabinetAddress);
+      }
+    };
+    load();
+  }, [setValue, supabase]);
+
+  const modeReception = useWatch({ control, name: "mode_reception" });
+  const watchedItems = useWatch({ control, name: "items" });
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -193,8 +227,8 @@ export default function NouvelleCommandePage() {
 
     // Upload fichiers STL
     if (files.length > 0) {
-      for (const file of files) {
-        const fileName = `${commande.id}/${Date.now()}_${file.name}`;
+      for (const [index, file] of files.entries()) {
+        const fileName = `${commande.id}/${files.length}_${index}_${file.name}`;
         const fileKind = detectFileKind(file.name, file.type);
         const format3d = getScanFormat(file.name, file.type);
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -474,13 +508,11 @@ export default function NouvelleCommandePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {fields.map((field, index) => {
-              const selectedServiceId = watch(`items.${index}.service_labo_id`);
-              const selectedService = servicesLabo.find(
-                (s: any) => s.id === selectedServiceId
-              );
-              const materiauxForService =
-                selectedService?.materiaux_disponibles?.length > 0
-                  ? selectedService.materiaux_disponibles.map((m: string) => ({
+              const selectedServiceId = watchedItems?.[index]?.service_labo_id;
+              const selectedService = servicesLabo.find((service) => service.id === selectedServiceId);
+              const serviceMateriaux = selectedService?.materiaux_disponibles;
+              const materiauxForService = serviceMateriaux?.length
+                  ? serviceMateriaux.map((m) => ({
                       value: m,
                       label: MATERIAUX_LABELS[m] || m,
                     }))
@@ -511,9 +543,13 @@ export default function NouvelleCommandePage() {
                       {...register(`items.${index}.service_labo_id`)}
                       onChange={(e) => {
                         const svc = servicesLabo.find(
-                          (s: any) => s.id === e.target.value
+                          (service) => service.id === e.target.value
                         );
                         register(`items.${index}.service_labo_id`).onChange(e);
+                        if (svc?.demander_dents === false) setValue(`items.${index}.dents`, "");
+                        if (svc?.demander_materiau === false) setValue(`items.${index}.materiau`, "");
+                        if (svc?.demander_teinte === false) setValue(`items.${index}.teinte`, "");
+                        if (svc?.demander_notes === false) setValue(`items.${index}.notes`, "");
                         if (svc?.type_travail) {
                           // Auto-fill type_travail hidden field
                           const el = document.querySelector(
@@ -528,8 +564,8 @@ export default function NouvelleCommandePage() {
                     >
                       <option value="">Sélectionner un service...</option>
                       {(() => {
-                        const grouped: Record<string, any[]> = {};
-                        servicesLabo.forEach((s: any) => {
+                        const grouped: Record<string, ServiceOption[]> = {};
+                        servicesLabo.forEach((s) => {
                           const cat = s.categorie || "autre";
                           if (!grouped[cat]) grouped[cat] = [];
                           grouped[cat].push(s);
@@ -547,7 +583,7 @@ export default function NouvelleCommandePage() {
                             key={cat}
                             label={catLabels[cat] || cat}
                           >
-                            {svcs.map((s: any) => (
+                            {svcs.map((s) => (
                               <option key={s.id} value={s.id}>
                                 {s.nom}
                                 {s.duree_estimee_jours
@@ -596,55 +632,53 @@ export default function NouvelleCommandePage() {
                   <input
                     type="hidden"
                     {...register(`items.${index}.type_travail`)}
-                    value={selectedService?.type_travail || watch(`items.${index}.type_travail`) || "autre"}
+                    value={selectedService?.type_travail || watchedItems?.[index]?.type_travail || "autre"}
                   />
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <Input
-                      label="Dents (n°)"
-                      placeholder="11, 12, 21"
-                      {...register(`items.${index}.dents`)}
-                    />
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        Matériau
-                      </label>
-                      <select
-                        className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                        {...register(`items.${index}.materiau`)}
-                      >
-                        <option value="">Sélectionner...</option>
-                        {materiauxForService.map((opt: any) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        Teinte
-                      </label>
-                      <select
-                        className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                        {...register(`items.${index}.teinte`)}
-                      >
-                        <option value="">Sélectionner...</option>
-                        {teintesOptions.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {selectedService?.demander_dents !== false && (
+                      <Input
+                        label="Dents (n°)"
+                        placeholder="11, 12, 21"
+                        {...register(`items.${index}.dents`)}
+                      />
+                    )}
+                    {selectedService?.demander_materiau !== false && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">Matériau</label>
+                        <select
+                          className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                          {...register(`items.${index}.materiau`)}
+                        >
+                          <option value="">Sélectionner...</option>
+                          {materiauxForService.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {selectedService?.demander_teinte !== false && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">Teinte</label>
+                        <select
+                          className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                          {...register(`items.${index}.teinte`)}
+                        >
+                          <option value="">Sélectionner...</option>
+                          {teintesOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3">
-                    <Input
-                      label="Notes"
-                      placeholder="Détails supplémentaires..."
-                      {...register(`items.${index}.notes`)}
-                    />
-                  </div>
+                  {selectedService?.demander_notes !== false && (
+                    <div className="mt-3">
+                      <Input
+                        label="Notes"
+                        placeholder="Détails supplémentaires..."
+                        {...register(`items.${index}.notes`)}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
