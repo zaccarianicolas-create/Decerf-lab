@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -7,38 +7,27 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   try {
-    const admin = createAdminClient();
-    
-    // Récupérer le token de la requête
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Vérifier le token et récupérer l'utilisateur
-    const { data: { user }, error: userError } = await admin.auth.admin.getUserById(
-      token.split(".")[0] // Rough extraction, should use proper JWT parsing
-    );
-
-    if (userError || !user) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // Récupérer le rôle de l'utilisateur
-    const { data: profile, error: profileError } = await admin
+    const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
+    if (!profile) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Rediriger vers le bon dashboard
-    const dashboardUrl = profile.role === "admin" ? "/admin" : "/dashboard";
+    const dashboardUrl = profile.role === "admin"
+      ? "/admin"
+      : profile.role === "technicien"
+        ? "/atelier"
+        : "/dashboard";
     return NextResponse.redirect(new URL(dashboardUrl, request.url));
   } catch (error) {
     console.error("Error in redirect endpoint:", error);
