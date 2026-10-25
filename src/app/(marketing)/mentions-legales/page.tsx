@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getParametresLabo } from "@/lib/parametres-labo";
+import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Mentions légales | DECERF LAB",
@@ -8,9 +8,7 @@ export const metadata: Metadata = {
 
 export default async function MentionsLegales() {
   const labo = await getParametresLabo();
-  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
-    .filter(Boolean)
-    .join(", ");
+  const adresse = formatAdresseLabo(labo);
 
   return (
     <main className="min-h-screen bg-white py-20">

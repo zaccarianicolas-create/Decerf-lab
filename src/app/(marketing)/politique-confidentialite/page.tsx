@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getParametresLabo } from "@/lib/parametres-labo";
+import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité | DECERF LAB",
@@ -8,9 +8,7 @@ export const metadata: Metadata = {
 
 export default async function PolitiqueConfidentialite() {
   const labo = await getParametresLabo();
-  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
-    .filter(Boolean)
-    .join(", ");
+  const adresse = formatAdresseLabo(labo);
   const emailContact = labo.email_contact || "contact@decerf-lab.be";
 
   return (

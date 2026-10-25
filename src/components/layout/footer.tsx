@@ -1,8 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 
-export function Footer() {
+export async function Footer() {
+  const labo = await getParametresLabo();
+  const adresse = formatAdresseLabo(labo);
+
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -12,7 +16,7 @@ export function Footer() {
             <Link href="/" className="flex flex-col items-start">
               <Image
                 src="/images/logod.png"
-                alt="DECERF LAB"
+                alt={labo.nom_labo}
                 width={180}
                 height={50}
                 className="h-12 w-auto"
@@ -77,15 +81,15 @@ export function Footer() {
             <ul className="mt-4 space-y-3">
               <li className="flex items-center gap-2 text-sm text-slate-500">
                 <Phone className="h-4 w-4 text-slate-400" />
-                <span>+32 (0)4 xxx xx xx</span>
+                <span>{labo.telephone || "Téléphone à compléter"}</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-slate-500">
                 <Mail className="h-4 w-4 text-slate-400" />
-                <span>contact@decerf-lab.be</span>
+                <span>{labo.email_contact || "Email à compléter"}</span>
               </li>
               <li className="flex items-start gap-2 text-sm text-slate-500">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                <span>Rue des Claveaux 1, 4560 Clavier</span>
+                <span>{adresse || "Adresse à compléter"}</span>
               </li>
             </ul>
           </div>
@@ -136,7 +140,7 @@ export function Footer() {
             </Link>
           </div>
           <p className="mt-6 text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} DECERF LAB. Tous droits réservés.
+            &copy; {new Date().getFullYear()} {labo.nom_labo}. Tous droits réservés.
           </p>
           <p className="mt-2 text-center text-xs text-slate-400">
             Made with ♡ by{" "}

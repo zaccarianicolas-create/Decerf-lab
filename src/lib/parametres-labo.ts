@@ -38,16 +38,16 @@ export type ParametresLabo = {
 };
 
 const DEFAULTS: ParametresLabo = {
-  nom_labo: "DECERF LAB",
+  nom_labo: "Decerf lab",
   titulaire_legal: "Julie Decerf",
   forme_juridique: "Personne physique",
-  adresse: null,
-  code_postal: null,
-  ville: null,
+  adresse: "Rue des Claveaux 1",
+  code_postal: "4560",
+  ville: "Clavier",
   pays: "Belgique",
   telephone: null,
-  email_contact: null,
-  site_web: null,
+  email_contact: "contact@decerf-lab.be",
+  site_web: "https://www.decerf-lab.be",
   numero_entreprise: null,
   tva_numero: null,
   regime_tva: "franchise",
@@ -86,6 +86,18 @@ export async function getParametresLabo(): Promise<ParametresLabo> {
   } catch {
     return DEFAULTS;
   }
+}
+
+export function formatAdresseLabo(
+  params: Pick<ParametresLabo, "adresse" | "code_postal" | "ville" | "pays">
+) {
+  const rue = params.adresse?.trim();
+  const codePostal = params.code_postal?.trim();
+  const ville = params.ville?.trim();
+  if (!rue || !codePostal || !ville) return null;
+  return [rue, `${codePostal} ${ville}`, params.pays?.trim()]
+    .filter(Boolean)
+    .join(", ");
 }
 
 export function invalidateParametresCache() {

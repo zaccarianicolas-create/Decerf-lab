@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getParametresLabo } from "@/lib/parametres-labo";
+import { formatAdresseLabo, getParametresLabo } from "@/lib/parametres-labo";
 
 export const metadata: Metadata = {
   title: "Conditions d’utilisation du portail | Decerf lab",
@@ -135,14 +135,12 @@ const sections = [
 
 export default async function ConditionsUtilisationPage() {
   const labo = await getParametresLabo();
-  const adresse = [labo.adresse, labo.code_postal, labo.ville, labo.pays]
-    .filter(Boolean)
-    .join(", ");
+  const adresse = formatAdresseLabo(labo);
   const identity = {
     titulaire_legal: labo.titulaire_legal,
     forme_juridique: labo.forme_juridique,
     nom_labo: labo.nom_labo,
-    adresse,
+    adresse: adresse || "à compléter dans les paramètres du laboratoire",
     numero_entreprise: labo.numero_entreprise || "à compléter dès attribution",
     tva_numero: labo.tva_numero || "à compléter",
     email_contact: labo.email_contact || "à compléter",
@@ -163,7 +161,7 @@ export default async function ConditionsUtilisationPage() {
           <section>
             <h2 className="mb-4 text-xl font-semibold text-gray-900">1. Éditeur</h2>
             <p>
-              {identity.titulaire_legal}, {identity.forme_juridique.toLowerCase()}, exerçant sous le nom commercial {identity.nom_labo}, dont le siège est situé {identity.adresse || "à compléter dans les paramètres du laboratoire"}.
+              {identity.titulaire_legal}, {identity.forme_juridique.toLowerCase()}, exerçant sous le nom commercial {identity.nom_labo}, dont le siège est situé {identity.adresse}.
             </p>
             <p>
               Numéro BCE : {identity.numero_entreprise}. TVA : {identity.tva_numero}. Contact : {identity.email_contact}. Téléphone : {identity.telephone}. Adresse du portail : {identity.site_web}.

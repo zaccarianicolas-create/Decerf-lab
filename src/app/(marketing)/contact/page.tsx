@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Send, CheckCircle2, Mail, Phone, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function ContactPage() {
+  const [labContact, setLabContact] = useState({
+    email_contact: "contact@decerf-lab.be",
+    telephone: null as string | null,
+    adresse: "Rue des Claveaux 1",
+    code_postal: "4560",
+    ville: "Clavier",
+    pays: "Belgique",
+  });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +25,23 @@ export default function ContactPage() {
     message: "",
     website: "", // honeypot
   });
+
+  useEffect(() => {
+    fetch("/api/public/labo-contact")
+      .then((response) => response.json())
+      .then((payload: { contact?: Partial<typeof labContact> }) => {
+        if (payload.contact) {
+          setLabContact((current) => ({ ...current, ...payload.contact }));
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const adresseLaboratoire = [
+    labContact.adresse,
+    [labContact.code_postal, labContact.ville].filter(Boolean).join(" "),
+    labContact.pays,
+  ].filter(Boolean).join(", ");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +98,10 @@ export default function ContactPage() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Email</h3>
                 <a
-                  href="mailto:contact@decerf-lab.be"
+                  href={`mailto:${labContact.email_contact}`}
                   className="text-sm text-slate-600 transition-colors hover:text-sky-600"
                 >
-                  contact@decerf-lab.be
+                  {labContact.email_contact}
                 </a>
               </div>
             </div>
@@ -88,9 +113,7 @@ export default function ContactPage() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Adresse</h3>
                 <p className="text-sm text-slate-600">
-                  Rue des Claveaux 1
-                  <br />
-                  4560 Clavier
+                  {adresseLaboratoire || "Adresse à compléter"}
                 </p>
               </div>
             </div>
@@ -101,7 +124,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Téléphone</h3>
-                <p className="text-sm text-slate-600">Sur demande par email</p>
+                <p className="text-sm text-slate-600">{labContact.telephone || "Sur demande par email"}</p>
               </div>
             </div>
 
