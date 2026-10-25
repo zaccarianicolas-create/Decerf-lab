@@ -99,36 +99,32 @@ export async function createTarifsPdf(
     const address = [params.adresse, [params.code_postal, params.ville].filter(Boolean).join(" "), params.pays]
       .filter((part): part is string => Boolean(part?.trim()))
       .join(", ");
-    let leftY = PAGE_HEIGHT - 119;
-    const contactDetails = [
+    const details = [
       address,
       params.telephone ? `Tél. : ${params.telephone}` : null,
       params.email_contact ? `E-mail : ${params.email_contact}` : null,
-    ].filter((detail): detail is string => Boolean(detail?.trim()));
-    contactDetails.forEach((detail) => {
-      leftY = drawWrapped(detail, MARGIN, leftY, 225, 8, MUTED);
-    });
-    let legalY = PAGE_HEIGHT - 119;
-    const legalDetails = [
+      params.site_web ? `Site : ${params.site_web}` : null,
       params.titulaire_legal ? `Titulaire : ${params.titulaire_legal}` : null,
       params.forme_juridique,
       params.numero_entreprise ? `BCE : ${params.numero_entreprise}` : null,
       params.tva_numero ? `TVA : ${params.tva_numero}` : null,
-      params.site_web ? `Site : ${params.site_web}` : null,
     ].filter((detail): detail is string => Boolean(detail?.trim()));
-    legalDetails.forEach((detail) => {
-      legalY = drawWrapped(detail, 282, legalY, 171, 7.5, MUTED);
+    let detailsY = PAGE_HEIGHT - 119;
+    details.forEach((detail) => {
+      detailsY = drawWrapped(detail, MARGIN, detailsY, PAGE_WIDTH - MARGIN * 2 - 90, 8, MUTED);
     });
+
     let qrBottom = PAGE_HEIGHT - 119;
     if (qrCode) {
       const qrSize = 64;
       const qrX = PAGE_WIDTH - MARGIN - qrSize;
       const qrTop = PAGE_HEIGHT - 117;
       page.drawImage(qrCode, { x: qrX, y: qrTop - qrSize, width: qrSize, height: qrSize });
-      draw("Site du labo", qrX - 2, qrTop - qrSize - 5, 7, regular, MUTED);
-      qrBottom = qrTop - qrSize - 15;
+      draw("Scannez pour", qrX - 7, qrTop - qrSize - 5, 7, regular, MUTED);
+      draw("visiter notre site", qrX - 16, qrTop - qrSize - 15, 7, regular, MUTED);
+      qrBottom = qrTop - qrSize - 25;
     }
-    y = Math.min(leftY, legalY, qrBottom) - 9;
+    y = Math.min(detailsY, qrBottom) - 9;
     page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.8, color: RULE });
     y -= 20;
     draw("Tarifs exprimés en euros HT. Les options s’ajoutent au tarif de base lorsqu’elles sont sélectionnées.", MARGIN, y, 8, regular, MUTED);
@@ -136,7 +132,6 @@ export async function createTarifsPdf(
     draw(`Régime TVA : ${params.regime_tva === "franchise" ? "franchise" : "normal"}. Le traitement de la TVA est indiqué sur la facture.`, MARGIN, y, 8, regular, MUTED);
     y -= 20;
   };
-
   const categoryLabels: Record<string, string> = {
     prothese_fixe: "Prothèse fixe",
     prothese_amovible: "Prothèse amovible",
