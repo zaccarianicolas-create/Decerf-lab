@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,7 +94,6 @@ export function ClientDetail({
   patients: PatientRow[];
   commandes: CommandeRow[];
 }) {
-  const supabase = createClient();
   const [client, setClient] = useState(initialClient);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -111,6 +109,12 @@ export function ClientDetail({
     numero_tva: client.numero_tva || "",
     mode_travail_prefere: client.mode_travail_prefere || "",
     modele_scanner: client.modele_scanner || "",
+    cabinet_nom: client.cabinet?.nom || "",
+    cabinet_adresse: client.cabinet?.adresse || "",
+    cabinet_code_postal: client.cabinet?.code_postal || "",
+    cabinet_ville: client.cabinet?.ville || "",
+    cabinet_telephone: client.cabinet?.telephone || "",
+    cabinet_email: client.cabinet?.email || "",
   });
 
   const handleSave = async () => {
@@ -121,8 +125,17 @@ export function ClientDetail({
       setSaving(false);
       return;
     }
+    const {
+      cabinet_nom,
+      cabinet_adresse,
+      cabinet_code_postal,
+      cabinet_ville,
+      cabinet_telephone,
+      cabinet_email,
+      ...profileForm
+    } = form;
     const payload = {
-      ...form,
+      ...profileForm,
       assujetti_tva:
         form.assujetti_tva === "" ? null : form.assujetti_tva === "oui",
       numero_tva: form.numero_tva.trim() || null,
@@ -135,16 +148,36 @@ export function ClientDetail({
           ? null
           : form.modele_scanner || null,
     };
-    const { error } = await supabase
-      .from("profiles")
-      .update(payload)
-      .eq("id", client.id);
-
-    if (!error) {
+    try {
+      const response = await fetch(`/api/admin/clients/${client.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: payload,
+          cabinet: {
+            nom: cabinet_nom,
+            adresse: cabinet_adresse,
+            code_postal: cabinet_code_postal,
+            ville: cabinet_ville,
+            telephone: cabinet_telephone,
+            email: cabinet_email,
+          },
+        }),
+      });
+      const result = await response.json() as {
+        cabinet?: ClientDetailRecord["cabinet"];
+        error?: string;
+      };
+      if (!response.ok) {
+        setStatusNotice(result.error || "Impossible d’enregistrer les modifications.");
+        setSaving(false);
+        return;
+      }
       const numeroInamiChanged = payload.numero_inami !== (client.numero_inami || "");
       setClient({
         ...client,
         ...payload,
+        cabinet: result.cabinet ?? client.cabinet,
         ...(numeroInamiChanged
           ? {
               numero_inami_verifie: false,
@@ -154,6 +187,9 @@ export function ClientDetail({
           : {}),
       });
       setEditing(false);
+      setStatusNotice("Informations du client et du cabinet enregistrées.");
+    } catch {
+      setStatusNotice("Erreur réseau pendant l’enregistrement.");
     }
     setSaving(false);
   };
@@ -339,6 +375,12 @@ export function ClientDetail({
                         numero_tva: client.numero_tva || "",
                         mode_travail_prefere: client.mode_travail_prefere || "",
                         modele_scanner: client.modele_scanner || "",
+                        cabinet_nom: client.cabinet?.nom || "",
+                        cabinet_adresse: client.cabinet?.adresse || "",
+                        cabinet_code_postal: client.cabinet?.code_postal || "",
+                        cabinet_ville: client.cabinet?.ville || "",
+                        cabinet_telephone: client.cabinet?.telephone || "",
+                        cabinet_email: client.cabinet?.email || "",
                       });
                     }}
                     className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
@@ -429,6 +471,42 @@ export function ClientDetail({
                     setForm({ ...form, modele_scanner: e.target.value })
                   }
                 />
+                <div className="space-y-3 border-t border-gray-100 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Cabinet / clinique</h3>
+                  <Input
+                    label={client.type_compte_client === "laboratoire" ? "Nom du laboratoire" : "Nom du cabinet"}
+                    value={form.cabinet_nom}
+                    onChange={(e) => setForm({ ...form, cabinet_nom: e.target.value })}
+                  />
+                  <Input
+                    label="Rue et numéro"
+                    value={form.cabinet_adresse}
+                    onChange={(e) => setForm({ ...form, cabinet_adresse: e.target.value })}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      label="Code postal"
+                      value={form.cabinet_code_postal}
+                      onChange={(e) => setForm({ ...form, cabinet_code_postal: e.target.value })}
+                    />
+                    <Input
+                      label="Ville"
+                      value={form.cabinet_ville}
+                      onChange={(e) => setForm({ ...form, cabinet_ville: e.target.value })}
+                    />
+                  </div>
+                  <Input
+                    label="Téléphone du cabinet"
+                    value={form.cabinet_telephone}
+                    onChange={(e) => setForm({ ...form, cabinet_telephone: e.target.value })}
+                  />
+                  <Input
+                    label="E-mail du cabinet"
+                    type="email"
+                    value={form.cabinet_email}
+                    onChange={(e) => setForm({ ...form, cabinet_email: e.target.value })}
+                  />
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
