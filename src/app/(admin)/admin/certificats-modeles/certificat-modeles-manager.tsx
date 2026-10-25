@@ -61,7 +61,9 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewStatus, setPreviewStatus] = useState("Préparation de l’aperçu…");
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [pdfRenderError, setPdfRenderError] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const pdfPagesRef = useRef<HTMLDivElement>(null);
   const demoContent = renderCertificateTemplate(selected.contenu_template, DEMO_CERTIFICATE_VALUES);
 
   useEffect(() => {
@@ -109,6 +111,69 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
   useEffect(() => () => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
   }, []);
+
+  useEffect(() => {
+    const container = pdfPagesRef.current;
+    if (!previewUrl || !container) return;
+
+    let cancelled = false;
+    let cancelLoading: (() => void) | null = null;
+    container.replaceChildren();
+    setPdfRenderError(null);
+
+    const renderPdf = async () => {
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/build/pdf.worker.min.mjs",
+          import.meta.url
+        ).toString();
+        const response = await fetch(previewUrl);
+        if (!response.ok) throw new Error("Impossible de lire le PDF de démonstration.");
+        const data = new Uint8Array(await response.arrayBuffer());
+        const loadingTask = pdfjs.getDocument({ data });
+        cancelLoading = () => { void loadingTask.destroy(); };
+        const pdf = await loadingTask.promise;
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (cancelled || !pdfPagesRef.current) return;
+          const page = await pdf.getPage(pageNumber);
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(1.4, (container.clientWidth || 700) / baseViewport.width);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Le navigateur ne peut pas afficher le PDF.");
+
+          const pixelRatio = window.devicePixelRatio || 1;
+          canvas.width = Math.ceil(viewport.width * pixelRatio);
+          canvas.height = Math.ceil(viewport.height * pixelRatio);
+          canvas.style.width = `${viewport.width}px`;
+          canvas.style.maxWidth = "100%";
+          canvas.style.height = "auto";
+          canvas.className = "mx-auto mb-4 block bg-white shadow-sm";
+          pdfPagesRef.current.appendChild(canvas);
+
+          await page.render({
+            canvas,
+            canvasContext: context,
+            viewport,
+            transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
+          }).promise;
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPdfRenderError(error instanceof Error ? error.message : "Erreur d’affichage du PDF.");
+        }
+      }
+    };
+
+    void renderPdf();
+    return () => {
+      cancelled = true;
+      cancelLoading?.();
+    };
+  }, [previewUrl]);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -238,12 +303,13 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
             {previewError ? (
               <p role="alert" className="p-4 text-sm text-red-700">{previewError}</p>
             ) : previewUrl ? (
-              <iframe
-                key={previewUrl}
-                src={previewUrl}
-                title="Aperçu PDF fictif du modèle de conformité"
-                className="h-[min(70vh,720px)] w-full bg-white"
-              />
+              <div className="max-h-[70vh] overflow-y-auto p-3">
+                {pdfRenderError ? (
+                  <p role="alert" className="text-sm text-red-700">{pdfRenderError}</p>
+                ) : (
+                  <div ref={pdfPagesRef} aria-label="Pages du PDF de démonstration" />
+                )}
+              </div>
             ) : (
               <div className="flex h-56 items-center justify-center gap-2 text-sm text-gray-500">
                 <FileText className="h-4 w-4" />
