@@ -29,7 +29,7 @@ export async function PATCH(
   // Charger la tâche pour vérifier les droits
   const { data: tache } = await admin
     .from("commande_taches")
-    .select("id, assignee_id, commande_id, statut")
+    .select("id, titre, description, assignee_id, commande_id, statut, priorite, due_date")
     .eq("id", tacheId)
     .maybeSingle();
 
@@ -79,6 +79,16 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  const auditFields = ["statut", "titre", "description", "assignee_id", "priorite", "due_date"];
+  const before: Record<string, unknown> = {};
+  const after: Record<string, unknown> = {};
+  for (const key of auditFields) {
+    if (key in update && tache[key as keyof typeof tache] !== update[key]) {
+      before[key] = tache[key as keyof typeof tache] ?? null;
+      after[key] = update[key] ?? null;
+    }
+  }
+
   const meta = extractRequestMeta(request);
   await logAudit({
     actor_id: user.id,
@@ -86,7 +96,7 @@ export async function PATCH(
     action: "tache.update",
     entity_type: "commande_tache",
     entity_id: tacheId,
-    metadata: update,
+    metadata: { before, after },
     ip: meta.ip,
     user_agent: meta.user_agent,
   });
@@ -117,6 +127,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
+  const { data: task } = await admin
+    .from("commande_taches")
+    .select("titre, statut, assignee_id, commande_id")
+    .eq("id", tacheId)
+    .maybeSingle();
   const { error } = await admin.from("commande_taches").delete().eq("id", tacheId);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -129,7 +144,7 @@ export async function DELETE(
     action: "tache.delete",
     entity_type: "commande_tache",
     entity_id: tacheId,
-    metadata: {},
+    metadata: { deleted: task ?? null },
     ip: meta.ip,
     user_agent: meta.user_agent,
   });

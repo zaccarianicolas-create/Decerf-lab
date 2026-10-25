@@ -38,12 +38,22 @@ export default async function JournalPage() {
       .limit(100),
   ]);
 
-  const userIds = Array.from(
-    new Set([
-      ...((logs ?? []).map((l: any) => l.actor_id).filter(Boolean) as string[]),
-      ...((requests ?? []).map((r: any) => r.user_id).filter(Boolean) as string[]),
-    ])
-  );
+  const auditEntries = (logs ?? []) as Array<{
+    actor_id: string | null;
+    metadata: Record<string, unknown> | null;
+  }>;
+  const privacyRequests = (requests ?? []) as Array<{ user_id: string | null }>;
+  const userIds = Array.from(new Set([
+    ...auditEntries.flatMap((entry) => {
+      const before = entry.metadata?.before as Record<string, unknown> | undefined;
+      const after = entry.metadata?.after as Record<string, unknown> | undefined;
+      return [entry.actor_id, before?.assignee_id, after?.assignee_id]
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
+    }),
+    ...privacyRequests
+      .map((request) => request.user_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
+  ]));
 
   let profilesMap: Record<string, { nom: string | null; prenom: string | null; email: string | null }> = {};
   if (userIds.length > 0) {
@@ -52,7 +62,8 @@ export default async function JournalPage() {
       .select("id, nom, prenom, email")
       .in("id", userIds);
     profilesMap = Object.fromEntries(
-      (profiles ?? []).map((p: any) => [p.id, { nom: p.nom, prenom: p.prenom, email: p.email }])
+      ((profiles ?? []) as Array<{ id: string; nom: string | null; prenom: string | null; email: string | null }>)
+        .map((profile) => [profile.id, { nom: profile.nom, prenom: profile.prenom, email: profile.email }])
     );
   }
 

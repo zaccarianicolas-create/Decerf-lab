@@ -39,6 +39,30 @@ const STATUT_COLORS: Record<RgpdRequest["statut"], string> = {
   refuse: "bg-red-100 text-red-700",
 };
 
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  statut: "Statut",
+  titre: "Titre",
+  description: "Description",
+  assignee_id: "Assigné à",
+  priorite: "Priorité",
+  due_date: "Échéance",
+};
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  "tache.update": "Modification d’une tâche",
+  "tache.delete": "Suppression d’une tâche",
+  "collaborateur.invite": "Invitation d’un collaborateur",
+  "collaborateur.update": "Modification d’un collaborateur",
+  "parametres_labo.update": "Modification des paramètres du labo",
+  "client.update": "Modification d’une fiche client",
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
 export function JournalPanel({
   logs,
   requests,
@@ -49,7 +73,7 @@ export function JournalPanel({
   profilesMap: Record<string, ProfileInfo>;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"logs" | "rgpd">("rgpd");
+  const [tab, setTab] = useState<"logs" | "rgpd">("logs");
   const [filter, setFilter] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +117,18 @@ export function JournalPanel({
     const p = profilesMap[id];
     if (!p) return id.slice(0, 8) + "…";
     return `${p.prenom ?? ""} ${p.nom ?? ""}`.trim() || p.email || id.slice(0, 8) + "…";
+  };
+
+  const formatAuditValue = (field: string, value: unknown) => {
+    if (value === null || value === undefined || value === "") return "—";
+    if (field === "assignee_id" && typeof value === "string") return renderUser(value);
+    if (field === "due_date" && typeof value === "string") {
+      return new Date(`${value}T00:00:00`).toLocaleDateString("fr-FR");
+    }
+    if (field === "statut" && typeof value === "string") {
+      return value.replace(/_/g, " ");
+    }
+    return typeof value === "string" ? value : JSON.stringify(value);
   };
 
   return (
@@ -266,7 +302,7 @@ export function JournalPanel({
                       </td>
                       <td className="px-3 py-2">
                         <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">
-                          {l.action}
+                          {AUDIT_ACTION_LABELS[l.action] || l.action}
                         </code>
                       </td>
                       <td className="px-3 py-2 text-xs text-gray-600">
@@ -281,13 +317,26 @@ export function JournalPanel({
                         {l.ip || "—"}
                       </td>
                       <td className="px-3 py-2 text-xs text-gray-600">
-                        {l.metadata && Object.keys(l.metadata).length > 0 ? (
-                          <code className="text-[10px]">
-                            {JSON.stringify(l.metadata)}
-                          </code>
-                        ) : (
-                          "—"
-                        )}
+                        {(() => {
+                          const before = asRecord(l.metadata?.before);
+                          const after = asRecord(l.metadata?.after);
+                          const changedFields = after ? Object.keys(after) : [];
+                          if (changedFields.length > 0 && before && after) {
+                            return (
+                              <div className="space-y-1">
+                                {changedFields.map((field) => (
+                                  <p key={field}>
+                                    <span className="font-medium">{AUDIT_FIELD_LABELS[field] || field}:</span>{" "}
+                                    {formatAuditValue(field, before[field])} → {formatAuditValue(field, after[field])}
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return l.metadata && Object.keys(l.metadata).length > 0
+                            ? <code className="text-[10px]">{JSON.stringify(l.metadata)}</code>
+                            : "—";
+                        })()}
                       </td>
                     </tr>
                   ))}

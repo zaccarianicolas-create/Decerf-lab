@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { extractRequestMeta, logAudit } from "@/lib/audit";
 
 const readText = (value: unknown) => typeof value === "string" ? value.trim() : "";
 
@@ -19,7 +20,7 @@ export async function PATCH(
   const { id } = await params;
   const { data: client, error: clientError } = await admin
     .from("profiles")
-    .select("id, role, cabinet_id, numero_inami")
+    .select("id, role, cabinet_id, nom, prenom, telephone, numero_inami, numero_entreprise, assujetti_tva, numero_tva, mode_travail_prefere, modele_scanner, cabinet:cabinets(nom, adresse, code_postal, ville, telephone, email)")
     .eq("id", id)
     .maybeSingle();
   if (clientError || !client || client.role !== "dentiste") {
@@ -53,6 +54,10 @@ export async function PATCH(
     modele_scanner: readText(profile.modele_scanner) || null,
   };
   const numeroInamiChanged = profileUpdate.numero_inami !== (client.numero_inami || null);
+  const currentProfile = client as unknown as Record<string, unknown>;
+  const changedProfileFields = Object.entries(profileUpdate)
+    .filter(([key, value]) => (currentProfile[key] ?? null) !== value)
+    .map(([key]) => key);
 
   const cabinet = body.cabinet as Record<string, unknown>;
   const cabinetUpdate = {
@@ -63,6 +68,11 @@ export async function PATCH(
     telephone: readText(cabinet.telephone) || null,
     email: readText(cabinet.email).toLowerCase() || null,
   };
+  const currentCabinet = Array.isArray(client.cabinet) ? client.cabinet[0] : client.cabinet;
+  const currentCabinetFields = (currentCabinet ?? {}) as Record<string, unknown>;
+  const changedCabinetFields = Object.entries(cabinetUpdate)
+    .filter(([key, value]) => (currentCabinetFields[key] ?? null) !== value)
+    .map(([key]) => key);
 
   let cabinetId = client.cabinet_id;
   let savedCabinet = null;
@@ -107,6 +117,21 @@ export async function PATCH(
     if (cabinetId && cabinetId !== client.cabinet_id) await admin.from("cabinets").delete().eq("id", cabinetId);
     return NextResponse.json({ error: profileError.message }, { status: 400 });
   }
+
+  const meta = extractRequestMeta(request);
+  await logAudit({
+    actor_id: user.id,
+    actor_role: "admin",
+    action: "client.update",
+    entity_type: "profile",
+    entity_id: client.id,
+    metadata: {
+      profile_fields: changedProfileFields,
+      cabinet_fields: changedCabinetFields,
+    },
+    ip: meta.ip,
+    user_agent: meta.user_agent,
+  });
 
   return NextResponse.json({ success: true, cabinet: savedCabinet });
 }
