@@ -50,9 +50,10 @@ export function MobileSidebarMenu({
           aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className={`rounded-md p-2 ${dark ? "text-gray-200 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"}`}
+          className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${dark ? "text-gray-200 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-100"}`}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <span>{open ? "Fermer" : "Menu"}</span>
         </button>
       </header>
       {open && (
