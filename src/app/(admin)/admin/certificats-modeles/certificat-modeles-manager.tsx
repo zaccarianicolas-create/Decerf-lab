@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CERTIFICAT_TEMPLATE_TAGS, validateCertificateTemplate } from "@/lib/certificat-template";
+import { CERTIFICAT_TEMPLATE_TAGS, renderCertificateTemplate, validateCertificateTemplate } from "@/lib/certificat-template";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, FilePlus2, Save } from "lucide-react";
+import { Check, FilePlus2, FileText, Loader2, Save } from "lucide-react";
 
 type CertificateTemplate = {
   id: string;
@@ -29,6 +29,27 @@ const emptyTemplate = {
   actif: true,
 };
 
+const DEMO_CERTIFICATE_VALUES: Record<string, string> = {
+  "labo.nom": "Laboratoire Exemple",
+  "labo.adresse": "1 rue de Démonstration, 0000 Ville Exemple",
+  "labo.site_fabrication": "Site de fabrication — exemple",
+  "dispositifs.liste": "Couronne unitaire — exemple fictif",
+  "patient.identifiant": "PATIENT-DEMO-001",
+  "dentiste.nom": "Dr Exemple",
+  "dentiste.cabinet": "Cabinet Démo",
+  "dentiste.adresse": "2 avenue de Démonstration, 0000 Ville Exemple",
+  "prescription.caracteristiques": "Caractéristiques fictives de démonstration",
+  "production.materiaux_lots": "Matériau démo — lot DEMO-000",
+  "conformite.declaration": "Texte de démonstration — à remplacer par la déclaration validée",
+  "conformite.exigences_non_satisfaites": "Aucune — exemple",
+  "conformite.justification": "Sans objet — exemple",
+  "conformite.classe_dispositif": "Classe exemple",
+  "conformite.code_nomenclature": "CODE-DEMO",
+  "document.date_emission": "25/10/2026",
+  "document.signataire": "Responsable — exemple",
+  "document.numero": "APERÇU-DEMO-0000",
+};
+
 export function CertificatModelesManager({ initialTemplates }: { initialTemplates: CertificateTemplate[] }) {
   const supabase = createClient();
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
@@ -37,6 +58,57 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewStatus, setPreviewStatus] = useState("Préparation de l’aperçu…");
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const demoContent = renderCertificateTemplate(selected.contenu_template, DEMO_CERTIFICATE_VALUES);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPreviewStatus("Génération du PDF…");
+      setPreviewError(null);
+      try {
+        const response = await fetch("/api/admin/certificats/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contenu: demoContent,
+            numero: DEMO_CERTIFICATE_VALUES["document.numero"],
+            demo: true,
+          }),
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || "Aperçu PDF indisponible.");
+        }
+        const nextUrl = URL.createObjectURL(await response.blob());
+        if (controller.signal.aborted) {
+          URL.revokeObjectURL(nextUrl);
+          return;
+        }
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = nextUrl;
+        setPreviewUrl(nextUrl);
+        setPreviewStatus("Aperçu à jour");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setPreviewStatus("");
+        setPreviewError(error instanceof Error ? error.message : "Aperçu PDF indisponible.");
+      }
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [demoContent]);
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -152,6 +224,33 @@ export function CertificatModelesManager({ initialTemplates }: { initialTemplate
               className="w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </label>
+          <section className="overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">Aperçu PDF en direct</h3>
+                <p className="text-xs text-amber-700">Données entièrement fictives — document de démonstration, non valable.</p>
+              </div>
+              <span className="flex items-center gap-1.5 text-xs text-gray-500" role="status">
+                {previewStatus === "Génération du PDF…" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {previewStatus}
+              </span>
+            </div>
+            {previewError ? (
+              <p role="alert" className="p-4 text-sm text-red-700">{previewError}</p>
+            ) : previewUrl ? (
+              <iframe
+                key={previewUrl}
+                src={previewUrl}
+                title="Aperçu PDF fictif du modèle de conformité"
+                className="h-[min(70vh,720px)] w-full bg-white"
+              />
+            ) : (
+              <div className="flex h-56 items-center justify-center gap-2 text-sm text-gray-500">
+                <FileText className="h-4 w-4" />
+                Génération du premier aperçu…
+              </div>
+            )}
+          </section>
           <fieldset className="flex flex-wrap gap-5 text-sm text-gray-700">
             <label className="flex items-center gap-2"><input type="checkbox" checked={selected.est_defaut} onChange={(event) => setSelected({ ...selected, est_defaut: event.target.checked })} /> Modèle par défaut</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={selected.actif} onChange={(event) => setSelected({ ...selected, actif: event.target.checked })} /> Actif</label>

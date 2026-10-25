@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createCertificatPdf } from "@/lib/certificat-pdf";
+import { getCertificatLogo } from "@/lib/certificat-logo";
 
 export async function POST(
   _request: Request,
@@ -35,7 +36,11 @@ export async function POST(
     return NextResponse.json({ error: "Le contenu de la déclaration est vide." }, { status: 409 });
   }
 
-  const bytes = await createCertificatPdf(certificate.contenu_complet, certificate.numero_certificat);
+  const bytes = await createCertificatPdf(
+    certificate.contenu_complet,
+    certificate.numero_certificat,
+    { logoBytes: await getCertificatLogo() }
+  );
   const path = `${certificate.dentiste_id}/${certificate.commande_id}/${certificate.id}.pdf`;
   const { error: uploadError } = await admin.storage.from("certificats").upload(path, bytes, {
     contentType: "application/pdf",

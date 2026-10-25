@@ -27,7 +27,11 @@ function wrapLine(text: string, maxWidth: number, font: Awaited<ReturnType<PDFDo
   return lines;
 }
 
-export async function createCertificatPdf(content: string, number: string): Promise<Uint8Array> {
+export async function createCertificatPdf(
+  content: string,
+  number: string,
+  options: { logoBytes?: Uint8Array; preview?: boolean } = {}
+): Promise<Uint8Array> {
   const document = await PDFDocument.create();
   document.setTitle(`Declaration de conformite ${number}`);
   document.setSubject("Dispositif medical sur mesure");
@@ -39,6 +43,35 @@ export async function createCertificatPdf(content: string, number: string): Prom
   const lineHeight = 15;
   let page = document.addPage(pageSize);
   let y = page.getHeight() - margin;
+
+  if (options.logoBytes) {
+    try {
+      const logo = await document.embedPng(options.logoBytes);
+      const size = logo.scaleToFit(180, 42);
+      page.drawImage(logo, {
+        x: (page.getWidth() - size.width) / 2,
+        y: y - size.height,
+        width: size.width,
+        height: size.height,
+      });
+      y -= size.height + 18;
+    } catch {
+      // Keep the document readable if the site logo cannot be embedded.
+    }
+  }
+
+  if (options.preview) {
+    const label = "APERÇU DÉMO - NON VALABLE";
+    const cleanLabel = toPdfText(label);
+    page.drawText(cleanLabel, {
+      x: (page.getWidth() - bold.widthOfTextAtSize(cleanLabel, 8)) / 2,
+      y,
+      size: 8,
+      font: bold,
+      color: rgb(0.65, 0.22, 0.12),
+    });
+    y -= 18;
+  }
 
   page.drawText(toPdfText(number), {
     x: margin,
