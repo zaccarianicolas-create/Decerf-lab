@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,12 +23,17 @@ import {
   AlertCircle,
   Loader2,
   Copy,
+  RotateCcw,
 } from "lucide-react";
 import {
   toggleServiceActif,
   deleteService as deleteServiceAction,
   saveService,
   reorderServices,
+  addServiceCatalogOption,
+  setServiceCatalogOptionActive,
+  type ServiceCatalogKind,
+  type ServiceCatalogOption,
 } from "./actions";
 
 type Service = {
@@ -64,15 +69,6 @@ type Service = {
   created_at: string;
 };
 
-const CATEGORIES = [
-  { value: "prothese_fixe", label: "Prothèse fixe" },
-  { value: "prothese_amovible", label: "Prothèse amovible" },
-  { value: "implantologie", label: "Implantologie" },
-  { value: "orthodontie", label: "Orthodontie" },
-  { value: "esthetique", label: "Esthétique" },
-  { value: "autre", label: "Autre" },
-];
-
 const TYPES_TRAVAIL = [
   { value: "couronne", label: "Couronne" },
   { value: "bridge", label: "Bridge" },
@@ -83,18 +79,6 @@ const TYPES_TRAVAIL = [
   { value: "implant", label: "Implant" },
   { value: "orthodontie", label: "Orthodontie" },
   { value: "gouttiere", label: "Gouttière" },
-  { value: "autre", label: "Autre" },
-];
-
-const MATERIAUX = [
-  { value: "zircone", label: "Zircone" },
-  { value: "emax", label: "E.max" },
-  { value: "metal", label: "Métal" },
-  { value: "ceramique", label: "Céramique" },
-  { value: "resine", label: "Résine" },
-  { value: "composite", label: "Composite" },
-  { value: "titane", label: "Titane" },
-  { value: "chrome_cobalt", label: "Chrome-Cobalt" },
   { value: "autre", label: "Autre" },
 ];
 
@@ -136,11 +120,14 @@ const createEmptyForm = (defaultTva = 21) => ({
 export function ServicesList({
   initialServices,
   defaultTva,
+  initialCatalogOptions,
 }: {
   initialServices: Service[];
   defaultTva: number;
+  initialCatalogOptions: ServiceCatalogOption[];
 }) {
   const [services, setServices] = useState(initialServices);
+  const [catalogOptions, setCatalogOptions] = useState(initialCatalogOptions);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -148,6 +135,57 @@ export function ServicesList({
   const [filterCat, setFilterCat] = useState<string>("all");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogSaving, setCatalogSaving] = useState<ServiceCatalogKind | null>(null);
+  const [catalogDrafts, setCatalogDrafts] = useState<Record<ServiceCatalogKind, string>>({
+    categorie: "",
+    materiau: "",
+    teinte: "",
+  });
+
+  const activeCategories = catalogOptions.filter((option) => option.kind === "categorie" && option.actif);
+  const serviceCategories = catalogOptions.filter((option) =>
+    option.kind === "categorie" && (option.actif || option.value === form.categorie)
+  );
+  const serviceMaterials = catalogOptions.filter((option) =>
+    option.kind === "materiau" && (option.actif || form.materiaux_disponibles.includes(option.value))
+  );
+
+  const addCatalogOption = async (kind: ServiceCatalogKind) => {
+    setCatalogError(null);
+    const label = catalogDrafts[kind].trim();
+    if (!label) return;
+    setCatalogSaving(kind);
+    const result = await addServiceCatalogOption(kind, label);
+    if (result.success && result.data) {
+      setCatalogOptions((current) => [
+        ...current.filter((option) => option.id !== result.data!.id),
+        result.data!,
+      ].sort((a, b) => a.ordre - b.ordre || a.label.localeCompare(b.label)));
+      setCatalogDrafts((current) => ({ ...current, [kind]: "" }));
+    } else {
+      setCatalogError(result.error || "Impossible d’enregistrer cette valeur.");
+    }
+    setCatalogSaving(null);
+  };
+
+  const toggleCatalogOption = async (option: ServiceCatalogOption) => {
+    setCatalogError(null);
+    setCatalogSaving(option.kind);
+    const result = await setServiceCatalogOptionActive(option.id, !option.actif);
+    if (result.success && result.data) {
+      setCatalogOptions((current) => current.map((entry) => entry.id === option.id ? result.data! : entry));
+    } else {
+      setCatalogError(result.error || "Impossible de modifier cette valeur.");
+    }
+    setCatalogSaving(null);
+  };
+
+  const catalogSections: { kind: ServiceCatalogKind; title: string; placeholder: string }[] = [
+    { kind: "categorie", title: "Catégories", placeholder: "Ex. Prothèse provisoire" },
+    { kind: "materiau", title: "Matériaux", placeholder: "Ex. PMMA" },
+    { kind: "teinte", title: "Teintes", placeholder: "Ex. OM2" },
+  ];
 
   // Drag and drop state
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -456,6 +494,42 @@ export function ServicesList({
         </Card>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Listes du catalogue</CardTitle>
+          <p className="text-sm text-gray-500">Ajoute des valeurs ou désactive celles qui ne sont plus proposées. Une valeur encore utilisée doit d’abord être retirée des services concernés.</p>
+        </CardHeader>
+        <CardContent className="grid gap-5 md:grid-cols-3">
+          {catalogError && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700 md:col-span-3">{catalogError}</p>}
+          {catalogSections.map((section) => (
+            <section key={section.kind} className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-900">{section.title}</h3>
+              <div className="flex gap-2">
+                <Input
+                  aria-label={`Nouvelle valeur : ${section.title.toLowerCase()}`}
+                  placeholder={section.placeholder}
+                  value={catalogDrafts[section.kind]}
+                  onChange={(event) => setCatalogDrafts((current) => ({ ...current, [section.kind]: event.target.value }))}
+                />
+                <Button type="button" variant="outline" size="icon" disabled={catalogSaving !== null || !catalogDrafts[section.kind].trim()} onClick={() => void addCatalogOption(section.kind)} aria-label={`Ajouter ${section.title.toLowerCase()}`}>
+                  {catalogSaving === section.kind ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+              </div>
+              <ul className="space-y-1">
+                {catalogOptions.filter((option) => option.kind === section.kind).map((option) => (
+                  <li key={option.id} className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm ${option.actif ? "border-gray-100 text-gray-700" : "border-gray-100 text-gray-400"}`}>
+                    <span>{option.label}{!option.actif ? " · désactivé" : ""}</span>
+                    <button type="button" disabled={catalogSaving !== null} onClick={() => void toggleCatalogOption(option)} aria-label={`${option.actif ? "Désactiver" : "Réactiver"} ${option.label}`} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50">
+                      {option.actif ? <Trash2 className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
@@ -469,7 +543,7 @@ export function ServicesList({
           >
             Tous
           </button>
-          {CATEGORIES.map((c) => (
+          {activeCategories.map((c) => (
             <button
               key={c.value}
               onClick={() => setFilterCat(c.value)}
@@ -545,9 +619,9 @@ export function ServicesList({
                     }
                     className="flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
                   >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
+                    {serviceCategories.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}{!category.actif ? " (désactivée)" : ""}
                       </option>
                     ))}
                   </select>
@@ -823,7 +897,7 @@ export function ServicesList({
                   Matériaux disponibles
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {MATERIAUX.map((m) => (
+                  {serviceMaterials.map((m) => (
                     <button
                       key={m.value}
                       type="button"
@@ -832,9 +906,9 @@ export function ServicesList({
                         form.materiaux_disponibles.includes(m.value)
                           ? "border-sky-300 bg-sky-100 text-sky-700"
                           : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
-                      }`}
+                      } ${!m.actif ? "opacity-60" : ""}`}
                     >
-                      {m.label}
+                      {m.label}{!m.actif ? " (désactivé)" : ""}
                     </button>
                   ))}
                 </div>
@@ -940,8 +1014,7 @@ export function ServicesList({
                           CATEGORIE_COLORS.autre
                         }`}
                       >
-                        {CATEGORIES.find((c) => c.value === s.categorie)
-                          ?.label || s.categorie}
+                        {catalogOptions.find((option) => option.kind === "categorie" && option.value === s.categorie)?.label || s.categorie}
                       </span>
                       {!s.actif && (
                         <Badge className="border-gray-200 bg-gray-100 text-gray-500">
@@ -997,7 +1070,7 @@ export function ServicesList({
                           {s.materiaux_disponibles
                             .map(
                               (m) =>
-                                MATERIAUX.find((x) => x.value === m)?.label ||
+                                catalogOptions.find((option) => option.kind === "materiau" && option.value === m)?.label ||
                                 m
                             )
                             .join(", ")}

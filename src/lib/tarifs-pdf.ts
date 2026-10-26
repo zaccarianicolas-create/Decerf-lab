@@ -4,6 +4,7 @@ import type { ParametresLabo } from "@/lib/parametres-labo";
 export type TarifPdfService = {
   nom: string;
   categorie: string;
+  categorie_label?: string;
   description: string | null;
   prix_base_ht: number | null;
   options: { nom: string; prix_ht: number }[];
@@ -130,15 +131,6 @@ export async function createTarifsPdf(
     draw(`Régime TVA : ${params.regime_tva === "franchise" ? "franchise" : "normal"}. Le traitement de la TVA est indiqué sur la facture.`, MARGIN, y, 8, regular, MUTED);
     y -= 20;
   };
-  const categoryLabels: Record<string, string> = {
-    prothese_fixe: "Prothèse fixe",
-    prothese_amovible: "Prothèse amovible",
-    implantologie: "Implantologie",
-    orthodontie: "Orthodontie",
-    esthetique: "Esthétique",
-    autre: "Autres services",
-  };
-
   drawHeader();
   let currentCategory = "";
   for (const service of services) {
@@ -154,7 +146,7 @@ export async function createTarifsPdf(
     if (currentCategory !== category) {
       y -= 7;
       page.drawRectangle({ x: MARGIN, y: y - 5, width: PAGE_WIDTH - MARGIN * 2, height: 22, color: PALE });
-      draw(categoryLabels[category] || category, MARGIN + 8, y + 11, 9, bold, ACCENT);
+      draw(service.categorie_label || category, MARGIN + 8, y + 11, 9, bold, ACCENT);
       y -= 25;
       currentCategory = category;
     }

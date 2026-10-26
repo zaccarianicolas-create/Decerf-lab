@@ -3,15 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 
-const CATEGORIES: Record<string, string> = {
-  prothese_fixe: "Prothèse fixe",
-  prothese_amovible: "Prothèse amovible",
-  implantologie: "Implantologie",
-  orthodontie: "Orthodontie",
-  esthetique: "Esthétique",
-  autre: "Autre",
-};
-
 export default async function TarifsPage() {
   const supabase = await createClient();
   const {
@@ -26,7 +17,7 @@ export default async function TarifsPage() {
   if (profile?.role !== "dentiste") redirect("/dashboard");
 
   const admin = createAdminClient();
-  const [{ data: services }, { data: tarifs }, { data: options }] = await Promise.all([
+  const [{ data: services }, { data: tarifs }, { data: options }, { data: catalogOptions }] = await Promise.all([
     admin
       .from("services_labo")
       .select("id, nom, description, categorie, ordre")
@@ -38,7 +29,13 @@ export default async function TarifsPage() {
       .select("id, service_id, nom, prix_ht, ordre")
       .eq("actif", true)
       .order("ordre"),
+    admin
+      .from("service_catalog_options")
+      .select("value, label")
+      .eq("kind", "categorie")
+      .eq("actif", true),
   ]);
+  const categoryLabels = new Map((catalogOptions ?? []).map((category) => [category.value, category.label]));
 
   const tarifsParService = new Map(
     (tarifs ?? []).map((tarif) => [tarif.service_id, Number(tarif.prix_base_ht)])
@@ -67,7 +64,7 @@ export default async function TarifsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4">
                     <div>
                       <p className="text-xs font-medium uppercase text-sky-700">
-                        {CATEGORIES[service.categorie] ?? "Autre"}
+                        {categoryLabels.get(service.categorie) ?? service.categorie}
                       </p>
                       <h2 className="mt-1 font-semibold text-gray-900">{service.nom}</h2>
                       {service.description && (

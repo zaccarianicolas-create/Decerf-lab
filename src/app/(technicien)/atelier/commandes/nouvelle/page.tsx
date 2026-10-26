@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 type DentistOption = { id: string; nom: string; prenom: string };
 type OptionRow = { id: string; service_id: string; nom: string };
+type CatalogValue = { id: string; kind: "categorie" | "materiau" | "teinte"; value: string; label: string };
 
 export default async function TechnicienNouvelleCommandePage() {
   const supabase = await createClient();
@@ -23,7 +24,7 @@ export default async function TechnicienNouvelleCommandePage() {
     redirect(profile?.role === "admin" ? "/admin" : "/dashboard");
   }
 
-  const [{ data: dentists }, { data: services }, { data: options }] = await Promise.all([
+  const [{ data: dentists }, { data: services }, { data: options }, { data: catalogValues }] = await Promise.all([
     admin
       .from("profiles")
       .select("id, nom, prenom")
@@ -39,6 +40,11 @@ export default async function TechnicienNouvelleCommandePage() {
     admin
       .from("service_options")
       .select("id, service_id, nom")
+      .eq("actif", true)
+      .order("ordre"),
+    admin
+      .from("service_catalog_options")
+      .select("id, kind, value, label")
       .eq("actif", true)
       .order("ordre"),
   ]);
@@ -59,6 +65,7 @@ export default async function TechnicienNouvelleCommandePage() {
     <TechnicienCommandeForm
       dentists={(dentists ?? []) as DentistOption[]}
       services={servicesForForm}
+      catalogValues={(catalogValues ?? []) as CatalogValue[]}
     />
   );
 }

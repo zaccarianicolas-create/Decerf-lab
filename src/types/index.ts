@@ -28,24 +28,9 @@ export type TypeTravail =
   | "gouttiere"
   | "autre";
 
-export type Materiau =
-  | "zircone"
-  | "emax"
-  | "metal"
-  | "ceramique"
-  | "resine"
-  | "composite"
-  | "titane"
-  | "chrome_cobalt"
-  | "autre";
+export type Materiau = string;
 
-export type Teinte =
-  | "A1" | "A2" | "A3" | "A3.5" | "A4"
-  | "B1" | "B2" | "B3" | "B4"
-  | "C1" | "C2" | "C3" | "C4"
-  | "D2" | "D3" | "D4"
-  | "BL1" | "BL2" | "BL3" | "BL4"
-  | "personnalisee";
+export type Teinte = string;
 
 export type StatutPaiement = "en_attente" | "paye" | "echoue" | "rembourse";
 export type Priorite = "normale" | "urgente" | "express";
@@ -343,13 +328,7 @@ export interface CertificatConformite {
   patient?: Patient;
 }
 
-export type CategorieService =
-  | "prothese_fixe"
-  | "prothese_amovible"
-  | "implantologie"
-  | "orthodontie"
-  | "esthetique"
-  | "autre";
+export type CategorieService = string;
 
 export type ModeFourniture = "numerique_stl" | "empreinte_physique" | "les_deux";
 

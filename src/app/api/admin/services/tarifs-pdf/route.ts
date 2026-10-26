@@ -22,7 +22,7 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const [{ data: services, error: servicesError }, { data: tariffs, error: tariffsError }, { data: options, error: optionsError }] = await Promise.all([
+  const [{ data: services, error: servicesError }, { data: tariffs, error: tariffsError }, { data: options, error: optionsError }, { data: catalogOptions, error: catalogError }] = await Promise.all([
     admin
       .from("services_labo")
       .select("id, nom, categorie, description, ordre")
@@ -34,17 +34,23 @@ export async function GET() {
       .select("id, service_id, nom, prix_ht, ordre")
       .eq("actif", true)
       .order("ordre"),
+    admin
+      .from("service_catalog_options")
+      .select("value, label")
+      .eq("kind", "categorie")
+      .eq("actif", true),
   ]);
 
-  if (servicesError || tariffsError || optionsError) {
+  if (servicesError || tariffsError || optionsError || catalogError) {
     return NextResponse.json({
-      error: servicesError?.message || tariffsError?.message || optionsError?.message || "Impossible de charger les tarifs.",
+      error: servicesError?.message || tariffsError?.message || optionsError?.message || catalogError?.message || "Impossible de charger les tarifs.",
     }, { status: 500 });
   }
 
   const tariffByService = new Map(
     (tariffs ?? []).map((tariff) => [tariff.service_id, Number(tariff.prix_base_ht)])
   );
+  const categoryLabels = new Map((catalogOptions ?? []).map((option) => [option.value, option.label]));
   const optionsByService = new Map<string, { nom: string; prix_ht: number }[]>();
   for (const option of options ?? []) {
     const serviceOptions = optionsByService.get(option.service_id) ?? [];
@@ -55,6 +61,7 @@ export async function GET() {
   const catalog = (services ?? []).map((service) => ({
     nom: service.nom,
     categorie: service.categorie,
+    categorie_label: categoryLabels.get(service.categorie) || service.categorie,
     description: service.description,
     prix_base_ht: tariffByService.get(service.id) ?? null,
     options: optionsByService.get(service.id) ?? [],

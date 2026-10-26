@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ServicesList } from "./services-list";
 import { getParametresLabo } from "@/lib/parametres-labo";
 import { Download } from "lucide-react";
+import type { ServiceCatalogOption } from "./actions";
 
 export default async function AdminServicesPage() {
   const supabase = await createClient();
@@ -14,10 +15,11 @@ export default async function AdminServicesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: services }, { data: tarifs }, { data: options }] = await Promise.all([
+  const [{ data: services }, { data: tarifs }, { data: options }, { data: catalogOptions }] = await Promise.all([
     admin.from("services_labo").select("*").order("ordre", { ascending: true }),
     admin.from("service_tarifs").select("service_id, prix_base_ht"),
     admin.from("service_options").select("*").order("ordre"),
+    admin.from("service_catalog_options").select("id, kind, value, label, ordre, actif").order("ordre"),
   ]);
   const parametres = await getParametresLabo();
   const tarifsParService = new Map(
@@ -60,6 +62,7 @@ export default async function AdminServicesPage() {
       <ServicesList
         initialServices={servicesAvecTarifs}
         defaultTva={Number(parametres.taux_tva_defaut ?? 21)}
+        initialCatalogOptions={(catalogOptions ?? []) as ServiceCatalogOption[]}
       />
     </div>
   );

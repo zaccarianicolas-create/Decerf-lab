@@ -18,6 +18,7 @@ import {
 
 type DentistOption = { id: string; nom: string; prenom: string };
 type PatientOption = { id: string; reference: string; nom: string; prenom: string };
+type CatalogValue = { id: string; kind: "categorie" | "materiau" | "teinte"; value: string; label: string };
 type ServiceOption = { id: string; nom: string };
 export type TechnicienCommandeService = {
   id: string;
@@ -52,29 +53,14 @@ const newWorkItem = (): WorkItem => ({
   notes: "",
 });
 
-const MATERIAL_LABELS: Record<string, string> = {
-  zircone: "Zircone",
-  emax: "E.max",
-  metal: "Métal",
-  ceramique: "Céramique",
-  resine: "Résine",
-  composite: "Composite",
-  titane: "Titane",
-  chrome_cobalt: "Chrome-Cobalt",
-  autre: "Autre",
-};
-
-const SHADES = [
-  "A1", "A2", "A3", "A3.5", "A4", "B1", "B2", "B3", "B4",
-  "C1", "C2", "C3", "C4", "D2", "D3", "D4", "BL1", "BL2", "BL3", "BL4",
-];
-
 export function TechnicienCommandeForm({
   dentists,
   services,
+  catalogValues,
 }: {
   dentists: DentistOption[];
   services: TechnicienCommandeService[];
+  catalogValues: CatalogValue[];
 }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
@@ -287,6 +273,11 @@ export function TechnicienCommandeForm({
         <CardContent className="space-y-4">
           {items.map((item, index) => {
             const service = services.find((entry) => entry.id === item.service_labo_id);
+            const activeMaterials = catalogValues.filter((option) => option.kind === "materiau");
+            const materialValues = (service?.materiaux_disponibles?.length
+              ? activeMaterials.filter((option) => service.materiaux_disponibles?.includes(option.value))
+              : activeMaterials);
+            const shadeValues = catalogValues.filter((option) => option.kind === "teinte");
             return (
               <div key={index} className="space-y-4 rounded-md border border-gray-200 p-4">
                 <div className="flex items-center justify-between">
@@ -312,8 +303,8 @@ export function TechnicienCommandeForm({
                 ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {service?.demander_dents !== false && <Input label="Dents (n°)" placeholder="11, 12, 21" value={item.dents} onChange={(event) => updateItem(index, { dents: event.target.value })} />}
-                  {service?.demander_materiau !== false && <div><label className="mb-1 block text-sm font-medium text-gray-700">Matériau</label><select value={item.materiau} onChange={(event) => updateItem(index, { materiau: event.target.value })} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"><option value="">Sélectionner…</option>{(service?.materiaux_disponibles ?? []).map((material) => <option key={material} value={material}>{MATERIAL_LABELS[material] || material.replace(/_/g, " ")}</option>)}</select></div>}
-                  {service?.demander_teinte !== false && <div><label className="mb-1 block text-sm font-medium text-gray-700">Teinte</label><select value={item.teinte} onChange={(event) => updateItem(index, { teinte: event.target.value })} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"><option value="">Sélectionner…</option>{SHADES.map((shade) => <option key={shade} value={shade}>{shade}</option>)}</select></div>}
+                  {service?.demander_materiau !== false && <div><label className="mb-1 block text-sm font-medium text-gray-700">Matériau</label><select value={item.materiau} onChange={(event) => updateItem(index, { materiau: event.target.value })} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"><option value="">Sélectionner…</option>{materialValues.map((material) => <option key={material.id} value={material.value}>{material.label}</option>)}</select></div>}
+                  {service?.demander_teinte !== false && <div><label className="mb-1 block text-sm font-medium text-gray-700">Teinte</label><select value={item.teinte} onChange={(event) => updateItem(index, { teinte: event.target.value })} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"><option value="">Sélectionner…</option>{shadeValues.map((shade) => <option key={shade.id} value={shade.value}>{shade.label}</option>)}</select></div>}
                   {service?.demander_notes !== false && <Input label="Notes pour ce travail" value={item.notes} onChange={(event) => updateItem(index, { notes: event.target.value })} />}
                 </div>
               </div>

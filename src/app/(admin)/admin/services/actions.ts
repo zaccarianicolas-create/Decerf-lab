@@ -4,6 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+export type ServiceCatalogKind = "categorie" | "materiau" | "teinte";
+export type ServiceCatalogOption = {
+  id: string;
+  kind: ServiceCatalogKind;
+  value: string;
+  label: string;
+  ordre: number;
+  actif: boolean;
+};
+
 async function requireAdmin() {
   const supabase = await createClient();
   const {
@@ -18,6 +28,95 @@ async function requireAdmin() {
     .maybeSingle();
 
   return profile?.role === "admin" ? createAdminClient() : null;
+}
+
+function catalogSlug(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export async function addServiceCatalogOption(kind: ServiceCatalogKind, label: string) {
+  const admin = await requireAdmin();
+  if (!admin) return { success: false, error: "Non autorisé" };
+  const normalizedLabel = label.trim();
+  const value = catalogSlug(normalizedLabel);
+  if (!normalizedLabel || normalizedLabel.length > 60 || !value) {
+    return { success: false, error: "Saisis un nom valide de 1 à 60 caractères." };
+  }
+
+  const { data: existing } = await admin
+    .from("service_catalog_options")
+    .select("id, ordre")
+    .eq("kind", kind)
+    .eq("value", value)
+    .maybeSingle();
+  const { data: options } = await admin
+    .from("service_catalog_options")
+    .select("ordre")
+    .eq("kind", kind)
+    .order("ordre", { ascending: false })
+    .limit(1);
+  const ordre = existing?.ordre ?? (options?.[0]?.ordre ?? 0) + 10;
+  const { data, error } = await admin
+    .from("service_catalog_options")
+    .upsert({ kind, value, label: normalizedLabel, ordre, actif: true }, { onConflict: "kind,value" })
+    .select("id, kind, value, label, ordre, actif")
+    .single();
+  if (error || !data) return { success: false, error: error?.message || "Enregistrement impossible." };
+
+  revalidatePath("/admin/services");
+  revalidatePath("/dashboard/tarifs");
+  revalidatePath("/dashboard/commandes/nouvelle");
+  revalidatePath("/atelier/commandes/nouvelle");
+  return { success: true, data: data as ServiceCatalogOption };
+}
+
+export async function setServiceCatalogOptionActive(id: string, actif: boolean) {
+  const admin = await requireAdmin();
+  if (!admin) return { success: false, error: "Non autorisé" };
+
+  const { data: option, error: readError } = await admin
+    .from("service_catalog_options")
+    .select("id, kind, value, label, ordre, actif")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError || !option) return { success: false, error: readError?.message || "Valeur introuvable." };
+
+  if (!actif && option.kind === "categorie") {
+    const { count, error } = await admin
+      .from("services_labo")
+      .select("id", { count: "exact", head: true })
+      .eq("categorie", option.value);
+    if (error) return { success: false, error: error.message };
+    if ((count ?? 0) > 0) return { success: false, error: "Réaffecte d’abord les services de cette catégorie." };
+  }
+  if (!actif && option.kind === "materiau") {
+    const { data: services, error } = await admin
+      .from("services_labo")
+      .select("id, materiaux_disponibles");
+    if (error) return { success: false, error: error.message };
+    if ((services ?? []).some((service) => (service.materiaux_disponibles ?? []).includes(option.value))) {
+      return { success: false, error: "Retire d’abord ce matériau des services qui l’utilisent." };
+    }
+  }
+
+  const { data, error } = await admin
+    .from("service_catalog_options")
+    .update({ actif })
+    .eq("id", id)
+    .select("id, kind, value, label, ordre, actif")
+    .single();
+  if (error || !data) return { success: false, error: error?.message || "Mise à jour impossible." };
+
+  revalidatePath("/admin/services");
+  revalidatePath("/dashboard/tarifs");
+  revalidatePath("/dashboard/commandes/nouvelle");
+  revalidatePath("/atelier/commandes/nouvelle");
+  return { success: true, data: data as ServiceCatalogOption };
 }
 
 export async function toggleServiceActif(id: string, actif: boolean) {

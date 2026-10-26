@@ -65,28 +65,7 @@ type ServiceOption = {
   instructions: string | null;
   options: BillableOption[];
 };
-
-const MATERIAUX_LABELS: Record<string, string> = {
-  zircone: "Zircone",
-  emax: "E.max",
-  metal: "Métal",
-  ceramique: "Céramique",
-  resine: "Résine",
-  composite: "Composite",
-  titane: "Titane",
-  chrome_cobalt: "Chrome-Cobalt",
-  autre: "Autre",
-};
-
-const ALL_MATERIAUX = Object.entries(MATERIAUX_LABELS).map(([value, label]) => ({ value, label }));
-
-const teintesOptions = [
-  "A1", "A2", "A3", "A3.5", "A4",
-  "B1", "B2", "B3", "B4",
-  "C1", "C2", "C3", "C4",
-  "D2", "D3", "D4",
-  "BL1", "BL2", "BL3", "BL4",
-];
+type CatalogValue = { id: string; kind: "categorie" | "materiau" | "teinte"; value: string; label: string };
 
 export default function NouvelleCommandePage() {
   const router = useRouter();
@@ -94,6 +73,7 @@ export default function NouvelleCommandePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [servicesLabo, setServicesLabo] = useState<ServiceOption[]>([]);
+  const [catalogValues, setCatalogValues] = useState<CatalogValue[]>([]);
   const [patientMode, setPatientMode] = useState<"existing" | "new">("existing");
 
   const [supabase] = useState(() => createClient());
@@ -118,7 +98,7 @@ export default function NouvelleCommandePage() {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      const [patientsRes, servicesRes, profileRes, optionsRes] = await Promise.all([
+      const [patientsRes, servicesRes, profileRes, optionsRes, catalogRes] = await Promise.all([
         supabase
           .from("patients")
           .select("id, reference, nom, prenom")
@@ -140,6 +120,11 @@ export default function NouvelleCommandePage() {
           .select("id, service_id, nom, prix_ht")
           .eq("actif", true)
           .order("ordre"),
+        supabase
+          .from("service_catalog_options")
+          .select("id, kind, value, label")
+          .eq("actif", true)
+          .order("ordre"),
       ]);
       const loadedPatients = patientsRes.data ?? [];
       setPatients(loadedPatients);
@@ -153,6 +138,7 @@ export default function NouvelleCommandePage() {
         ...service,
         options: optionsByService.get(service.id) ?? [],
       })) as ServiceOption[]);
+      setCatalogValues((catalogRes.data ?? []) as CatalogValue[]);
       const requestedPatientId = new URLSearchParams(window.location.search).get("patient_id");
       if (requestedPatientId && loadedPatients.some((patient) => patient.id === requestedPatientId)) {
         setValue("patient_id", requestedPatientId);
@@ -537,12 +523,13 @@ export default function NouvelleCommandePage() {
               const selectedServiceId = watchedItems?.[index]?.service_labo_id;
               const selectedService = servicesLabo.find((service) => service.id === selectedServiceId);
               const serviceMateriaux = selectedService?.materiaux_disponibles;
+              const activeMateriaux = catalogValues.filter((option) => option.kind === "materiau");
               const materiauxForService = serviceMateriaux?.length
-                  ? serviceMateriaux.map((m) => ({
-                      value: m,
-                      label: MATERIAUX_LABELS[m] || m,
+                  ? serviceMateriaux.map((material) => ({
+                      value: material,
+                      label: catalogValues.find((option) => option.kind === "materiau" && option.value === material)?.label || material,
                     }))
-                  : ALL_MATERIAUX;
+                  : activeMateriaux.map(({ value, label }) => ({ value, label }));
 
               return (
                 <div
@@ -598,12 +585,9 @@ export default function NouvelleCommandePage() {
                           grouped[cat].push(s);
                         });
                         const catLabels: Record<string, string> = {
-                          prothese_fixe: "Prothèse fixe",
-                          prothese_amovible: "Prothèse amovible",
-                          implantologie: "Implantologie",
-                          orthodontie: "Orthodontie",
-                          esthetique: "Esthétique",
-                          autre: "Autre",
+                          ...Object.fromEntries(catalogValues
+                            .filter((option) => option.kind === "categorie")
+                            .map((option) => [option.value, option.label])),
                         };
                         return Object.entries(grouped).map(([cat, svcs]) => (
                           <optgroup
@@ -723,7 +707,7 @@ export default function NouvelleCommandePage() {
                           {...register(`items.${index}.teinte`)}
                         >
                           <option value="">Sélectionner...</option>
-                          {teintesOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                          {catalogValues.filter((option) => option.kind === "teinte").map((shade) => <option key={shade.id} value={shade.value}>{shade.label}</option>)}
                         </select>
                       </div>
                     )}
