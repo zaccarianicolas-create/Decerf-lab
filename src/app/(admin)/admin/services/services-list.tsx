@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Loader2,
   Copy,
+  ChevronDown,
   RotateCcw,
 } from "lucide-react";
 import {
@@ -128,6 +129,7 @@ export function ServicesList({
 }) {
   const [services, setServices] = useState(initialServices);
   const [catalogOptions, setCatalogOptions] = useState(initialCatalogOptions);
+  const [catalogExpanded, setCatalogExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -495,11 +497,24 @@ export function ServicesList({
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Listes du catalogue</CardTitle>
-          <p className="text-sm text-gray-500">Ajoute des valeurs ou désactive celles qui ne sont plus proposées. Une valeur encore utilisée doit d’abord être retirée des services concernés.</p>
+        <CardHeader className="p-0">
+          <button
+            type="button"
+            aria-expanded={catalogExpanded}
+            aria-controls="service-catalog-settings"
+            onClick={() => setCatalogExpanded((expanded) => !expanded)}
+            className="flex w-full items-center justify-between gap-4 p-5 text-left hover:bg-gray-50"
+          >
+            <span>
+              <CardTitle>Listes du catalogue</CardTitle>
+              <span className="mt-1 block text-sm text-gray-500">
+                {catalogExpanded ? "Gérer les catégories, matériaux et teintes" : "Catégories, matériaux et teintes"}
+              </span>
+            </span>
+            <ChevronDown className={`h-5 w-5 shrink-0 text-gray-500 transition-transform ${catalogExpanded ? "rotate-180" : ""}`} />
+          </button>
         </CardHeader>
-        <CardContent className="grid gap-5 md:grid-cols-3">
+        {catalogExpanded && <div id="service-catalog-settings"><CardContent className="grid gap-5 border-t border-gray-100 p-5 md:grid-cols-3">
           {catalogError && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700 md:col-span-3">{catalogError}</p>}
           {catalogSections.map((section) => (
             <section key={section.kind} className="space-y-3">
@@ -527,7 +542,7 @@ export function ServicesList({
               </ul>
             </section>
           ))}
-        </CardContent>
+        </CardContent></div>}
       </Card>
 
       {/* Toolbar */}
