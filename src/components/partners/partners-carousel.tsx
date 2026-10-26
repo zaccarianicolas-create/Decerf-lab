@@ -90,12 +90,12 @@ export function PartnersCarousel({ partners }: { partners: Partner[] }) {
           onBlurCapture={(event) => {
             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false);
           }}
-          className={`flex items-center gap-8 overflow-x-auto overscroll-x-contain scrollbar-none ${hasOverflow ? "justify-start scroll-smooth" : "justify-center sm:justify-between"}`}
+          className={`flex items-center gap-8 overflow-x-auto overscroll-x-contain scrollbar-none ${hasOverflow ? "justify-start scroll-smooth" : "justify-center"}`}
         >
           {partners.map((partner) => {
             const logo = partner.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={partner.logo_url} alt={`Logo ${partner.nom}`} className="max-h-14 max-w-[180px] object-contain" />
+              <img src={partner.logo_url} alt={`Logo ${partner.nom}`} className="max-h-16 max-w-[210px] object-contain" />
             ) : (
               <span className="font-display text-xl font-semibold tracking-tight text-slate-800">{partner.nom}</span>
             );
