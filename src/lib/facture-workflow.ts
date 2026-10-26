@@ -180,7 +180,7 @@ export async function createFactureDraft(
       adresse: adresseLabo,
       telephone: params.telephone ?? "",
       email: params.email_contact ?? "",
-      tva_numero: !regimeFranchise ? params.tva_numero ?? "" : "",
+      tva_numero: params.tva_numero ?? "",
       numero_entreprise: params.numero_entreprise ?? "",
       iban: params.iban ?? "",
       bic: params.bic ?? "",

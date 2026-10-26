@@ -103,7 +103,7 @@ const sections = [
   {
     title: "14. TVA et facturation",
     paragraphs: [
-      "La TVA est déterminée selon la nature de l’opération, le statut des parties et les règles fiscales belges en vigueur à la date de l’opération. Decerf lab applique le régime normal jusqu’au 31 décembre 2026. À compter du 1er janvier 2027, le régime de franchise des petites entreprises sera appliqué si les conditions légales restent réunies; la facture portera alors la mention réglementaire correspondante.",
+      "La TVA est déterminée selon la nature de l’opération, le statut des parties et les règles fiscales belges en vigueur à la date de l’opération. Le régime appliqué par Decerf lab et la mention réglementaire correspondante figurent sur la facture. Le numéro d’identification TVA du Laboratoire peut être indiqué même lorsque le régime de franchise s’applique et qu’aucune TVA n’est portée en compte.",
       "Les factures sont établies selon les règles fiscales et comptables applicables. Lorsqu’une facturation électronique structurée est légalement requise, Decerf lab utilise le format et le canal conformes aux exigences alors en vigueur. Le Client fournit des coordonnées de facturation exactes et informe le Laboratoire de tout changement.",
       "Toute contestation de facture est motivée et transmise dans un délai raisonnable après réception. Elle ne suspend pas le paiement des montants non contestés et exigibles.",
     ],
