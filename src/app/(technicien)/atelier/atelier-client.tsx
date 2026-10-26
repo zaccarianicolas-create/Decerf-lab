@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 type Profile = {
   nom: string | null;
@@ -76,13 +78,18 @@ export function AtelierClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Atelier · {profile.prenom} {profile.nom}
-        </h1>
-        {profile.role_labo && (
-          <p className="text-sm text-gray-500 capitalize">{profile.role_labo}</p>
-        )}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Atelier · {profile.prenom} {profile.nom}
+          </h1>
+          {profile.role_labo && (
+            <p className="text-sm text-gray-500 capitalize">{profile.role_labo}</p>
+          )}
+        </div>
+        <Link href="/atelier/commandes/nouvelle">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Saisir une commande papier</Button>
+        </Link>
       </div>
 
       <Card>

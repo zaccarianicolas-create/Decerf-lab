@@ -678,11 +678,11 @@ export default function NouvelleCommandePage() {
                               />
                               {option.nom}
                             </span>
-                            <span className="whitespace-nowrap font-medium text-gray-900">+ {option.prix_ht.toFixed(2)} € HT</span>
+                            <span className="text-xs text-gray-500">Option facturable</span>
                           </label>
                         );
                       })}
-                      <p className="text-xs text-gray-500">Les choix seront transmis au laboratoire et précochés sur le brouillon de facture.</p>
+                      <p className="text-xs text-gray-500">Les tarifs sont consultables dans l’onglet Tarifs. Les options choisies seront transmises au laboratoire.</p>
                     </fieldset>
                   ) : null}
 
