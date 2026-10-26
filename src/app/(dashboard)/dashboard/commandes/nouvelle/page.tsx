@@ -26,6 +26,7 @@ const itemSchema = z.object({
   materiau: z.string().optional(),
   teinte: z.string().optional(),
   notes: z.string().optional(),
+  options_selectionnees: z.array(z.string()).optional(),
 });
 
 const commandeSchema = z.object({
@@ -47,6 +48,7 @@ const commandeSchema = z.object({
 type CommandeForm = z.infer<typeof commandeSchema>;
 
 type PatientOption = { id: string; reference: string; nom: string; prenom: string };
+type BillableOption = { id: string; nom: string; prix_ht: number };
 type ServiceOption = {
   id: string;
   nom: string;
@@ -61,6 +63,7 @@ type ServiceOption = {
   demander_notes: boolean;
   duree_estimee_jours: number | null;
   instructions: string | null;
+  options: BillableOption[];
 };
 
 const MATERIAUX_LABELS: Record<string, string> = {
@@ -106,7 +109,7 @@ export default function NouvelleCommandePage() {
     defaultValues: {
       priorite: "normale",
       mode_reception: "envoi_numerique",
-      items: [{ service_labo_id: "", type_travail: "", dents: "", materiau: "", teinte: "" }],
+      items: [{ service_labo_id: "", type_travail: "", dents: "", materiau: "", teinte: "", options_selectionnees: [] }],
     },
   });
 
@@ -115,7 +118,7 @@ export default function NouvelleCommandePage() {
     const load = async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      const [patientsRes, servicesRes, profileRes] = await Promise.all([
+      const [patientsRes, servicesRes, profileRes, optionsRes] = await Promise.all([
         supabase
           .from("patients")
           .select("id, reference, nom, prenom")
@@ -132,10 +135,24 @@ export default function NouvelleCommandePage() {
           .select("cabinet_id")
           .eq("id", userData.user.id)
           .maybeSingle(),
+        supabase
+          .from("service_options")
+          .select("id, service_id, nom, prix_ht")
+          .eq("actif", true)
+          .order("ordre"),
       ]);
       const loadedPatients = patientsRes.data ?? [];
       setPatients(loadedPatients);
-      setServicesLabo(servicesRes.data ?? []);
+      const optionsByService = new Map<string, BillableOption[]>();
+      for (const option of optionsRes.data ?? []) {
+        const serviceOptions = optionsByService.get(option.service_id) ?? [];
+        serviceOptions.push({ id: option.id, nom: option.nom, prix_ht: Number(option.prix_ht) });
+        optionsByService.set(option.service_id, serviceOptions);
+      }
+      setServicesLabo((servicesRes.data ?? []).map((service) => ({
+        ...service,
+        options: optionsByService.get(service.id) ?? [],
+      })) as ServiceOption[]);
       const requestedPatientId = new URLSearchParams(window.location.search).get("patient_id");
       if (requestedPatientId && loadedPatients.some((patient) => patient.id === requestedPatientId)) {
         setValue("patient_id", requestedPatientId);
@@ -227,6 +244,7 @@ export default function NouvelleCommandePage() {
       materiau: item.materiau || null,
       teinte: item.teinte || null,
       notes: item.notes || null,
+      options_selectionnees: item.options_selectionnees ?? [],
     }));
 
     await supabase.from("commande_items").insert(items);
@@ -506,6 +524,7 @@ export default function NouvelleCommandePage() {
                   dents: "",
                   materiau: "",
                   teinte: "",
+                  options_selectionnees: [],
                 })
               }
             >
@@ -553,6 +572,7 @@ export default function NouvelleCommandePage() {
                           (service) => service.id === e.target.value
                         );
                         register(`items.${index}.service_labo_id`).onChange(e);
+                        setValue(`items.${index}.options_selectionnees`, []);
                         if (svc?.demander_dents === false) setValue(`items.${index}.dents`, "");
                         if (svc?.demander_materiau === false) setValue(`items.${index}.materiau`, "");
                         if (svc?.demander_teinte === false) setValue(`items.${index}.teinte`, "");
@@ -634,6 +654,37 @@ export default function NouvelleCommandePage() {
                       )}
                     </div>
                   )}
+
+                  {selectedService?.options.length ? (
+                    <fieldset className="mb-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                      <legend className="px-1 text-sm font-medium text-gray-800">Options facturables</legend>
+                      {selectedService.options.map((option) => {
+                        const selectedOptionIds = watchedItems?.[index]?.options_selectionnees ?? [];
+                        const isChecked = selectedOptionIds.includes(option.id);
+                        return (
+                          <label key={option.id} className="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => setValue(
+                                  `items.${index}.options_selectionnees`,
+                                  isChecked
+                                    ? selectedOptionIds.filter((id) => id !== option.id)
+                                    : [...selectedOptionIds, option.id],
+                                  { shouldDirty: true }
+                                )}
+                                className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+                              />
+                              {option.nom}
+                            </span>
+                            <span className="whitespace-nowrap font-medium text-gray-900">+ {option.prix_ht.toFixed(2)} € HT</span>
+                          </label>
+                        );
+                      })}
+                      <p className="text-xs text-gray-500">Les choix seront transmis au laboratoire et précochés sur le brouillon de facture.</p>
+                    </fieldset>
+                  ) : null}
 
                   {/* Hidden type_travail for DB - auto-filled by service selection */}
                   <input
