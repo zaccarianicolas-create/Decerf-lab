@@ -272,7 +272,7 @@ export function FichesManuellsList({
               </div>
               <div className="space-y-2">
                 {items.map((item, i) => (
-                  <div key={i} className="grid grid-cols-4 gap-2 rounded-lg border border-gray-200 bg-white p-2">
+                  <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 bg-white p-2 sm:grid-cols-2 xl:grid-cols-4">
                     <select
                       value={item.type_travail}
                       onChange={(e) => updateItem(i, "type_travail", e.target.value)}

@@ -306,11 +306,11 @@ export function FicheManuelleDetail({
                 <div className="space-y-2">
                   {items.map((item, i) =>
                     editing ? (
-                      <div key={i} className="grid grid-cols-4 gap-2 rounded-lg border border-gray-200 p-2">
+                      <div key={i} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-200 p-2 sm:grid-cols-2 xl:grid-cols-4">
                         <select
                           value={item.type_travail || ""}
                           onChange={(e) => updateItem(i, "type_travail", e.target.value)}
-                          className="col-span-1 rounded border border-gray-200 px-2 py-1 text-xs"
+                          className="min-w-0 rounded border border-gray-200 px-2 py-1 text-xs"
                         >
                           <option value="">Type…</option>
                           <option value="couronne">Couronne</option>
@@ -339,12 +339,14 @@ export function FicheManuelleDetail({
                         <button onClick={() => removeItem(i)} className="text-xs text-red-500 hover:underline">
                           Suppr.
                         </button>
-                        <Input
-                          value={item.notes || ""}
-                          onChange={(e) => updateItem(i, "notes", e.target.value)}
-                          placeholder="Notes…"
-                          className="col-span-4 text-xs"
-                        />
+                        <div className="col-span-full min-w-0">
+                          <Input
+                            value={item.notes || ""}
+                            onChange={(e) => updateItem(i, "notes", e.target.value)}
+                            placeholder="Notes…"
+                            className="text-xs"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div key={i} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
