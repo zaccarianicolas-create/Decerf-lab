@@ -9,6 +9,7 @@ export default function ContactPage() {
   const [labContact, setLabContact] = useState({
     email_contact: "contact@decerf-lab.be",
     telephone: null as string | null,
+    horaires: null as string | null,
     adresse: "Rue des Claveaux 1",
     code_postal: "4560",
     ville: "Clavier",
@@ -124,7 +125,11 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Téléphone</h3>
-                <p className="text-sm text-slate-600">{labContact.telephone || "Sur demande par email"}</p>
+                {labContact.telephone ? (
+                  <a href={`tel:${labContact.telephone.replace(/\(0\)|[^+\d]/g, "")}`} className="text-sm text-slate-600 hover:text-sky-600">
+                    {labContact.telephone}
+                  </a>
+                ) : <p className="text-sm text-slate-600">Sur demande par email</p>}
               </div>
             </div>
 
@@ -134,8 +139,8 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Horaires</h3>
-                <p className="text-sm text-slate-600">
-                  Lun – Ven : 8h30 – 17h30
+                <p className="whitespace-pre-line text-sm text-slate-600">
+                  {labContact.horaires || "Horaires à confirmer auprès du laboratoire"}
                 </p>
               </div>
             </div>

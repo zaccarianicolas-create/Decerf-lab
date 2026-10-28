@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { HorairesEditor } from "@/components/ui/horaires-editor";
 import { Save } from "lucide-react";
 
 type ParamValue = string | number | boolean | null | undefined;
@@ -51,7 +52,7 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           { k: "code_postal", label: "Code postal" },
           { k: "ville", label: "Ville" },
           { k: "pays", label: "Pays" },
-          { k: "telephone", label: "Téléphone" },
+          { k: "telephone", label: "Téléphone", type: "tel" },
           { k: "email_contact", label: "Email contact", type: "email" },
           { k: "horaires", label: "Horaires", full: true },
         ],
@@ -105,12 +106,14 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {sec.fields.map((f) => (
                 <div key={f.k} className={f.full ? "md:col-span-2" : ""}>
-                  <Input
+                  {f.k === "horaires" ? (
+                    <HorairesEditor value={String(form.horaires ?? "")} onChange={(value) => setField("horaires", value)} />
+                  ) : <Input
                     label={f.label}
                     type={f.type || "text"}
                     value={String(form[f.k] ?? "")}
                     onChange={(e) => setField(f.k, e.target.value)}
-                  />
+                  />}
                 </div>
               ))}
             </div>

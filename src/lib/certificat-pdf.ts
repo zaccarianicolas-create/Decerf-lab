@@ -30,7 +30,7 @@ function wrapLine(text: string, maxWidth: number, font: Awaited<ReturnType<PDFDo
 export async function createCertificatPdf(
   content: string,
   number: string,
-  options: { logoBytes?: Uint8Array; preview?: boolean } = {}
+  options: { logoBytes?: Uint8Array; preview?: boolean; telephone?: string | null } = {}
 ): Promise<Uint8Array> {
   const document = await PDFDocument.create();
   document.setTitle(`Declaration de conformite ${number}`);
@@ -58,6 +58,18 @@ export async function createCertificatPdf(
     } catch {
       // Keep the document readable if the site logo cannot be embedded.
     }
+  }
+
+  if (options.telephone?.trim()) {
+    const telephone = toPdfText(`Tél. : ${options.telephone.trim()}`);
+    page.drawText(telephone, {
+      x: (page.getWidth() - regular.widthOfTextAtSize(telephone, 9)) / 2,
+      y,
+      size: 9,
+      font: regular,
+      color: rgb(0.38, 0.44, 0.51),
+    });
+    y -= 22;
   }
 
   if (options.preview) {

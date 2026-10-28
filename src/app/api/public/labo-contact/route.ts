@@ -5,7 +5,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("parametres_labo")
-    .select("nom_labo, email_contact, telephone, adresse, code_postal, ville, pays")
+    .select("nom_labo, email_contact, telephone, adresse, code_postal, ville, pays, horaires")
     .limit(1)
     .maybeSingle();
 

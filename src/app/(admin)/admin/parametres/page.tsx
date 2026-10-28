@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ParametresForm } from "./parametres-form";
 import { BrandingPanel } from "./branding-panel";
 import { PartenairesPanel, type Partenaire } from "./partenaires-panel";
+import { EmailTestsPanel } from "./email-tests-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,9 @@ export default async function AdminParametresPage() {
       </div>
 
       <PartenairesPanel initial={(partenaires ?? []) as Partenaire[]} />
+      <div className="mt-8">
+        <EmailTestsPanel configured={Boolean(process.env.RESEND_API_KEY)} />
+      </div>
     </div>
   );
 }

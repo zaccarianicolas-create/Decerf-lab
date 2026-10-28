@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createCertificatPdf } from "@/lib/certificat-pdf";
 import { getCertificatLogo } from "@/lib/certificat-logo";
+import { getParametresLabo } from "@/lib/parametres-labo";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -31,8 +32,10 @@ export async function POST(request: Request) {
     ? body.numero.trim().slice(0, 80)
     : "APERÇU — NUMÉRO PROVISOIRE";
 
+  const labo = await getParametresLabo();
   const bytes = await createCertificatPdf(body.contenu, numero, {
     logoBytes: await getCertificatLogo(),
+    telephone: labo.telephone,
     preview: body.demo === true,
   });
   const responseBuffer = new ArrayBuffer(bytes.byteLength);

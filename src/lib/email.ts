@@ -138,17 +138,24 @@ export async function sendEmail(args: SendArgs): Promise<{ ok: boolean; id?: str
 // ---------- Templates ----------
 
 function wrap(title: string, body: string): string {
-  return `<!doctype html><html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f6fa;padding:24px;color:#0f172a;">
-    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
-      <div style="background:linear-gradient(135deg,#0284c7,#0ea5e9);padding:20px 28px;color:#fff;">
-        <h1 style="margin:0;font-size:18px;letter-spacing:.2px;">DECERF LAB</h1>
-        <p style="margin:4px 0 0;font-size:13px;opacity:.9;">${title}</p>
-      </div>
-      <div style="padding:24px 28px;font-size:14px;line-height:1.55;">${body}</div>
-      <div style="padding:14px 28px;border-top:1px solid #f1f5f9;color:#94a3b8;font-size:11px;">
-        DECERF LAB — Laboratoire de prothèse dentaire numérique
-      </div>
-    </div></body></html>`;
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;background:#f3f6f8;color:#182332;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #dfe7ed;border-radius:8px;">
+          <tr><td style="padding:24px;border-bottom:1px solid #e8eef2;">
+            <img src="${APP_URL}/images/logodecerflabslogan.png" width="260" alt="DECERF LAB - Laboratoire dentaire" style="display:block;width:260px;max-width:100%;height:auto;border:0;">
+          </td></tr>
+          <tr><td style="padding:24px;font-size:15px;line-height:1.6;overflow-wrap:anywhere;">
+            <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;">${title}</h1>${body}
+          </td></tr>
+          <tr><td style="padding:20px 24px;border-top:1px solid #e8eef2;font-size:12px;line-height:1.7;color:#526174;">
+            DECERF LAB · Laboratoire dentaire<br>
+            <a href="${APP_URL}/contact" style="color:#0369a1;">Contacter le laboratoire</a> ·
+            <a href="${APP_URL}/politique-confidentialite" style="color:#0369a1;">Confidentialité</a>
+          </td></tr>
+        </table>
+      </td></tr></table>
+    </body></html>`;
 }
 
 function btn(label: string, href: string): string {
