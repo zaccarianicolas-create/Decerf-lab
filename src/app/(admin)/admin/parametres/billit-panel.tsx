@@ -70,9 +70,10 @@ export function BillitPanel() {
     try {
       const response = await fetch("/api/admin/billit/test", { method: "POST" });
       const payload = await response.json();
+      if (payload.orderId) setTestOrderId(payload.orderId);
+      setTestOrderStatus(null);
       if (!response.ok) throw new Error(payload.error || "Envoi du test Billit impossible.");
       setTestOrderId(payload.orderId);
-      setTestOrderStatus(null);
       setTestResult(`Facture fictive ${payload.orderNumber} envoyée au Sandbox (OrderID ${payload.orderId}).`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Envoi du test Billit impossible.");
@@ -131,7 +132,7 @@ export function BillitPanel() {
             </Button>
           )}
           {status?.authMode === "api_key" ? (
-            <Button type="button" disabled={busy} onClick={sendTest}>
+            <Button type="button" disabled={busy || Boolean(testOrderId)} onClick={sendTest}>
               <Send className="mr-2 h-4 w-4" /> Envoyer une facture test
             </Button>
           ) : status?.connected ? (

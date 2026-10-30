@@ -10,6 +10,12 @@
 - Le connecteur accepte aussi l’API key Billit privée (non commerciale) : headers `ApiKey` et `partyID`. La clé API et le Party ID doivent provenir du même compte Sandbox.
 - Le code impose une URL HTTPS publique identique à l’origine du callback. Pour le domaine de production après déploiement, l’URL prévue est `https://www.decerf-lab.be/api/admin/billit/callback`.
 
+**Test API key Sandbox au 31 octobre 2026**
+
+- La clé API et le Party ID configurés localement ont permis la création réelle d’une facture fictive Billit (`OrderID 3488116`). La clé n’est pas enregistrée dans ce mémo.
+- Billit a refusé la commande `commands/send` car le destinataire fictif n’est pas actif sur Peppol. Le GET de statut indique `OrderStatus: ToSend`, `IsSent: false`, `IsDocumentDelivered: false`.
+- Ne pas relancer ce test avec le même faux destinataire. Pour valider le transport, utiliser un destinataire de test Sandbox inscrit sur Peppol ou celui recommandé par Billit.
+
 ## Point d’arrêt
 
 Ne pas connecter Billit Production ni envoyer de facture réelle avant d’avoir le numéro BCE, le statut TVA confirmé et une intégration testée en Sandbox. Reprendre ce mémo dès que le BCE est attribué.

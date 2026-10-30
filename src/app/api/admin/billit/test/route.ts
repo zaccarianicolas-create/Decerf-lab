@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireBillitAdmin } from "@/lib/billit-admin";
-import { createAndSendSandboxTestInvoice, getBillitOrderStatus } from "@/lib/billit";
+import { BillitTestSendError, createAndSendSandboxTestInvoice, getBillitOrderStatus } from "@/lib/billit";
 
 export async function GET(request: Request) {
   const auth = await requireBillitAdmin();
@@ -29,6 +29,9 @@ export async function POST() {
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Envoi du test Billit impossible.";
+    if (error instanceof BillitTestSendError) {
+      return NextResponse.json({ error: message, orderId: error.orderId, orderNumber: error.orderNumber }, { status: 502 });
+    }
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

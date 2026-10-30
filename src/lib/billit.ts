@@ -222,6 +222,17 @@ export type BillitOrderStatus = {
   delivered: boolean | null;
 };
 
+export class BillitTestSendError extends Error {
+  constructor(
+    message: string,
+    readonly orderId: number,
+    readonly orderNumber: string
+  ) {
+    super(message);
+    this.name = "BillitTestSendError";
+  }
+}
+
 export async function getBillitOrderStatus(admin: BillitAdmin, orderId: number): Promise<BillitOrderStatus> {
   const order = await callBillitApi<{
     OrderID?: number | string;
@@ -294,7 +305,11 @@ export async function createAndSendSandboxTestInvoice(admin: BillitAdmin) {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Erreur inconnue";
-    throw new Error(`La facture test ${orderNumber} (OrderID ${orderId}) est créée dans Billit, mais son envoi Peppol a échoué : ${reason}`);
+    throw new BillitTestSendError(
+      `La facture test ${orderNumber} (OrderID ${orderId}) est créée dans Billit, mais son envoi Peppol a échoué : ${reason}`,
+      orderId,
+      orderNumber
+    );
   }
 
   return { orderId, orderNumber };
