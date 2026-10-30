@@ -5,6 +5,7 @@ import { ParametresForm } from "./parametres-form";
 import { BrandingPanel } from "./branding-panel";
 import { PartenairesPanel, type Partenaire } from "./partenaires-panel";
 import { EmailTestsPanel } from "./email-tests-panel";
+import { BillitPanel } from "./billit-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,10 @@ export default async function AdminParametresPage() {
           Identité légale, coordonnées et facturation du laboratoire
         </h2>
         <BrandingPanel initial={parametres} />
+      </div>
+
+      <div className="mt-8">
+        <BillitPanel />
       </div>
 
       <PartenairesPanel initial={(partenaires ?? []) as Partenaire[]} />
