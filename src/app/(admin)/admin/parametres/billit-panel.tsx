@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 type BillitStatus = {
   configured: boolean;
   connected: boolean;
+  authMode: "api_key" | "oauth" | null;
   environment: "sandbox";
   connected_at: string | null;
 };
@@ -16,6 +17,8 @@ export function BillitPanel() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [testOrderId, setTestOrderId] = useState<number | null>(null);
+  const [testOrderStatus, setTestOrderStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = async () => {
@@ -68,9 +71,28 @@ export function BillitPanel() {
       const response = await fetch("/api/admin/billit/test", { method: "POST" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Envoi du test Billit impossible.");
+      setTestOrderId(payload.orderId);
+      setTestOrderStatus(null);
       setTestResult(`Facture fictive ${payload.orderNumber} envoyée au Sandbox (OrderID ${payload.orderId}).`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Envoi du test Billit impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshTestStatus = async () => {
+    if (!testOrderId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/billit/test?orderId=${testOrderId}`, { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Statut Billit indisponible.");
+      const delivery = payload.delivered === true ? "livrée" : payload.delivered === false ? "pas encore livrée" : "livraison non confirmée";
+      setTestOrderStatus(`${payload.orderStatus || "Statut en attente"} · ${payload.isSent ? "envoyée par Billit" : "pas encore marquée envoyée"} · ${delivery}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Statut Billit indisponible.");
     } finally {
       setBusy(false);
     }
@@ -85,20 +107,34 @@ export function BillitPanel() {
             Connexion Billit limitée à l’environnement Sandbox. Aucun envoi en production n’est activé.
           </p>
           <p className="mt-3 text-sm text-gray-700">
-            {status?.connected ? "Compte Billit Sandbox connecté." : "Compte Billit Sandbox non connecté."}
+            {status?.authMode === "api_key"
+              ? "Clé API du compte Sandbox configurée."
+              : status?.connected
+                ? "Compte Billit Sandbox connecté par OAuth."
+                : "Compte Billit Sandbox non connecté."}
           </p>
           {status && !status.configured && (
             <p className="mt-2 text-sm text-amber-700">
-              Configuration serveur à compléter : Client ID, Client Secret, Party ID, URL HTTPS du callback et clé de chiffrement.
+              Configuration serveur à compléter : clé API Sandbox et Party ID, ou identifiants OAuth Sandbox, URL HTTPS du callback et clé de chiffrement.
             </p>
           )}
           {result === "connected" && <p role="status" className="mt-2 text-sm text-green-700">Compte Sandbox connecté.</p>}
           {result === "error" && <p role="alert" className="mt-2 text-sm text-red-700">La connexion Billit a échoué. Réessaie ou vérifie les paramètres OAuth.</p>}
           {testResult && <p role="status" className="mt-2 text-sm text-green-700">{testResult}</p>}
+          {testOrderStatus && <p role="status" className="mt-2 text-sm text-gray-700">Statut réseau : {testOrderStatus}</p>}
           {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          {status?.connected ? (
+          {testOrderId && (
+            <Button type="button" variant="outline" disabled={busy} onClick={refreshTestStatus}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Actualiser le statut
+            </Button>
+          )}
+          {status?.authMode === "api_key" ? (
+            <Button type="button" disabled={busy} onClick={sendTest}>
+              <Send className="mr-2 h-4 w-4" /> Envoyer une facture test
+            </Button>
+          ) : status?.connected ? (
             <>
               <Button type="button" disabled={busy} onClick={sendTest}>
                 <Send className="mr-2 h-4 w-4" /> Envoyer une facture test

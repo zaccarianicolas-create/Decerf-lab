@@ -5,12 +5,9 @@ const BILLIT_API_URL = "https://api.sandbox.billit.be";
 const BILLIT_LOGIN_URL = "https://my.sandbox.billit.be/Account/Logon";
 const BILLIT_TOKEN_URL = `${BILLIT_API_URL}/OAuth2/token`;
 
-export type BillitConfig = {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  partyId: string;
-};
+export type BillitConfig =
+  | { partyId: string; authMode: "api_key"; apiKey: string }
+  | { partyId: string; authMode: "oauth"; clientId: string; clientSecret: string; redirectUri: string };
 
 export type BillitToken = {
   accessToken: string;
@@ -21,11 +18,15 @@ export type BillitToken = {
 type BillitAdmin = ReturnType<typeof createAdminClient>;
 
 export function getBillitConfig(): BillitConfig {
+  const partyId = process.env.BILLIT_PARTY_ID?.trim();
+  const apiKey = process.env.BILLIT_API_KEY?.trim();
+  if (!partyId) throw new Error("BILLIT_PARTY_ID n’est pas configuré pour le Sandbox.");
+  if (apiKey) return { partyId, apiKey, authMode: "api_key" };
+
   const clientId = process.env.BILLIT_CLIENT_ID?.trim();
   const clientSecret = process.env.BILLIT_CLIENT_SECRET?.trim();
   const redirectUri = process.env.BILLIT_REDIRECT_URI?.trim();
-  const partyId = process.env.BILLIT_PARTY_ID?.trim();
-  if (!clientId || !clientSecret || !redirectUri || !partyId) {
+  if (!clientId || !clientSecret || !redirectUri) {
     throw new Error("Configuration Billit Sandbox incomplète.");
   }
 
@@ -39,13 +40,13 @@ export function getBillitConfig(): BillitConfig {
     throw new Error("BILLIT_REDIRECT_URI doit être une URL HTTPS publique.");
   }
 
-  return { clientId, clientSecret, redirectUri: redirect.toString(), partyId };
+  return { clientId, clientSecret, redirectUri: redirect.toString(), partyId, authMode: "oauth" };
 }
 
 export function isBillitConfigured(): boolean {
   try {
-    getBillitConfig();
-    encryptionKey();
+    const config = getBillitConfig();
+    if (config.authMode === "oauth") encryptionKey();
     return true;
   } catch {
     return false;
@@ -54,6 +55,9 @@ export function isBillitConfigured(): boolean {
 
 export function createBillitAuthorizationUrl(state: string): string {
   const config = getBillitConfig();
+  if (config.authMode !== "oauth" || !config.clientId || !config.redirectUri) {
+    throw new Error("Une clé API Sandbox est configurée; le parcours OAuth n’est pas nécessaire.");
+  }
   const url = new URL(BILLIT_LOGIN_URL);
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
@@ -122,6 +126,9 @@ async function requestToken(body: Record<string, string>): Promise<BillitToken> 
 
 export async function exchangeBillitAuthorizationCode(code: string): Promise<BillitToken> {
   const config = getBillitConfig();
+  if (config.authMode !== "oauth" || !config.clientId || !config.clientSecret || !config.redirectUri) {
+    throw new Error("L’échange OAuth est indisponible avec le mode API key.");
+  }
   return requestToken({
     grant_type: "authorization_code",
     code,
@@ -133,6 +140,9 @@ export async function exchangeBillitAuthorizationCode(code: string): Promise<Bil
 
 export async function refreshBillitToken(refreshToken: string): Promise<BillitToken> {
   const config = getBillitConfig();
+  if (config.authMode !== "oauth" || !config.clientId || !config.clientSecret) {
+    throw new Error("Le renouvellement OAuth est indisponible avec le mode API key.");
+  }
   return requestToken({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
@@ -177,12 +187,15 @@ export async function callBillitApi<T>(
   options: { method?: "GET" | "POST"; body?: Record<string, unknown> } = {}
 ): Promise<T> {
   const config = getBillitConfig();
+  const authorizationHeaders: Record<string, string> = config.authMode === "api_key"
+    ? { ApiKey: config.apiKey }
+    : { Authorization: `Bearer ${await getBillitAccessToken(admin)}` };
   const response = await fetch(getBillitApiUrl(path), {
     method: options.method ?? "GET",
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${await getBillitAccessToken(admin)}`,
-      PartyID: config.partyId,
+      ...authorizationHeaders,
+      partyID: config.partyId,
       ...(options.body ? { "Content-Type": "application/json" } : {}),
     },
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
@@ -199,6 +212,37 @@ export async function callBillitApi<T>(
     throw new Error(errors || `Billit Sandbox a répondu avec le statut ${response.status}.`);
   }
   return payload as T;
+}
+
+export type BillitOrderStatus = {
+  orderId: number;
+  orderNumber: string | null;
+  orderStatus: string | null;
+  isSent: boolean;
+  delivered: boolean | null;
+};
+
+export async function getBillitOrderStatus(admin: BillitAdmin, orderId: number): Promise<BillitOrderStatus> {
+  const order = await callBillitApi<{
+    OrderID?: number | string;
+    OrderNumber?: string;
+    OrderStatus?: string;
+    IsSent?: boolean;
+    CurrentDocumentDeliveryDetails?: { IsDocumentDelivered?: boolean };
+  }>(admin, `/v1/orders/${orderId}`);
+  const returnedId = Number(order.OrderID);
+  if (Number.isSafeInteger(returnedId) && returnedId !== orderId) {
+    throw new Error("Billit a retourné un identifiant de facture inattendu.");
+  }
+  return {
+    orderId,
+    orderNumber: typeof order.OrderNumber === "string" ? order.OrderNumber : null,
+    orderStatus: typeof order.OrderStatus === "string" ? order.OrderStatus : null,
+    isSent: order.IsSent === true,
+    delivered: typeof order.CurrentDocumentDeliveryDetails?.IsDocumentDelivered === "boolean"
+      ? order.CurrentDocumentDeliveryDetails.IsDocumentDelivered
+      : null,
+  };
 }
 
 export async function createAndSendSandboxTestInvoice(admin: BillitAdmin) {

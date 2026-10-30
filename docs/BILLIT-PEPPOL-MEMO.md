@@ -5,7 +5,9 @@
 **Mise à jour au 30 octobre 2026**
 
 - Le stockage des jetons OAuth chiffrés a été ajouté dans `billit_connections`; la migration `20261030120000_billit_sandbox_connection.sql` est appliquée au projet Supabase lié.
-- Le panneau de paramètres propose une connexion OAuth Sandbox et un envoi de facture technique fictive au Sandbox. Aucun flux métier de facture réelle n’envoie encore vers Peppol.
+- Le panneau de paramètres reconnaît une API key Sandbox ou une connexion OAuth, et permet d’envoyer une facture technique fictive au Sandbox. Aucun flux métier de facture réelle n’envoie encore vers Peppol.
+- Le test peut relire l’`OrderStatus`, `IsSent` et l’indicateur de livraison via `GET /v1/orders/{OrderID}`. Le polling est manuel dans le panneau; aucun webhook n’est configuré.
+- Le connecteur accepte aussi l’API key Billit privée (non commerciale) : headers `ApiKey` et `partyID`. La clé API et le Party ID doivent provenir du même compte Sandbox.
 - Le code impose une URL HTTPS publique identique à l’origine du callback. Pour le domaine de production après déploiement, l’URL prévue est `https://www.decerf-lab.be/api/admin/billit/callback`.
 
 ## Point d’arrêt
@@ -28,7 +30,8 @@ Ne pas connecter Billit Production ni envoyer de facture réelle avant d’avoir
 4. Créer une URL de retour HTTPS publique pour OAuth (staging recommandé; Billit indique que localhost n’est pas accepté comme redirect URI).
 5. Demander à Billit les identifiants OAuth Sandbox en fournissant les quatre éléments requis : Party ID, URL de retour, nom de l’application et environnement Sandbox.
 6. Stocker les identifiants uniquement dans les variables d’environnement privées du serveur. Ne jamais les envoyer dans le chat, le code source ou le navigateur.
-	Variables attendues par l’application : `BILLIT_CLIENT_ID`, `BILLIT_CLIENT_SECRET`, `BILLIT_PARTY_ID`, `BILLIT_REDIRECT_URI` et `BILLIT_TOKEN_ENCRYPTION_KEY`.
+	Variables pour API key : `BILLIT_API_KEY` et `BILLIT_PARTY_ID`.
+	Variables si OAuth est choisi : `BILLIT_CLIENT_ID`, `BILLIT_CLIENT_SECRET`, `BILLIT_PARTY_ID`, `BILLIT_REDIRECT_URI` et `BILLIT_TOKEN_ENCRYPTION_KEY`.
 	`BILLIT_TOKEN_ENCRYPTION_KEY` doit être une clé aléatoire Base64 de 32 octets; générer avec `openssl rand -base64 32`. Configurer ces variables dans l’environnement serveur déployé, jamais avec le préfixe `NEXT_PUBLIC_`.
 7. Implémenter l’authentification OAuth côté serveur, le renouvellement sécurisé des tokens et la déconnexion/révocation d’accès.
 8. Construire le mapping de facture Decerf Lab vers Billit `/v1/orders` : parties, BCE/TVA, adresses, lignes, prix, références, échéance, catégories et motifs TVA.
@@ -63,8 +66,8 @@ Ne pas connecter Billit Production ni envoyer de facture réelle avant d’avoir
 
 - Connexion réservée à l’administrateur depuis Paramètres > Facturation électronique Peppol.
 - Vérification de l’état OAuth et déconnexion.
-- Échange/renouvellement OAuth côté serveur; access token et refresh token chiffrés en AES-256-GCM dans une table inaccessible à `anon` et `authenticated`.
-- Route de test disponible dans le code : elle crée une facture de 1 EUR avec destinataire fictif, puis demande son envoi Peppol dans le Sandbox. Elle n’utilise aucun client ni aucune facture Decerf Lab.
+- API key privée envoyée dans le header `ApiKey`, avec le compte ciblé dans `partyID`; en alternative, échange/renouvellement OAuth côté serveur avec access token et refresh token chiffrés en AES-256-GCM dans une table inaccessible à `anon` et `authenticated`.
+- Route de test disponible dans le code : elle crée une facture de 1 EUR avec destinataire fictif, demande son envoi Peppol dans le Sandbox, puis permet de relire son statut avec l’OrderID. Elle n’utilise aucun client ni aucune facture Decerf Lab.
 - L’API et l’URL sont fixées à Sandbox dans le code. L’activation de Production nécessite une modification explicite, une validation métier et des identifiants Production séparés.
 
 Ne pas cliquer sur le test Sandbox avant que Billit ait confirmé que le compte et l’envoi test sont prêts. Un refus de réseau ou de validation reste possible sur Sandbox.

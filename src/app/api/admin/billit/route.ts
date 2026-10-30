@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isBillitConfigured } from "@/lib/billit";
+import { getBillitConfig, isBillitConfigured } from "@/lib/billit";
 import { requireBillitAdmin } from "@/lib/billit-admin";
 
 export async function GET() {
@@ -13,9 +13,12 @@ export async function GET() {
     .maybeSingle();
   if (error) return NextResponse.json({ error: "État Billit indisponible." }, { status: 500 });
 
+  const configured = isBillitConfigured();
+  const config = configured ? getBillitConfig() : null;
   return NextResponse.json({
-    configured: isBillitConfigured(),
-    connected: Boolean(data),
+    configured,
+    connected: Boolean(data) || config?.authMode === "api_key",
+    authMode: config?.authMode ?? null,
     environment: "sandbox",
     connected_at: data?.connected_at ?? null,
     access_token_expires_at: data?.access_token_expires_at ?? null,

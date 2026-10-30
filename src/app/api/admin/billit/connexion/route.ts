@@ -12,6 +12,9 @@ export async function GET(request: Request) {
 
   try {
     const config = getBillitConfig();
+    if (config.authMode !== "oauth") {
+      return NextResponse.json({ error: "Une clé API Sandbox est configurée; la connexion OAuth n’est pas nécessaire." }, { status: 400 });
+    }
     const redirect = new URL(config.redirectUri);
     const requestUrl = new URL(request.url);
     if (redirect.origin !== requestUrl.origin || redirect.pathname !== CALLBACK_PATH) {
