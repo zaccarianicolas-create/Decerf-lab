@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { Download } from "lucide-react";
 
 export default async function TarifsPage() {
   const supabase = await createClient();
@@ -49,9 +50,18 @@ export default async function TarifsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-900">Tarifs</h1>
-        <p className="mt-1 text-sm text-gray-500">Tarifs hors TVA</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Tarifs</h1>
+          <p className="mt-1 text-sm text-gray-500">Tarifs hors TVA</p>
+        </div>
+        <a
+          href="/api/admin/services/tarifs-pdf"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <Download className="h-4 w-4" />
+          Télécharger les tarifs PDF
+        </a>
       </header>
 
       {services?.length ? (

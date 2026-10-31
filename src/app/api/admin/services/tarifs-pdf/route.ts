@@ -18,7 +18,7 @@ export async function GET() {
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (profile?.role !== "admin") {
+  if (profile?.role !== "admin" && profile?.role !== "dentiste") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
