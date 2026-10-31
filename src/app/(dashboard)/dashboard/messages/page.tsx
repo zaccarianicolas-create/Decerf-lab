@@ -55,10 +55,7 @@ export default async function MessagesPage({
     <div className={isEmbed ? "h-full" : ""}>
       {!isEmbed && (
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
-          <p className="text-sm text-gray-500">
-            Échangez en temps réel avec le laboratoire.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Messages · DECERF LAB</h1>
         </div>
       )}
       <MessengerDentiste

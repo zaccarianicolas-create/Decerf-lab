@@ -137,7 +137,7 @@ export function MessengerAdmin({
     const d = dentistes.find((x) => x.id === dentisteId);
     if (!d) return;
     const existingConversation = conversations.find(
-      (conversation) => conversation.dentiste_id === dentisteId && !conversation.commande_id
+      (conversation) => conversation.dentiste_id === dentisteId
     );
     if (existingConversation) {
       open(existingConversation.id);
@@ -146,15 +146,21 @@ export function MessengerAdmin({
     }
     setCreating(true);
     setCreateError(null);
+    const { data: conversationId, error: ensureError } = await supabase.rpc(
+      "get_or_create_dentist_conversation",
+      { p_dentiste_id: dentisteId }
+    );
+    if (ensureError || !conversationId) {
+      setCreating(false);
+      setCreateError(ensureError?.message || "Impossible de créer la conversation.");
+      return;
+    }
     const { data: conv, error } = await supabase
       .from("conversations")
-      .insert({
-        titre: "Conversation avec DECERF LAB",
-        dentiste_id: dentisteId,
-      })
       .select(
         `*, dentiste:profiles!conversations_dentiste_id_fkey(id, nom, prenom, avatar_url, role), commande:commandes(numero)`
       )
+      .eq("id", conversationId)
       .single();
     setCreating(false);
     if (error) {
@@ -162,7 +168,7 @@ export function MessengerAdmin({
       return;
     }
     if (conv) {
-      setConversations((p) => [conv as Conversation, ...p]);
+      setConversations((p) => [conv as Conversation, ...p.filter((conversation) => conversation.id !== conv.id)]);
       open(conv.id);
     }
     setShowNew(false);

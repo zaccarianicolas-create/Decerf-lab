@@ -176,8 +176,10 @@ export function ChatModalWindow({
           isDragging ? "select-none" : ""
         }`}
       >
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">Messages</h3>
+        <div className="flex min-w-0 items-center gap-3">
+          <h3 className="min-w-0 text-lg font-semibold">
+            {chatPath.startsWith("/dashboard/messages") ? "Messages · DECERF LAB" : "Messages"}
+          </h3>
           {unreadCount > 0 && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold">
               {unreadCount > 9 ? "9+" : unreadCount}
