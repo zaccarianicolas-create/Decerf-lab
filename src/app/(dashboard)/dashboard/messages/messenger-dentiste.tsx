@@ -142,7 +142,6 @@ export function MessengerDentiste({
   };
 
   const active = conversations.find((c) => c.id === activeId);
-  const activeCommande = Array.isArray(active?.commande) ? active.commande[0] : active?.commande;
   const filtered = conversations.filter((c) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -293,18 +292,10 @@ export function MessengerDentiste({
         <section className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${activeId ? "flex" : "hidden md:flex"}`}>
           {active && (
             <>
-              <div className="flex min-h-12 items-center gap-2 border-b border-gray-200 px-3">
+              <div className="flex min-h-12 items-center gap-2 border-b border-gray-200 px-3 md:hidden">
                 <button type="button" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 md:hidden" onClick={() => setActiveId(null)} aria-label="Retour aux conversations">
                   <ArrowLeft className="h-4 w-4" />
                 </button>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">DECERF LAB</p>
-                  <p className="truncate text-xs text-gray-500">
-                    {activeCommande?.numero
-                      ? `Commande ${activeCommande.numero}`
-                      : "Équipe du laboratoire"}
-                  </p>
-                </div>
               </div>
               <ChatThread
                 conversationId={active.id}

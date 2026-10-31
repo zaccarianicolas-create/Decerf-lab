@@ -6,8 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createFacturePdf } from "@/lib/facture-pdf";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 import { sendEmail, emailTemplates } from "@/lib/email";
-import { getParametresLabo } from "@/lib/parametres-labo";
-import { createConditionsGeneralesPdf } from "@/lib/conditions-generales-pdf";
 import {
   createBillitSalesInvoice,
   downloadBillitOrderPdf,
@@ -136,9 +134,6 @@ export async function POST(
   if (billitSendEnabled) {
     try {
       if (!billitOrderId) {
-        const labo = await getParametresLabo();
-        const cgvLogo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
-        const cgvPdf = await createConditionsGeneralesPdf(labo, cgvLogo);
         const created = await createBillitSalesInvoice(admin, {
           numero: updatedFacture.numero,
           dateEmission: updatedFacture.date_emission,
@@ -151,7 +146,6 @@ export async function POST(
             vatPercent: Number(line.taux_tva),
             vatCategory: line.categorie_tva_peppol as "S" | "Z" | "E" | undefined,
           })),
-          attachments: [{ fileName: "CGV-Decerf-Lab.pdf", bytes: cgvPdf }],
         });
         billitOrderId = created.orderId;
         const { error: orderIdError } = await admin.from("factures").update({
