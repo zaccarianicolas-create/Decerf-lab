@@ -222,6 +222,18 @@ export type BillitOrderStatus = {
   delivered: boolean | null;
 };
 
+export function formatBillitDateInBrussels(date: Date): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en", {
+      timeZone: "Europe/Brussels",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date).map(({ type, value }) => [type, value])
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 export class BillitTestSendError extends Error {
   constructor(
     message: string,
@@ -258,10 +270,9 @@ export async function getBillitOrderStatus(admin: BillitAdmin, orderId: number):
 
 export async function createAndSendSandboxTestInvoice(admin: BillitAdmin) {
   const orderNumber = `DL-SANDBOX-${Date.now()}`;
-  const date = new Date();
-  const dueDate = new Date(date);
-  dueDate.setDate(dueDate.getDate() + 14);
-  const formatDate = (value: Date) => value.toISOString().slice(0, 10);
+  const orderDate = formatBillitDateInBrussels(new Date());
+  const dueDate = new Date(`${orderDate}T00:00:00.000Z`);
+  dueDate.setUTCDate(dueDate.getUTCDate() + 14);
 
   const created = await callBillitApi<number | { OrderID?: number | string; ID?: number | string }>(admin, "/v1/orders", {
     method: "POST",
@@ -269,8 +280,8 @@ export async function createAndSendSandboxTestInvoice(admin: BillitAdmin) {
       OrderType: "Invoice",
       OrderDirection: "Income",
       OrderNumber: orderNumber,
-      OrderDate: formatDate(date),
-      ExpiryDate: formatDate(dueDate),
+      OrderDate: orderDate,
+      ExpiryDate: formatBillitDateInBrussels(dueDate),
       Currency: "EUR",
       Customer: {
         Name: "Decerf Lab - destinataire de test",
