@@ -1,13 +1,20 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import type { createAdminClient } from "@/lib/supabase/admin";
 
-const BILLIT_API_URL = "https://api.sandbox.billit.be";
-const BILLIT_LOGIN_URL = "https://my.sandbox.billit.be/Account/Logon";
-const BILLIT_TOKEN_URL = `${BILLIT_API_URL}/OAuth2/token`;
+const BILLIT_ENDPOINTS = {
+  sandbox: {
+    api: "https://api.sandbox.billit.be",
+    login: "https://my.sandbox.billit.be/Account/Logon",
+  },
+  production: {
+    api: "https://api.billit.be",
+    login: "https://my.billit.be/Account/Logon",
+  },
+} as const;
 
 export type BillitConfig =
-  | { partyId: string; authMode: "api_key"; apiKey: string }
-  | { partyId: string; authMode: "oauth"; clientId: string; clientSecret: string; redirectUri: string };
+  | { environment: "sandbox" | "production"; partyId: string; authMode: "api_key"; apiKey: string }
+  | { environment: "sandbox" | "production"; partyId: string; authMode: "oauth"; clientId: string; clientSecret: string; redirectUri: string };
 
 export type BillitToken = {
   accessToken: string;
@@ -18,14 +25,23 @@ export type BillitToken = {
 type BillitAdmin = ReturnType<typeof createAdminClient>;
 
 export function getBillitConfig(): BillitConfig {
-  const partyId = process.env.BILLIT_PARTY_ID?.trim();
-  const apiKey = process.env.BILLIT_API_KEY?.trim();
-  if (!partyId) throw new Error("BILLIT_PARTY_ID n’est pas configuré pour le Sandbox.");
-  if (apiKey) return { partyId, apiKey, authMode: "api_key" };
+  const environment = process.env.BILLIT_ENV?.trim() || "sandbox";
+  if (environment !== "sandbox" && environment !== "production") {
+    throw new Error("BILLIT_ENV doit valoir sandbox ou production.");
+  }
+  if (environment === "production" && process.env.BILLIT_ENABLE_PRODUCTION !== "true") {
+    throw new Error("Billit Production reste verrouillé. Active-le explicitement après validation Sandbox.");
+  }
 
-  const clientId = process.env.BILLIT_CLIENT_ID?.trim();
-  const clientSecret = process.env.BILLIT_CLIENT_SECRET?.trim();
-  const redirectUri = process.env.BILLIT_REDIRECT_URI?.trim();
+  const prefix = environment === "production" ? "BILLIT_PRODUCTION_" : "BILLIT_";
+  const partyId = process.env[`${prefix}PARTY_ID`]?.trim();
+  const apiKey = process.env[`${prefix}API_KEY`]?.trim();
+  if (!partyId) throw new Error("BILLIT_PARTY_ID n’est pas configuré pour le Sandbox.");
+  if (apiKey) return { environment, partyId, apiKey, authMode: "api_key" };
+
+  const clientId = process.env[`${prefix}CLIENT_ID`]?.trim();
+  const clientSecret = process.env[`${prefix}CLIENT_SECRET`]?.trim();
+  const redirectUri = process.env[`${prefix}REDIRECT_URI`]?.trim();
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error("Configuration Billit Sandbox incomplète.");
   }
@@ -40,7 +56,7 @@ export function getBillitConfig(): BillitConfig {
     throw new Error("BILLIT_REDIRECT_URI doit être une URL HTTPS publique.");
   }
 
-  return { clientId, clientSecret, redirectUri: redirect.toString(), partyId, authMode: "oauth" };
+  return { environment, clientId, clientSecret, redirectUri: redirect.toString(), partyId, authMode: "oauth" };
 }
 
 export function isBillitConfigured(): boolean {
@@ -58,7 +74,7 @@ export function createBillitAuthorizationUrl(state: string): string {
   if (config.authMode !== "oauth" || !config.clientId || !config.redirectUri) {
     throw new Error("Une clé API Sandbox est configurée; le parcours OAuth n’est pas nécessaire.");
   }
-  const url = new URL(BILLIT_LOGIN_URL);
+  const url = new URL(BILLIT_ENDPOINTS[config.environment].login);
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
   url.searchParams.set("state", state);
@@ -95,8 +111,8 @@ export function decryptBillitToken(envelope: string): string {
   ]).toString("utf8");
 }
 
-async function requestToken(body: Record<string, string>): Promise<BillitToken> {
-  const response = await fetch(BILLIT_TOKEN_URL, {
+async function requestToken(body: Record<string, string>, environment: BillitConfig["environment"]): Promise<BillitToken> {
+  const response = await fetch(`${BILLIT_ENDPOINTS[environment].api}/OAuth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
@@ -135,7 +151,7 @@ export async function exchangeBillitAuthorizationCode(code: string): Promise<Bil
     client_id: config.clientId,
     client_secret: config.clientSecret,
     redirect_uri: config.redirectUri,
-  });
+  }, config.environment);
 }
 
 export async function refreshBillitToken(refreshToken: string): Promise<BillitToken> {
@@ -148,21 +164,26 @@ export async function refreshBillitToken(refreshToken: string): Promise<BillitTo
     refresh_token: refreshToken,
     client_id: config.clientId,
     client_secret: config.clientSecret,
-  });
+  }, config.environment);
 }
 
 export function getBillitApiUrl(path: string): URL {
   if (!path.startsWith("/v1/")) throw new Error("Route Billit invalide.");
-  return new URL(path, BILLIT_API_URL);
+  return new URL(path, BILLIT_ENDPOINTS[getBillitConfig().environment].api);
 }
 
 async function getBillitAccessToken(admin: BillitAdmin): Promise<string> {
+  const config = getBillitConfig();
+  if (config.authMode !== "oauth") throw new Error("Un jeton OAuth est requis pour cet appel.");
   const { data: connection, error } = await admin
     .from("billit_connections")
-    .select("access_token_encrypted, refresh_token_encrypted, access_token_expires_at")
+    .select("environment, access_token_encrypted, refresh_token_encrypted, access_token_expires_at")
     .eq("singleton", true)
     .maybeSingle();
   if (error || !connection) throw new Error("Connecte d’abord un compte Billit Sandbox dans les paramètres.");
+  if (connection.environment !== config.environment) {
+    throw new Error("La connexion OAuth Billit enregistrée appartient à un autre environnement.");
+  }
 
   if (Date.parse(connection.access_token_expires_at) > Date.now() + 60_000) {
     return decryptBillitToken(connection.access_token_encrypted);
@@ -218,8 +239,40 @@ export type BillitOrderStatus = {
   orderId: number;
   orderNumber: string | null;
   orderStatus: string | null;
+  deliveryStatus: string | null;
+  deliveryInfo: string | null;
   isSent: boolean;
   delivered: boolean | null;
+  totalExcl: number | null;
+  totalVat: number | null;
+  totalIncl: number | null;
+  toPay: number | null;
+  paid: boolean;
+};
+
+export type BillitInvoiceInput = {
+  numero: string;
+  dateEmission: string;
+  dateEcheance: string;
+  snapshot: import("@/lib/facture-workflow").FactureBillingSnapshot;
+  lines: {
+    description: string;
+    quantity: number;
+    unitPriceExcl: number;
+    vatPercent: number;
+    vatCategory?: "S" | "Z" | "E";
+  }[];
+};
+
+export type BillitCreatedOrder = { orderId: number; orderNumber: string };
+
+export type BillitCreditNoteInput = {
+  numero: string;
+  dateEmission: string;
+  dateEcheance: string;
+  factureOriginale: string;
+  snapshot: import("@/lib/facture-workflow").FactureBillingSnapshot;
+  lines: BillitInvoiceInput["lines"];
 };
 
 export function formatBillitDateInBrussels(date: Date): string {
@@ -251,7 +304,16 @@ export async function getBillitOrderStatus(admin: BillitAdmin, orderId: number):
     OrderNumber?: string;
     OrderStatus?: string;
     IsSent?: boolean;
-    CurrentDocumentDeliveryDetails?: { IsDocumentDelivered?: boolean };
+    TotalExcl?: number;
+    TotalVAT?: number;
+    TotalIncl?: number;
+    ToPay?: number;
+    Paid?: boolean;
+    CurrentDocumentDeliveryDetails?: {
+      IsDocumentDelivered?: boolean;
+      DocumentDeliveryStatus?: string;
+      DocumentDeliveryInfo?: string;
+    };
   }>(admin, `/v1/orders/${orderId}`);
   const returnedId = Number(order.OrderID);
   if (Number.isSafeInteger(returnedId) && returnedId !== orderId) {
@@ -261,14 +323,175 @@ export async function getBillitOrderStatus(admin: BillitAdmin, orderId: number):
     orderId,
     orderNumber: typeof order.OrderNumber === "string" ? order.OrderNumber : null,
     orderStatus: typeof order.OrderStatus === "string" ? order.OrderStatus : null,
+    deliveryStatus: typeof order.CurrentDocumentDeliveryDetails?.DocumentDeliveryStatus === "string"
+      ? order.CurrentDocumentDeliveryDetails.DocumentDeliveryStatus
+      : null,
+    deliveryInfo: typeof order.CurrentDocumentDeliveryDetails?.DocumentDeliveryInfo === "string"
+      ? order.CurrentDocumentDeliveryDetails.DocumentDeliveryInfo
+      : null,
     isSent: order.IsSent === true,
     delivered: typeof order.CurrentDocumentDeliveryDetails?.IsDocumentDelivered === "boolean"
       ? order.CurrentDocumentDeliveryDetails.IsDocumentDelivered
       : null,
+    totalExcl: typeof order.TotalExcl === "number" ? order.TotalExcl : null,
+    totalVat: typeof order.TotalVAT === "number" ? order.TotalVAT : null,
+    totalIncl: typeof order.TotalIncl === "number" ? order.TotalIncl : null,
+    toPay: typeof order.ToPay === "number" ? order.ToPay : null,
+    paid: order.Paid === true,
+  };
+}
+
+function buildCustomer(snapshot: BillitInvoiceInput["snapshot"]) {
+  const client = snapshot.client;
+  const name = client.cabinet_nom?.trim() || client.nom || "Client";
+  const address: Record<string, string> = {
+    AddressType: "InvoiceAddress",
+    Name: name,
+    CountryCode: "BE",
+  };
+  if (client.rue?.trim()) address.Street = client.rue.trim();
+  if (client.code_postal?.trim()) address.Zipcode = client.code_postal.trim();
+  if (client.ville?.trim()) address.City = client.ville.trim();
+
+  return {
+    Name: name,
+    CommercialName: name,
+    PartyType: "Customer",
+    ...(client.tva_numero?.trim() ? { VATNumber: client.tva_numero.trim() } : {}),
+    ...(client.email?.trim() ? { Email: client.email.trim() } : {}),
+    ...(client.telephone?.trim() ? { Phone: client.telephone.trim() } : {}),
+    Addresses: [address],
+  };
+}
+
+export async function createBillitSalesInvoice(
+  admin: BillitAdmin,
+  input: BillitInvoiceInput
+): Promise<BillitCreatedOrder> {
+  const config = getBillitConfig();
+  if (config.environment !== "production") {
+    throw new Error("Une facture réelle ne peut pas être envoyée avec les identifiants Sandbox.");
+  }
+  const exemptionCode = process.env.BILLIT_FRANCHISE_VENTILATION_CODE?.trim();
+  if (input.lines.some((line) => line.vatCategory === "E") && !exemptionCode) {
+    throw new Error("Envoi bloqué : demande à Billit le code de ventilation belge pour la franchise, puis configure BILLIT_FRANCHISE_VENTILATION_CODE.");
+  }
+
+  const orderLines = input.lines.map((line) => ({
+    Quantity: line.quantity,
+    UnitPriceExcl: line.unitPriceExcl,
+    Description: line.description,
+    VATPercentage: line.vatPercent,
+    ...(line.vatCategory === "E" ? { VentilationCode: exemptionCode } : {}),
+  }));
+  const created = await callBillitApi<number | { OrderID?: number | string; ID?: number | string }>(admin, "/v1/orders", {
+    method: "POST",
+    body: {
+      OrderType: "Invoice",
+      OrderDirection: "Income",
+      OrderNumber: input.numero,
+      OrderDate: input.dateEmission,
+      ExpiryDate: input.dateEcheance,
+      Currency: "EUR",
+      Reference: input.snapshot.commande_numero,
+      PaymentTerms: input.snapshot.issuer.conditions_paiement,
+      Customer: buildCustomer(input.snapshot),
+      OrderLines: orderLines,
+    },
+  });
+  const orderId = Number(typeof created === "number" ? created : created?.OrderID ?? created?.ID);
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+    throw new Error("Billit n’a pas retourné d’OrderID pour cette facture.");
+  }
+  return { orderId, orderNumber: input.numero };
+}
+
+export async function createBillitCreditNote(
+  admin: BillitAdmin,
+  input: BillitCreditNoteInput
+): Promise<BillitCreatedOrder> {
+  const config = getBillitConfig();
+  if (config.environment !== "production") {
+    throw new Error("Un avoir lié à une facture réelle ne peut pas être envoyé avec les identifiants Sandbox.");
+  }
+  const exemptionCode = process.env.BILLIT_FRANCHISE_VENTILATION_CODE?.trim();
+  if (input.lines.some((line) => line.vatCategory === "E") && !exemptionCode) {
+    throw new Error("Envoi bloqué : le code belge de ventilation pour la franchise doit être confirmé par Billit.");
+  }
+
+  const created = await callBillitApi<number | { OrderID?: number | string; ID?: number | string }>(admin, "/v1/orders", {
+    method: "POST",
+    body: {
+      OrderType: "CreditNote",
+      OrderDirection: "Income",
+      OrderNumber: input.numero,
+      OrderDate: input.dateEmission,
+      ExpiryDate: input.dateEcheance,
+      AboutInvoiceNumber: input.factureOriginale,
+      Currency: "EUR",
+      Customer: buildCustomer(input.snapshot),
+      OrderLines: input.lines.map((line) => ({
+        Quantity: line.quantity,
+        UnitPriceExcl: line.unitPriceExcl,
+        Description: line.description,
+        VATPercentage: line.vatPercent,
+        ...(line.vatCategory === "E" ? { VentilationCode: exemptionCode } : {}),
+      })),
+    },
+  });
+  const orderId = Number(typeof created === "number" ? created : created?.OrderID ?? created?.ID);
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+    throw new Error("Billit n’a pas retourné d’OrderID pour cet avoir.");
+  }
+  return { orderId, orderNumber: input.numero };
+}
+
+export async function sendBillitOrder(admin: BillitAdmin, orderId: number): Promise<void> {
+  if (getBillitConfig().environment !== "production") {
+    throw new Error("L’envoi d’une facture réelle est bloqué en Sandbox.");
+  }
+  await callBillitApi(admin, "/v1/orders/commands/send", {
+    method: "POST",
+    body: { Transporttype: "Peppol", OrderIDs: [orderId] },
+  });
+}
+
+export async function addBillitPayment(
+  admin: BillitAdmin,
+  orderId: number,
+  amount: number,
+  description: string,
+  date: string
+): Promise<void> {
+  if (getBillitConfig().environment !== "production" || process.env.BILLIT_SEND_REAL_INVOICES !== "true") {
+    throw new Error("La synchronisation des paiements Billit nécessite l’activation explicite de Production.");
+  }
+  await callBillitApi(admin, `/v1/order/${orderId}/payments`, {
+    method: "POST",
+    body: { Amount: amount, Description: description, Date: date },
+  });
+}
+
+export async function downloadBillitOrderPdf(admin: BillitAdmin, orderId: number) {
+  const order = await callBillitApi<{ OrderPDF?: { FileID?: string; FileName?: string } }>(admin, `/v1/orders/${orderId}`);
+  const fileId = order.OrderPDF?.FileID;
+  if (!fileId) throw new Error("Billit n’a pas encore généré le PDF de cette facture.");
+  const file = await callBillitApi<{ FileName?: string; MimeType?: string; FileContent?: string }>(
+    admin,
+    `/v1/files/${encodeURIComponent(fileId)}`
+  );
+  if (!file.FileContent) throw new Error("Le PDF Billit ne contient pas de fichier téléchargeable.");
+  return {
+    fileName: file.FileName || order.OrderPDF?.FileName || `facture-${orderId}.pdf`,
+    mimeType: file.MimeType || "application/pdf",
+    bytes: Buffer.from(file.FileContent, "base64"),
   };
 }
 
 export async function createAndSendSandboxTestInvoice(admin: BillitAdmin) {
+  if (getBillitConfig().environment !== "sandbox") {
+    throw new Error("Les factures fictives ne peuvent être envoyées qu’au Sandbox.");
+  }
   const orderNumber = `DL-SANDBOX-${Date.now()}`;
   const orderDate = formatBillitDateInBrussels(new Date());
   const dueDate = new Date(`${orderDate}T00:00:00.000Z`);

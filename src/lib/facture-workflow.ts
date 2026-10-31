@@ -26,6 +26,12 @@ export type FactureBillingSnapshot = {
     prenom: string;
     email: string;
     adresse: string;
+    cabinet_nom?: string;
+    rue?: string;
+    code_postal?: string;
+    ville?: string;
+    pays?: string;
+    telephone?: string;
     tva_numero: string;
     numero_entreprise?: string;
     assujetti_tva?: boolean | null;
@@ -92,7 +98,7 @@ export async function createFactureDraft(
     serviceIds.length
     ? admin.from("service_options").select("id, service_id, nom, prix_ht, taux_tva, categorie_tva_peppol, motif_exoneration_tva").eq("actif", true).in("service_id", serviceIds).order("ordre")
       : Promise.resolve({ data: [], error: null }),
-    admin.from("profiles").select("nom, prenom, email, cabinet_id, numero_entreprise, assujetti_tva, numero_tva").eq("id", commande.dentiste_id).single(),
+    admin.from("profiles").select("nom, prenom, email, telephone, cabinet_id, numero_entreprise, assujetti_tva, numero_tva").eq("id", commande.dentiste_id).single(),
   ]);
 
   if (tariffsError || optionsError || dentistError) {
@@ -165,7 +171,7 @@ export async function createFactureDraft(
 
   const cabinetId = dentist?.cabinet_id || commande.cabinet_id;
   const { data: cabinet } = cabinetId
-    ? await admin.from("cabinets").select("nom, adresse, code_postal, ville, tva_numero").eq("id", cabinetId).maybeSingle()
+    ? await admin.from("cabinets").select("nom, adresse, code_postal, ville, telephone, tva_numero").eq("id", cabinetId).maybeSingle()
     : { data: null };
   const adresseLabo = [params.adresse, params.code_postal, params.ville, params.pays].filter(Boolean).join(", ");
   const adresseCabinet = [cabinet?.adresse, cabinet?.code_postal, cabinet?.ville].filter(Boolean).join(", ");
@@ -196,6 +202,12 @@ export async function createFactureDraft(
       prenom: dentist?.prenom ?? "",
       email: dentist?.email ?? "",
       adresse: [cabinet?.nom, adresseCabinet].filter(Boolean).join(" — "),
+      cabinet_nom: cabinet?.nom ?? "",
+      rue: cabinet?.adresse ?? "",
+      code_postal: cabinet?.code_postal ?? "",
+      ville: cabinet?.ville ?? "",
+      pays: "Belgique",
+      telephone: cabinet?.telephone || dentist?.telephone || "",
       tva_numero: dentist?.assujetti_tva === false
         ? ""
         : cabinet?.tva_numero ?? dentist?.numero_tva ?? "",

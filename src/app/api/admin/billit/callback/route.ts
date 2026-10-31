@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     const token = await exchangeBillitAuthorizationCode(code);
     const { error } = await auth.admin.from("billit_connections").upsert({
       singleton: true,
+      environment: getBillitConfig().environment,
       access_token_encrypted: encryptBillitToken(token.accessToken),
       refresh_token_encrypted: encryptBillitToken(token.refreshToken),
       access_token_expires_at: new Date(Date.now() + token.expiresIn * 1000).toISOString(),

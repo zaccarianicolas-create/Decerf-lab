@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { PaiementsTable } from "./paiements-table";
 import { FacturationPanel } from "./facturation-panel";
+import { getBillitConfig, isBillitConfigured } from "@/lib/billit";
 
 export default async function AdminPaiementsPage() {
   const supabase = await createClient();
@@ -39,6 +40,12 @@ export default async function AdminPaiementsPage() {
       date_echeance,
       montant_ttc,
       solde_du,
+      billit_paid_amount,
+      billit_order_id,
+      billit_order_status,
+      billit_delivery_status,
+      billit_is_delivered,
+      billit_last_error,
       commande:commandes(numero),
       dentiste:profiles!factures_dentiste_id_fkey(nom, prenom)
     `
@@ -57,6 +64,14 @@ export default async function AdminPaiementsPage() {
       montant,
       solde_restant,
       date_emission,
+      facture_id,
+      billit_order_id,
+      billit_order_status,
+      billit_delivery_status,
+      billit_is_delivered,
+      billit_last_error,
+      billit_pdf_storage_path,
+      facture:factures(billit_order_id),
       dentiste:profiles!avoirs_dentiste_id_fkey(nom, prenom)
     `
     )
@@ -119,10 +134,18 @@ export default async function AdminPaiementsPage() {
     .slice(0, 40);
 
   // Calculs stats
-  const totalPaye =
-    paiements
-      ?.filter((p: any) => p.statut === "paye")
-      .reduce((acc: number, p: any) => acc + Number(p.montant), 0) ?? 0;
+  const billitFactureIds = new Set((factures || [])
+    .filter((facture: any) => facture.billit_order_id)
+    .map((facture: any) => facture.id));
+  const paiementsLocauxHorsBillit = (paiements || []).filter((paiement: any) =>
+    paiement.statut === "paye" && (!paiement.facture_id || !billitFactureIds.has(paiement.facture_id))
+  );
+  const facturesBillitAvecPaiement = (factures || []).filter((facture: any) =>
+    facture.billit_order_id && Number(facture.billit_paid_amount || 0) > 0
+  );
+  const totalPayeLocal = paiementsLocauxHorsBillit.reduce((acc: number, paiement: any) => acc + Number(paiement.montant), 0);
+  const totalPayeBillit = facturesBillitAvecPaiement.reduce((acc: number, facture: any) => acc + Number(facture.billit_paid_amount), 0);
+  const totalPaye = totalPayeLocal + totalPayeBillit;
   const totalEnAttente =
     paiements
       ?.filter((p: any) => p.statut === "en_attente")
@@ -140,6 +163,15 @@ export default async function AdminPaiementsPage() {
     0;
   const totalAvoirs =
     avoirs?.reduce((acc: number, a: any) => acc + Number(a.montant || 0), 0) ?? 0;
+  let billitProductionReady = false;
+  try {
+    billitProductionReady =
+      process.env.BILLIT_SEND_REAL_INVOICES === "true" &&
+      getBillitConfig().environment === "production" &&
+      isBillitConfigured();
+  } catch {
+    billitProductionReady = false;
+  }
 
   return (
     <div>
@@ -158,8 +190,7 @@ export default async function AdminPaiementsPage() {
             {totalPaye.toFixed(2)} €
           </p>
           <p className="text-xs text-green-600">
-            {paiements?.filter((p: any) => p.statut === "paye").length || 0}{" "}
-            paiement(s)
+            {paiementsLocauxHorsBillit.length + facturesBillitAvecPaiement.length} mouvement(s) synchronisé(s)
           </p>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
@@ -216,6 +247,11 @@ export default async function AdminPaiementsPage() {
             date_echeance: f.date_echeance,
             montant_ttc: Number(f.montant_ttc || 0),
             solde_du: Number(f.solde_du || 0),
+            billit_order_id: f.billit_order_id,
+            billit_order_status: f.billit_order_status,
+            billit_delivery_status: f.billit_delivery_status,
+            billit_is_delivered: f.billit_is_delivered,
+            billit_last_error: f.billit_last_error,
             commande_numero: f.commande?.numero || "",
             dentiste_nom:
               [f.dentiste?.prenom, f.dentiste?.nom].filter(Boolean).join(" ") || "",
@@ -228,6 +264,16 @@ export default async function AdminPaiementsPage() {
             montant: Number(a.montant || 0),
             solde_restant: Number(a.solde_restant || 0),
             date_emission: a.date_emission,
+            facture_id: a.facture_id,
+            billit_order_id: a.billit_order_id,
+            billit_order_status: a.billit_order_status,
+            billit_delivery_status: a.billit_delivery_status,
+            billit_is_delivered: a.billit_is_delivered,
+            billit_last_error: a.billit_last_error,
+            billit_pdf_storage_path: a.billit_pdf_storage_path,
+            facture_billit_order_id: Array.isArray(a.facture)
+              ? a.facture[0]?.billit_order_id ?? null
+              : a.facture?.billit_order_id ?? null,
             dentiste_nom:
               [a.dentiste?.prenom, a.dentiste?.nom].filter(Boolean).join(" ") || "",
           }))}
@@ -240,6 +286,7 @@ export default async function AdminPaiementsPage() {
             dentiste_nom:
               [l.dentiste?.prenom, l.dentiste?.nom].filter(Boolean).join(" ") || "",
           }))}
+          billitProductionReady={billitProductionReady}
         />
       </div>
 

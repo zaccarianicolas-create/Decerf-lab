@@ -29,6 +29,10 @@ export function FactureValidation({
     montant_ttc: number;
     solde_du: number;
     email_sent: boolean;
+    billit_order_id?: number | null;
+    billit_order_status?: string | null;
+    billit_delivery_status?: string | null;
+    billit_is_delivered?: boolean | null;
   } | null>(null);
 
   const estimatedTotals = useMemo(
@@ -102,6 +106,16 @@ export function FactureValidation({
         {!result.email_sent && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             La facture est enregistrée. L’e-mail n’a pas pu être envoyé ; le PDF reste disponible dans Finance.
+          </div>
+        )}
+        {result.billit_order_id && (
+          <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+            Facture Billit {result.billit_order_status || "créée"}.
+            {result.billit_is_delivered === true
+              ? " Livraison Peppol confirmée."
+              : result.billit_delivery_status
+                ? ` Livraison : ${result.billit_delivery_status}.`
+                : " Livraison Peppol en attente de confirmation."}
           </div>
         )}
         <div className="flex flex-wrap gap-3">

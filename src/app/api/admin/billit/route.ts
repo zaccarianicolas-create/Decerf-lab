@@ -8,20 +8,23 @@ export async function GET() {
 
   const { data, error } = await auth.admin
     .from("billit_connections")
-    .select("connected_at, access_token_expires_at")
+    .select("environment, connected_at, access_token_expires_at")
     .eq("singleton", true)
     .maybeSingle();
   if (error) return NextResponse.json({ error: "État Billit indisponible." }, { status: 500 });
 
   const configured = isBillitConfigured();
   const config = configured ? getBillitConfig() : null;
+  const environment = config?.environment ?? (process.env.BILLIT_ENV === "production" ? "production" : "sandbox");
+  const oauthConnected = Boolean(data && data.environment === environment);
   return NextResponse.json({
     configured,
-    connected: Boolean(data) || config?.authMode === "api_key",
+    connected: oauthConnected || config?.authMode === "api_key",
     authMode: config?.authMode ?? null,
-    environment: "sandbox",
-    connected_at: data?.connected_at ?? null,
-    access_token_expires_at: data?.access_token_expires_at ?? null,
+    environment,
+    productionEnabled: environment === "production" && process.env.BILLIT_SEND_REAL_INVOICES === "true",
+    connected_at: oauthConnected ? data?.connected_at ?? null : null,
+    access_token_expires_at: oauthConnected ? data?.access_token_expires_at ?? null : null,
   });
 }
 

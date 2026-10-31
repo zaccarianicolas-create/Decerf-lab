@@ -41,7 +41,7 @@ export default async function DashboardFinancePage({
 
   let facturesQuery = supabase
     .from("factures")
-    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,commande:commandes(numero)")
+    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,billit_order_id,commande:commandes(numero)")
     .eq("dentiste_id", user.id)
     .order("date_emission", { ascending: false })
     .limit(60);
@@ -51,7 +51,7 @@ export default async function DashboardFinancePage({
 
   let avoirsQuery = supabase
     .from("avoirs")
-    .select("id,numero,statut,motif,montant,solde_restant,date_emission,facture:factures(numero)")
+    .select("id,numero,statut,motif,montant,solde_restant,date_emission,billit_pdf_storage_path,billit_order_status,billit_delivery_status,billit_is_delivered,billit_last_error,facture:factures(numero)")
     .eq("dentiste_id", user.id)
     .order("date_emission", { ascending: false })
     .limit(40);
@@ -235,6 +235,7 @@ export default async function DashboardFinancePage({
                           statut={f.statut}
                           pdfAvailable={Boolean(f.pdf_storage_path)}
                           emailSent={Boolean(f.email_envoye_at)}
+                          billitOrderId={f.billit_order_id}
                         />
                       </td>
                     </tr>
@@ -265,6 +266,17 @@ export default async function DashboardFinancePage({
                   <p className="mt-1 text-sm text-gray-700">
                     Montant: {Number(a.montant || 0).toFixed(2)} € • Restant: {Number(a.solde_restant || 0).toFixed(2)} €
                   </p>
+                  {(a.billit_delivery_status || a.billit_order_status) && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Peppol : {a.billit_delivery_status || a.billit_order_status}{a.billit_is_delivered ? " · Livré" : ""}
+                    </p>
+                  )}
+                  {a.billit_last_error && <p className="mt-1 text-xs text-red-700">{a.billit_last_error}</p>}
+                  {a.billit_pdf_storage_path && (
+                    <a href={`/api/dashboard/avoirs/${a.id}/pdf`} className="mt-2 inline-flex items-center gap-1 text-sm text-sky-700 hover:text-sky-900">
+                      <Download className="h-4 w-4" /> Télécharger le PDF
+                    </a>
+                  )}
                 </div>
               ))
             )}

@@ -11,7 +11,7 @@ export default async function FacturesPage() {
 
   const { data: factures, error } = await supabase
     .from("factures")
-    .select("id, numero, statut, date_emission, date_echeance, montant_ttc, solde_du, pdf_storage_path, email_envoye_at, commande:commandes(numero)")
+    .select("id, numero, statut, date_emission, date_echeance, montant_ttc, solde_du, pdf_storage_path, email_envoye_at, billit_order_id, commande:commandes(numero)")
     .eq("dentiste_id", user.id)
     .order("created_at", { ascending: false });
 

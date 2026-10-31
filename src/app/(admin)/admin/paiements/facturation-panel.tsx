@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, FilePlus2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,11 @@ type FactureRow = {
   date_echeance: string | null;
   montant_ttc: number;
   solde_du: number;
+  billit_order_id: number | null;
+  billit_order_status: string | null;
+  billit_delivery_status: string | null;
+  billit_is_delivered: boolean | null;
+  billit_last_error: string | null;
   commande_numero: string;
   dentiste_nom: string;
 };
@@ -36,6 +42,14 @@ type AvoirRow = {
   solde_restant: number;
   date_emission: string;
   dentiste_nom: string;
+  facture_id: string | null;
+  billit_order_id: number | null;
+  billit_order_status: string | null;
+  billit_delivery_status: string | null;
+  billit_is_delivered: boolean | null;
+  billit_last_error: string | null;
+  facture_billit_order_id: number | null;
+  billit_pdf_storage_path: string | null;
 };
 
 type LedgerRow = {
@@ -77,11 +91,13 @@ export function FacturationPanel({
   factures,
   avoirs,
   ledger,
+  billitProductionReady,
 }: {
   pendingCommandes: PendingCommande[];
   factures: FactureRow[];
   avoirs: AvoirRow[];
   ledger: LedgerRow[];
+  billitProductionReady: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"factures" | "avoirs" | "ledger">("factures");
@@ -89,6 +105,12 @@ export function FacturationPanel({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [avoirTarget, setAvoirTarget] = useState<FactureRow | null>(null);
+  const [avoirMotif, setAvoirMotif] = useState("");
+  const [savingAvoir, setSavingAvoir] = useState(false);
+  const [emittingAvoirId, setEmittingAvoirId] = useState<string | null>(null);
+  const [syncingFactureId, setSyncingFactureId] = useState<string | null>(null);
+  const [syncingAvoirId, setSyncingAvoirId] = useState<string | null>(null);
 
   const facturesEnRetard = useMemo(
     () => factures.filter((f) => f.statut === "en_retard").length,
@@ -116,6 +138,74 @@ export function FacturationPanel({
       setError(e?.message || "Erreur inattendue");
     } finally {
       setCreatingCommandeId(null);
+    }
+  };
+
+  const prepareAvoir = async () => {
+    if (!avoirTarget) return;
+    setSavingAvoir(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/avoirs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ facture_id: avoirTarget.id, motif: avoirMotif }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Impossible de préparer l’avoir.");
+      setAvoirTarget(null);
+      setAvoirMotif("");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de préparer l’avoir.");
+    } finally {
+      setSavingAvoir(false);
+    }
+  };
+
+  const emitAvoir = async (avoirId: string) => {
+    setEmittingAvoirId(avoirId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/avoirs/${avoirId}/emettre`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "L’émission Billit de l’avoir a échoué.");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "L’émission Billit de l’avoir a échoué.");
+      router.refresh();
+    } finally {
+      setEmittingAvoirId(null);
+    }
+  };
+
+  const syncFactureBillit = async (factureId: string) => {
+    setSyncingFactureId(factureId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/dashboard/factures/${factureId}/synchroniser-billit`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Synchronisation Billit impossible.");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Synchronisation Billit impossible.");
+    } finally {
+      setSyncingFactureId(null);
+    }
+  };
+
+  const syncAvoirBillit = async (avoirId: string) => {
+    setSyncingAvoirId(avoirId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/avoirs/${avoirId}/synchroniser-billit`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Synchronisation Billit impossible.");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Synchronisation Billit impossible.");
+    } finally {
+      setSyncingAvoirId(null);
     }
   };
 
@@ -199,6 +289,13 @@ export function FacturationPanel({
             </div>
           )}
 
+          {!billitProductionReady && (
+            <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              Les avoirs peuvent être préparés en brouillon. Leur émission Peppol reste désactivée tant que Billit Production n’est pas validé et configuré.
+            </p>
+          )}
+
           <div className="rounded-xl border border-gray-200">
             <div className="flex items-center gap-2 border-b border-gray-200 p-3">
               <button
@@ -249,6 +346,13 @@ export function FacturationPanel({
                         <p className="text-xs text-gray-500">
                           Cmd {f.commande_numero || "—"} • {f.dentiste_nom || "Client"}
                         </p>
+                        {f.billit_order_id && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Peppol : {f.billit_delivery_status || f.billit_order_status || "À synchroniser"}
+                            {f.billit_is_delivered ? " · Livrée" : ""}
+                          </p>
+                        )}
+                        {f.billit_last_error && <p className="mt-1 text-xs text-red-700">{f.billit_last_error}</p>}
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-gray-900">{Number(f.montant_ttc).toFixed(2)} €</p>
@@ -256,8 +360,18 @@ export function FacturationPanel({
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {statutFactureBadge(f.statut)}
+                        {f.billit_order_id && (
+                          <Button type="button" size="sm" variant="outline" disabled={syncingFactureId === f.id} onClick={() => syncFactureBillit(f.id)} aria-label="Actualiser le statut Billit">
+                            <RefreshCw className={`h-4 w-4 ${syncingFactureId === f.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
                         {Number(f.solde_du) > 0 && !["brouillon", "annulee"].includes(f.statut) && (
                           <PaiementVirementButton factureId={f.id} solde={Number(f.solde_du)} />
+                        )}
+                        {f.billit_order_id && !["brouillon", "annulee"].includes(f.statut) && !avoirs.some((avoir) => avoir.facture_id === f.id && avoir.statut !== "annule") && (
+                          <Button type="button" size="sm" variant="outline" onClick={() => setAvoirTarget(f)}>
+                            <FilePlus2 className="mr-1.5 h-4 w-4" /> Préparer un avoir total
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -280,7 +394,32 @@ export function FacturationPanel({
                         <p className="text-sm font-semibold text-gray-900">{Number(a.montant).toFixed(2)} €</p>
                         <p className="text-xs text-gray-500">Reste: {Number(a.solde_restant).toFixed(2)} €</p>
                       </div>
-                      <Badge className="border border-gray-200 bg-gray-100 text-gray-700">{a.statut}</Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="border border-gray-200 bg-gray-100 text-gray-700">{a.statut}</Badge>
+                        {a.billit_order_id && (
+                          <span className="text-xs text-gray-500">
+                            Peppol : {a.billit_delivery_status || a.billit_order_status || "À synchroniser"}{a.billit_is_delivered ? " · Livré" : ""}
+                          </span>
+                        )}
+                        {a.billit_pdf_storage_path && (
+                          <a href={`/api/dashboard/avoirs/${a.id}/pdf`}>
+                            <Button type="button" size="sm" variant="outline" aria-label="Télécharger le PDF de l’avoir">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </a>
+                        )}
+                        {a.billit_last_error && <span className="text-xs text-red-700">{a.billit_last_error}</span>}
+                        {a.billit_order_id && (
+                          <Button type="button" size="sm" variant="outline" disabled={syncingAvoirId === a.id} onClick={() => syncAvoirBillit(a.id)} aria-label="Actualiser le statut Billit de l’avoir">
+                            <RefreshCw className={`h-4 w-4 ${syncingAvoirId === a.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
+                        {a.statut === "brouillon" && billitProductionReady && a.facture_id && a.facture_billit_order_id && (
+                          <Button type="button" size="sm" onClick={() => emitAvoir(a.id)} disabled={emittingAvoirId === a.id}>
+                            {emittingAvoirId === a.id ? "Émission…" : "Émettre via Billit"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -347,6 +486,27 @@ export function FacturationPanel({
           )}
         </CardContent>
       </Card>
+
+      {avoirTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section role="dialog" aria-modal="true" aria-labelledby="avoir-draft-title" className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl">
+            <h2 id="avoir-draft-title" className="text-lg font-semibold text-gray-900">Préparer un avoir total</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Facture {avoirTarget.numero} · {avoirTarget.montant_ttc.toFixed(2)} € TTC. Le brouillon ne modifie pas encore le solde.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-gray-700">
+              Motif
+              <textarea value={avoirMotif} onChange={(event) => setAvoirMotif(event.target.value)} rows={3} maxLength={500} className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm" />
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => { setAvoirTarget(null); setAvoirMotif(""); }}>Annuler</Button>
+              <Button type="button" disabled={savingAvoir || !avoirMotif.trim()} onClick={prepareAvoir}>
+                {savingAvoir ? "Enregistrement…" : "Créer le brouillon"}
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

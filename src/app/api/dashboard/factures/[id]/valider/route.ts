@@ -6,6 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createFacturePdf } from "@/lib/facture-pdf";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 import { sendEmail, emailTemplates } from "@/lib/email";
+import {
+  createBillitSalesInvoice,
+  downloadBillitOrderPdf,
+  getBillitConfig,
+  getBillitOrderStatus,
+  sendBillitOrder,
+} from "@/lib/billit";
 
 export async function POST(
   request: Request,
@@ -33,9 +40,19 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+  const billitSendEnabled = process.env.BILLIT_SEND_REAL_INVOICES === "true";
+  if (billitSendEnabled) {
+    try {
+      if (getBillitConfig().environment !== "production") {
+        return NextResponse.json({ error: "L’émission réelle est bloquée : configure Billit Production séparément du Sandbox." }, { status: 409 });
+      }
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Configuration Billit Production invalide." }, { status: 409 });
+    }
+  }
   const { data: facture, error: factureError } = await admin
     .from("factures")
-    .select("id, numero, statut, dentiste_id, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at")
+    .select("id, numero, statut, dentiste_id, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at, billit_order_id")
     .eq("id", id)
     .eq("dentiste_id", user.id)
     .maybeSingle();
@@ -59,7 +76,7 @@ export async function POST(
   const [{ data: updatedFacture, error: updatedError }, { data: lines, error: linesError }] = await Promise.all([
     admin
       .from("factures")
-      .select("id, numero, statut, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at")
+      .select("id, numero, statut, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at, billit_order_id")
       .eq("id", facture.id)
       .single(),
     admin
@@ -93,6 +110,7 @@ export async function POST(
       total_ligne_ttc: Number(line.total_ligne_ttc),
     })),
   }, logo);
+  let emailPdfBytes: Uint8Array = bytes;
   const path = `${user.id}/${facture.id}/${updatedFacture.numero}.pdf`;
   const { error: uploadError } = await admin.storage.from("factures").upload(path, bytes, {
     contentType: "application/pdf",
@@ -115,6 +133,74 @@ export async function POST(
     return NextResponse.json({ error: pathError.message, validated: true }, { status: 500 });
   }
 
+  let billitOrderId = updatedFacture.billit_order_id ? Number(updatedFacture.billit_order_id) : null;
+  let billitStatus: Awaited<ReturnType<typeof getBillitOrderStatus>> | null = null;
+  if (billitSendEnabled) {
+    try {
+      if (!billitOrderId) {
+        const created = await createBillitSalesInvoice(admin, {
+          numero: updatedFacture.numero,
+          dateEmission: updatedFacture.date_emission,
+          dateEcheance: updatedFacture.date_echeance,
+          snapshot,
+          lines: lines.map((line) => ({
+            description: line.description,
+            quantity: Number(line.quantite),
+            unitPriceExcl: Number(line.prix_unitaire),
+            vatPercent: Number(line.taux_tva),
+            vatCategory: line.categorie_tva_peppol as "S" | "Z" | "E" | undefined,
+          })),
+        });
+        billitOrderId = created.orderId;
+        const { error: orderIdError } = await admin.from("factures").update({
+          billit_order_id: billitOrderId,
+          billit_status: "created",
+          billit_last_error: null,
+        }).eq("id", facture.id);
+        if (orderIdError) {
+          return NextResponse.json({ error: "Billit a créé la facture, mais l’OrderID n’a pas pu être enregistré localement. Ne relance pas avant vérification dans Billit.", validated: true }, { status: 500 });
+        }
+      }
+
+      billitStatus = await getBillitOrderStatus(admin, billitOrderId);
+      if (!billitStatus.isSent) {
+        await sendBillitOrder(admin, billitOrderId);
+        billitStatus = await getBillitOrderStatus(admin, billitOrderId);
+      }
+
+      const officialPdf = await downloadBillitOrderPdf(admin, billitOrderId);
+      emailPdfBytes = officialPdf.bytes;
+      const billitPdfPath = `${user.id}/${facture.id}/billit-${officialPdf.fileName}`;
+      const { error: billitPdfError } = await admin.storage.from("factures").upload(billitPdfPath, officialPdf.bytes, {
+        contentType: officialPdf.mimeType,
+        upsert: true,
+        cacheControl: "31536000",
+      });
+      if (billitPdfError) throw new Error(`Facture Billit créée, mais archivage du PDF officiel impossible : ${billitPdfError.message}`);
+
+      const { error: billitUpdateError } = await admin.from("factures").update({
+        billit_status: billitStatus.isSent ? "sent" : "created",
+        billit_order_status: billitStatus.orderStatus,
+        billit_delivery_status: billitStatus.deliveryStatus,
+        billit_is_sent: billitStatus.isSent,
+        billit_is_delivered: billitStatus.delivered,
+        billit_paid_amount: Math.max(0, Number(billitStatus.totalIncl ?? 0) - Number(billitStatus.toPay ?? 0)),
+        billit_pdf_storage_path: billitPdfPath,
+        pdf_storage_path: billitPdfPath,
+        billit_last_error: null,
+        billit_synced_at: new Date().toISOString(),
+      }).eq("id", facture.id);
+      if (billitUpdateError) throw new Error(`Facture Billit envoyée, mais synchronisation locale impossible : ${billitUpdateError.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Émission Billit impossible.";
+      await admin.from("factures").update({
+        billit_status: billitOrderId ? "error" : null,
+        billit_last_error: message,
+      }).eq("id", facture.id);
+      return NextResponse.json({ error: message, validated: true, facture_id: facture.id, billit_order_id: billitOrderId }, { status: 502 });
+    }
+  }
+
   let emailSent = Boolean(updatedFacture.email_envoye_at);
   if (!emailSent && snapshot.client.email) {
     const template = emailTemplates.facture_emise({
@@ -132,7 +218,7 @@ export async function POST(
       payload: { facture_id: facture.id },
       attachments: [{
         filename: `${updatedFacture.numero}.pdf`,
-        content: Buffer.from(bytes).toString("base64"),
+        content: Buffer.from(emailPdfBytes).toString("base64"),
       }],
     });
     emailSent = emailResult.ok;
@@ -150,6 +236,10 @@ export async function POST(
     solde_du: Number(updatedFacture.solde_du),
     statut: updatedFacture.statut,
     email_sent: emailSent,
+    billit_order_id: billitOrderId,
+    billit_order_status: billitStatus?.orderStatus ?? null,
+    billit_delivery_status: billitStatus?.deliveryStatus ?? null,
+    billit_is_delivered: billitStatus?.delivered ?? null,
     pdf_url: signed?.signedUrl ?? null,
     already_validated: Boolean(validation?.already_validated),
   });

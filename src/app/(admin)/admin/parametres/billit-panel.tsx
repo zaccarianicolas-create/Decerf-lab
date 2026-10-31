@@ -8,7 +8,8 @@ type BillitStatus = {
   configured: boolean;
   connected: boolean;
   authMode: "api_key" | "oauth" | null;
-  environment: "sandbox";
+  environment: "sandbox" | "production";
+  productionEnabled: boolean;
   connected_at: string | null;
 };
 
@@ -105,14 +106,18 @@ export function BillitPanel() {
         <div>
           <h2 className="text-base font-semibold text-gray-900">Facturation électronique Peppol</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Connexion Billit limitée à l’environnement Sandbox. Aucun envoi en production n’est activé.
+            {status?.environment === "production"
+              ? status.productionEnabled
+                ? "Billit Production est activé pour l’émission réelle."
+                : "Configuration Production détectée mais émission réelle verrouillée."
+              : "Sandbox : tous les documents créés ici sont des tests et ne sont pas des factures réelles."}
           </p>
           <p className="mt-3 text-sm text-gray-700">
             {status?.authMode === "api_key"
-              ? "Clé API du compte Sandbox configurée."
+              ? `Clé API Billit ${status.environment === "sandbox" ? "Sandbox" : "Production"} configurée.`
               : status?.connected
-                ? "Compte Billit Sandbox connecté par OAuth."
-                : "Compte Billit Sandbox non connecté."}
+                ? `Compte Billit ${status.environment === "sandbox" ? "Sandbox" : "Production"} connecté par OAuth.`
+                : `Compte Billit ${status?.environment === "sandbox" ? "Sandbox" : "Production"} non connecté.`}
           </p>
           {status && !status.configured && (
             <p className="mt-2 text-sm text-amber-700">
@@ -131,11 +136,11 @@ export function BillitPanel() {
               <RefreshCw className="mr-2 h-4 w-4" /> Actualiser le statut
             </Button>
           )}
-          {status?.authMode === "api_key" ? (
+          {status?.environment === "sandbox" && status?.authMode === "api_key" ? (
             <Button type="button" disabled={busy || Boolean(testOrderId)} onClick={sendTest}>
               <Send className="mr-2 h-4 w-4" /> Envoyer une facture test
             </Button>
-          ) : status?.connected ? (
+          ) : status?.environment === "sandbox" && status?.connected ? (
             <>
               <Button type="button" disabled={busy} onClick={sendTest}>
                 <Send className="mr-2 h-4 w-4" /> Envoyer une facture test
@@ -144,13 +149,13 @@ export function BillitPanel() {
                 <Link2Off className="mr-2 h-4 w-4" /> Déconnecter
               </Button>
             </>
-          ) : (
+          ) : status?.environment === "sandbox" ? (
             <a href="/api/admin/billit/connexion" aria-disabled={!status?.configured} className={!status?.configured ? "pointer-events-none opacity-50" : ""}>
               <Button type="button" disabled={!status?.configured}>
                 <ExternalLink className="mr-2 h-4 w-4" /> Connecter Billit Sandbox
               </Button>
             </a>
-          )}
+          ) : null}
           <Button type="button" variant="outline" disabled={busy} onClick={() => {
             setError(null);
             setBusy(true);
