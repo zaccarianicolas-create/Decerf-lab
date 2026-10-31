@@ -29,6 +29,17 @@ export default async function AdminPaiementsPage() {
     )
     .order("created_at", { ascending: false });
 
+  const { data: dentistesFacturation } = await admin
+    .from("profiles")
+    .select("id, nom, prenom, email")
+    .eq("role", "dentiste")
+    .order("nom", { ascending: true });
+  const { data: paramsLabo } = await admin
+    .from("parametres_labo")
+    .select("regime_tva, taux_tva_defaut")
+    .limit(1)
+    .maybeSingle();
+
   const { data: factures } = await admin
     .from("factures")
     .select(
@@ -238,6 +249,9 @@ export default async function AdminPaiementsPage() {
 
       <div className="mb-8">
         <FacturationPanel
+          dentistes={dentistesFacturation ?? []}
+          regimeTva={paramsLabo?.regime_tva ?? "franchise"}
+          tauxTvaDefaut={Number(paramsLabo?.taux_tva_defaut ?? 21)}
           pendingCommandes={pendingCommandes}
           factures={(factures || []).map((f: any) => ({
             id: f.id,

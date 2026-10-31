@@ -275,6 +275,23 @@ export type BillitCreditNoteInput = {
   lines: BillitInvoiceInput["lines"];
 };
 
+async function findBillitOrderByNumber(
+  admin: BillitAdmin,
+  orderNumber: string,
+  orderType: "Invoice" | "CreditNote"
+): Promise<number | null> {
+  const escapedNumber = orderNumber.replaceAll("'", "''");
+  const filter = `OrderNumber eq '${escapedNumber}' and OrderType eq '${orderType}'`;
+  const query = new URLSearchParams({ $filter: filter }).toString();
+  const result = await callBillitApi<{ Items?: { OrderID?: number | string; OrderNumber?: string }[] }>(
+    admin,
+    `/v1/orders?${query}`
+  );
+  const match = result.Items?.find((order) => order.OrderNumber === orderNumber);
+  const orderId = Number(match?.OrderID);
+  return Number.isSafeInteger(orderId) && orderId > 0 ? orderId : null;
+}
+
 export function formatBillitDateInBrussels(date: Date): string {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en", {
@@ -377,6 +394,9 @@ export async function createBillitSalesInvoice(
     throw new Error("Envoi bloqué : demande à Billit le code de ventilation belge pour la franchise, puis configure BILLIT_FRANCHISE_VENTILATION_CODE.");
   }
 
+  const existingOrderId = await findBillitOrderByNumber(admin, input.numero, "Invoice");
+  if (existingOrderId) return { orderId: existingOrderId, orderNumber: input.numero };
+
   const orderLines = input.lines.map((line) => ({
     Quantity: line.quantity,
     UnitPriceExcl: line.unitPriceExcl,
@@ -418,6 +438,9 @@ export async function createBillitCreditNote(
   if (input.lines.some((line) => line.vatCategory === "E") && !exemptionCode) {
     throw new Error("Envoi bloqué : le code belge de ventilation pour la franchise doit être confirmé par Billit.");
   }
+
+  const existingOrderId = await findBillitOrderByNumber(admin, input.numero, "CreditNote");
+  if (existingOrderId) return { orderId: existingOrderId, orderNumber: input.numero };
 
   const created = await callBillitApi<number | { OrderID?: number | string; ID?: number | string }>(admin, "/v1/orders", {
     method: "POST",

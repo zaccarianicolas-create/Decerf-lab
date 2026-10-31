@@ -1,49 +1,41 @@
 # Mémo — Intégration Billit / Peppol
 
-**État au 25 octobre 2026**
+**État vérifié au 31 octobre 2026**
 
-**Mise à jour au 30 octobre 2026**
+## État du système
 
-- Le stockage des jetons OAuth chiffrés a été ajouté dans `billit_connections`; la migration `20261030120000_billit_sandbox_connection.sql` est appliquée au projet Supabase lié.
-- Le panneau de paramètres reconnaît une API key Sandbox ou une connexion OAuth, et permet d’envoyer une facture technique fictive au Sandbox. Aucun flux métier de facture réelle n’envoie encore vers Peppol.
-- Le test peut relire l’`OrderStatus`, `IsSent` et l’indicateur de livraison via `GET /v1/orders/{OrderID}`. Le polling est manuel dans le panneau; aucun webhook n’est configuré.
-- Le connecteur accepte aussi l’API key Billit privée (non commerciale) : headers `ApiKey` et `partyID`. La clé API et le Party ID doivent provenir du même compte Sandbox.
-- Le code impose une URL HTTPS publique identique à l’origine du callback. Pour le domaine de production après déploiement, l’URL prévue est `https://www.decerf-lab.be/api/admin/billit/callback`.
+- La migration de connexion privée et les migrations de synchronisation facture/avoir sont appliquées au Supabase distant.
+- Le projet local utilise une API key et un Party ID Sandbox. Les variables de Production, l’activation Production et le code belge de franchise sont absents/non activés.
+- Les factures Decerf restent la source du brouillon, des lignes, des montants et du solde local. Quand l’envoi Production est explicitement activé, la validation crée l’Order Billit, l’envoie à Peppol, récupère le PDF Billit et le conserve dans le stockage privé des factures.
+- Le dashboard admin et le dashboard dentiste peuvent actualiser manuellement le statut Billit, la livraison et le solde. Les virements saisis par l’admin sont transmis à Billit uniquement si la facture et la configuration sont en Production.
+- Le dashboard admin permet de créer un brouillon de facture libre (ex. produit hors catalogue) pour un dentiste. Il suit le même parcours de validation que les factures issues de commandes.
+- Le dashboard admin permet de préparer un avoir total. Son émission est réservée à une facture réellement émise par Billit et est bloquée tant que Production n’est pas prête. Les avoirs partiels ne sont pas encore pris en charge.
+- Les rappels automatiques ne sont pas implémentés dans Decerf. Le modèle Billit expose des champs de rappel, mais la configuration et le calendrier des relances doivent être confirmés dans le compte Billit. Il faudra choisir un seul système de relance pour éviter les doublons.
 
-**Test API key Sandbox au 31 octobre 2026**
+## Résultats Sandbox
 
-- La clé API et le Party ID configurés localement ont permis la création réelle d’une facture fictive Billit (`OrderID 3488116`). La clé n’est pas enregistrée dans ce mémo.
-- Le premier envoi API a été refusé car le destinataire fictif n’est pas actif sur Peppol. Après une action manuelle dans Billit, le GET de statut indique `OrderStatus: ToPay`, `IsSent: true`, `IsDocumentDelivered: false`.
-- Le statut confirme qu’un envoi est marqué comme lancé, pas que le destinataire l’a reçu. Pour valider une livraison Peppol, utiliser un destinataire Sandbox inscrit sur Peppol ou celui recommandé par Billit.
+- Facture fictive `DL-SANDBOX-1793403864498`, Billit `OrderID 3488116` : créée via API. Après action manuelle dans Billit, `IsSent: true`, `OrderStatus: ToPay`, mais `IsDocumentDelivered: false`.
+- Note de crédit fictive `DL-CN-SANDBOX-1793407190609`, Billit `OrderID 3488319`, liée à la facture test : créée via API ; envoi Peppol refusé car le destinataire fictif n’est pas inscrit/actif sur Peppol. Elle reste `ToSend` et non livrée.
+- Les deux tests utilisent un destinataire fictif et ne figurent pas dans les factures Decerf.
 
-## Point d’arrêt
+## Rappels
 
-Ne pas connecter Billit Production ni envoyer de facture réelle avant d’avoir le numéro BCE, le statut TVA confirmé et une intégration testée en Sandbox. Reprendre ce mémo dès que le BCE est attribué.
+- Decerf envoie actuellement l’email d’émission initial, mais ne planifie pas les relances d’échéance ou d’impayé.
+- Billit peut exposer `LastReminder` et `RemindersSent` dans les données de facture ; le réglage de relance n’est ni configuré ni synchronisé ici.
+- Avant Production, confirmer avec Billit le réglage de rappel automatique du compte et décider si Billit ou Decerf en est l’unique expéditeur. Ne pas activer les deux sans coordination.
 
-## État actuel de Decerf Lab
+## Conditions avant Production
 
-- Aucune connexion API Billit n’est encore implémentée. Aucune facture n’est envoyée à Billit ou à Peppol.
-- Les factures sont créées, calculées, validées et produites en PDF dans Decerf Lab.
-- Le catalogue conserve un taux et une catégorie TVA par service, avec surcharge possible par option.
-- Le réglage « Activer la franchise de TVA » agit immédiatement sur les nouveaux brouillons : activé = 0 % et catégorie exonérée; désactivé = taux du catalogue. Les brouillons et factures déjà créés gardent leur snapshot.
-- Le régime prévu au démarrage est la franchise, à confirmer avec le comptable et Billit avant émission réelle.
+1. Confirmer avec le comptable le statut TVA, la date d’effet, la mention légale et le `VentilationCode`/`TaxExemptionReasonCode` belge exact pour la franchise. Le code `24` indiqué comme « marge » ne doit pas servir de code de franchise.
+2. Terminer les essais Sandbox avec un destinataire Sandbox réellement inscrit à Peppol : facture standard, franchise après validation du code, note de crédit, livraison, PDF/UBL, paiement partiel et paiement complet.
+3. Vérifier les relances dans Billit et choisir le système responsable pour éviter les emails en double.
+4. Faire valider le compte MyBillit Production et son inscription Peppol si requise ; obtenir le Party ID et la clé API Production séparés.
+5. Déployer la version et configurer les secrets uniquement dans l’environnement serveur sécurisé. Ne jamais copier les secrets dans le chat, le code ou une variable `NEXT_PUBLIC_`.
+6. Après validation comptable et tests, activer explicitement les variables Production listées ci-dessous. Toute facture envoyée via `https://api.billit.be` est une vraie facture.
 
-## Étapes à la réception du BCE
+Variables Production : `BILLIT_ENV=production`, `BILLIT_PRODUCTION_API_KEY`, `BILLIT_PRODUCTION_PARTY_ID`, `BILLIT_ENABLE_PRODUCTION=true`, `BILLIT_SEND_REAL_INVOICES=true` et, après confirmation écrite par Billit, `BILLIT_FRANCHISE_VENTILATION_CODE`.
 
-1. Confirmer auprès du comptable le statut TVA exact, la date d’effet et la mention légale applicable à la franchise belge.
-2. Compléter les paramètres identité du labo : BCE, numéro TVA si applicable, téléphone, adresse et email de contact.
-3. Créer un compte **Billit Sandbox** et obtenir le Party ID du laboratoire. La documentation Billit indique qu’un email et un numéro TVA valide sont demandés à l’inscription; si la TVA n’est pas encore activée, demander au support Billit si l’ouverture Sandbox est possible avec le BCE ou une autre procédure.
-4. Créer une URL de retour HTTPS publique pour OAuth (staging recommandé; Billit indique que localhost n’est pas accepté comme redirect URI).
-5. Demander à Billit les identifiants OAuth Sandbox en fournissant les quatre éléments requis : Party ID, URL de retour, nom de l’application et environnement Sandbox.
-6. Stocker les identifiants uniquement dans les variables d’environnement privées du serveur. Ne jamais les envoyer dans le chat, le code source ou le navigateur.
-	Variables pour API key : `BILLIT_API_KEY` et `BILLIT_PARTY_ID`.
-	Variables si OAuth est choisi : `BILLIT_CLIENT_ID`, `BILLIT_CLIENT_SECRET`, `BILLIT_PARTY_ID`, `BILLIT_REDIRECT_URI` et `BILLIT_TOKEN_ENCRYPTION_KEY`.
-	`BILLIT_TOKEN_ENCRYPTION_KEY` doit être une clé aléatoire Base64 de 32 octets; générer avec `openssl rand -base64 32`. Configurer ces variables dans l’environnement serveur déployé, jamais avec le préfixe `NEXT_PUBLIC_`.
-7. Implémenter l’authentification OAuth côté serveur, le renouvellement sécurisé des tokens et la déconnexion/révocation d’accès.
-8. Construire le mapping de facture Decerf Lab vers Billit `/v1/orders` : parties, BCE/TVA, adresses, lignes, prix, références, échéance, catégories et motifs TVA.
-9. Faire confirmer par Billit le `VentilationCode` exact et le `TaxExemptionReason/Code` pour la franchise **belge**. Ne pas copier les codes français `VATEX-FR-FRANCHISE` de leur page française et ne pas assimiler le code 24 au régime franchise (leur tableau belge le décrit comme marge).
-10. Envoyer uniquement des factures de test fictives via l’API Sandbox, puis vérifier la réponse, le PDF/UBL, le statut et les erreurs de réception Peppol. Ajouter une clé d’idempotence ou une référence externe pour éviter les doublons.
-11. Après tests et validation comptable, créer/faire vérifier le compte Production et demander les identifiants OAuth Production séparés. L’URL Production est `https://api.billit.be`; l’API Sandbox est `https://api.sandbox.billit.be`. Les appels Production ont des effets réels.
+La Production reste verrouillée tant que ces variables ne sont pas configurées. Le Sandbox utilise `https://api.sandbox.billit.be`; la Production utilise `https://api.billit.be`.
 
 ## Documentation Billit
 
@@ -71,9 +63,12 @@ Ne pas connecter Billit Production ni envoyer de facture réelle avant d’avoir
 ## Parcours actuellement implémenté
 
 - Connexion réservée à l’administrateur depuis Paramètres > Facturation électronique Peppol.
-- Vérification de l’état OAuth et déconnexion.
-- API key privée envoyée dans le header `ApiKey`, avec le compte ciblé dans `partyID`; en alternative, échange/renouvellement OAuth côté serveur avec access token et refresh token chiffrés en AES-256-GCM dans une table inaccessible à `anon` et `authenticated`.
-- Route de test disponible dans le code : elle crée une facture de 1 EUR avec destinataire fictif, demande son envoi Peppol dans le Sandbox, puis permet de relire son statut avec l’OrderID. Elle n’utilise aucun client ni aucune facture Decerf Lab.
-- L’API et l’URL sont fixées à Sandbox dans le code. L’activation de Production nécessite une modification explicite, une validation métier et des identifiants Production séparés.
+- API key privée envoyée dans le header `ApiKey`, avec le compte ciblé dans `partyID`; OAuth reste disponible en alternative avec tokens chiffrés et séparés par environnement.
+- La validation d’un brouillon Decerf crée/envoie un Order Billit uniquement si Production est explicitement activée. La création recherche d’abord l’OrderNumber pour réduire les doublons en cas de retry.
+- Les PDF Billit sont stockés dans le bucket privé et utilisés dans le dashboard/email quand le flux Production est actif; les statuts et soldes peuvent être synchronisés manuellement.
+- L’admin peut préparer un brouillon de facture libre et un avoir total. L’émission de l’avoir exige une facture d’origine déjà présente et envoyée dans Billit Production.
+- Le test Sandbox est distinct du flux métier et n’utilise que des données fictives. Les deux tests de livraison ont confirmé que le destinataire fictif n’est pas actif sur Peppol; aucune livraison réussie n’a encore été validée.
+- La synchronisation est manuelle, sans webhook ni tâche planifiée. Aucun rappel d’échéance automatique n’est envoyé par Decerf.
+- Le flux métier Production n’a pas encore été testé et reste verrouillé. Ne pas activer les variables Production avant confirmation comptable du mapping de franchise et un destinataire Sandbox Peppol actif.
 
 Ne pas cliquer sur le test Sandbox avant que Billit ait confirmé que le compte et l’envoi test sont prêts. Un refus de réseau ou de validation reste possible sur Sandbox.

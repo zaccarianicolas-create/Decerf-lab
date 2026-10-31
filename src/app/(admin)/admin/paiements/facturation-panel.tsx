@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, FilePlus2, RefreshCw } from "lucide-react";
+import { AlertTriangle, FilePlus2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,9 @@ type PendingCommande = {
   date_livraison: string | null;
   dentiste_nom: string;
 };
+
+type DentistOption = { id: string; nom: string; prenom: string; email: string };
+type DirectInvoiceLine = { id: number; description: string; quantite: string; prix_unitaire: string; taux_tva: string };
 
 type FactureRow = {
   id: string;
@@ -87,12 +90,18 @@ function csvExportUrl(
 }
 
 export function FacturationPanel({
+  dentistes,
+  regimeTva,
+  tauxTvaDefaut,
   pendingCommandes,
   factures,
   avoirs,
   ledger,
   billitProductionReady,
 }: {
+  dentistes: DentistOption[];
+  regimeTva: string;
+  tauxTvaDefaut: number;
   pendingCommandes: PendingCommande[];
   factures: FactureRow[];
   avoirs: AvoirRow[];
@@ -111,6 +120,13 @@ export function FacturationPanel({
   const [emittingAvoirId, setEmittingAvoirId] = useState<string | null>(null);
   const [syncingFactureId, setSyncingFactureId] = useState<string | null>(null);
   const [syncingAvoirId, setSyncingAvoirId] = useState<string | null>(null);
+  const [venteLibreOpen, setVenteLibreOpen] = useState(false);
+  const [venteLibreClient, setVenteLibreClient] = useState("");
+  const [venteLibreNotes, setVenteLibreNotes] = useState("");
+  const [venteLibreLines, setVenteLibreLines] = useState<DirectInvoiceLine[]>([
+    { id: 1, description: "", quantite: "1", prix_unitaire: "", taux_tva: String(tauxTvaDefaut) },
+  ]);
+  const [savingVenteLibre, setSavingVenteLibre] = useState(false);
 
   const facturesEnRetard = useMemo(
     () => factures.filter((f) => f.statut === "en_retard").length,
@@ -134,11 +150,47 @@ export function FacturationPanel({
       }
 
       router.refresh();
-    } catch (e: any) {
-      setError(e?.message || "Erreur inattendue");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Erreur inattendue");
     } finally {
       setCreatingCommandeId(null);
     }
+  };
+
+  const createVenteLibre = async () => {
+    setSavingVenteLibre(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/factures/libre", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dentiste_id: venteLibreClient,
+          notes: venteLibreNotes,
+          lignes: venteLibreLines.map((line) => ({
+            description: line.description,
+            quantite: Number(line.quantite),
+            prix_unitaire: Number(line.prix_unitaire),
+            taux_tva: Number(line.taux_tva),
+          })),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Impossible de créer la facture libre.");
+      setVenteLibreOpen(false);
+      setVenteLibreClient("");
+      setVenteLibreNotes("");
+      setVenteLibreLines([{ id: 1, description: "", quantite: "1", prix_unitaire: "", taux_tva: String(tauxTvaDefaut) }]);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible de créer la facture libre.");
+    } finally {
+      setSavingVenteLibre(false);
+    }
+  };
+
+  const updateVenteLibreLine = (id: number, patch: Partial<DirectInvoiceLine>) => {
+    setVenteLibreLines((current) => current.map((line) => line.id === id ? { ...line, ...patch } : line));
   };
 
   const prepareAvoir = async () => {
@@ -221,6 +273,9 @@ export function FacturationPanel({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" onClick={() => setVenteLibreOpen(true)} disabled={dentistes.length === 0}>
+                <FilePlus2 className="mr-1.5 h-4 w-4" /> Facture libre
+              </Button>
               <a href={csvExportUrl("factures", fromDate, toDate)}>
                 <Button variant="outline" size="sm">
                   <Download className="mr-1.5 h-4 w-4" />
@@ -502,6 +557,75 @@ export function FacturationPanel({
               <Button type="button" variant="outline" onClick={() => { setAvoirTarget(null); setAvoirMotif(""); }}>Annuler</Button>
               <Button type="button" disabled={savingAvoir || !avoirMotif.trim()} onClick={prepareAvoir}>
                 {savingAvoir ? "Enregistrement…" : "Créer le brouillon"}
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {venteLibreOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section role="dialog" aria-modal="true" aria-labelledby="vente-libre-title" className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 id="vente-libre-title" className="text-lg font-semibold text-gray-900">Créer une facture libre</h2>
+                <p className="mt-1 text-sm text-gray-600">Vente hors commande et hors catalogue. Le dentiste vérifiera ensuite le brouillon.</p>
+              </div>
+              <button type="button" onClick={() => setVenteLibreOpen(false)} disabled={savingVenteLibre} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <label className="mt-5 block text-sm font-medium text-gray-700">
+              Dentiste client
+              <select value={venteLibreClient} onChange={(event) => setVenteLibreClient(event.target.value)} className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                <option value="">Sélectionner un dentiste</option>
+                {dentistes.map((dentiste) => (
+                  <option key={dentiste.id} value={dentiste.id}>{dentiste.prenom} {dentiste.nom} · {dentiste.email}</option>
+                ))}
+              </select>
+            </label>
+            <div className="mt-5 space-y-3">
+              {venteLibreLines.map((line, index) => (
+                <div key={line.id} className="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-200 p-3 sm:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_auto]">
+                  <label className="text-xs font-medium text-gray-600">
+                    Désignation
+                    <input value={line.description} onChange={(event) => updateVenteLibreLine(line.id, { description: event.target.value })} maxLength={512} placeholder="Ex. Brosse à dents" className="mt-1 w-full rounded-md border border-gray-300 px-2.5 py-2 text-sm text-gray-900" />
+                  </label>
+                  <label className="text-xs font-medium text-gray-600">
+                    Qté
+                    <input type="number" min="1" step="1" value={line.quantite} onChange={(event) => updateVenteLibreLine(line.id, { quantite: event.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900" />
+                  </label>
+                  <label className="text-xs font-medium text-gray-600">
+                    Prix HT (€)
+                    <input type="number" min="0.01" step="0.01" value={line.prix_unitaire} onChange={(event) => updateVenteLibreLine(line.id, { prix_unitaire: event.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900" />
+                  </label>
+                  {regimeTva === "franchise" ? (
+                    <div className="pb-2 text-xs text-gray-600">TVA franchise</div>
+                  ) : (
+                    <label className="text-xs font-medium text-gray-600">
+                      TVA %
+                      <input type="number" min="0" max="100" step="0.01" value={line.taux_tva} onChange={(event) => updateVenteLibreLine(line.id, { taux_tva: event.target.value })} className="mt-1 w-full rounded-md border border-gray-300 px-2 py-2 text-sm text-gray-900" />
+                    </label>
+                  )}
+                  <button type="button" disabled={venteLibreLines.length <= 1} onClick={() => setVenteLibreLines((current) => current.filter((entry) => entry.id !== line.id))} aria-label={`Supprimer la ligne ${index + 1}`} className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" disabled={venteLibreLines.length >= 40} onClick={() => setVenteLibreLines((current) => [...current, { id: Math.max(0, ...current.map((line) => line.id)) + 1, description: "", quantite: "1", prix_unitaire: "", taux_tva: String(tauxTvaDefaut) }])}>
+                <Plus className="mr-1 h-4 w-4" /> Ajouter une ligne
+              </Button>
+            </div>
+            <label className="mt-4 block text-sm font-medium text-gray-700">
+              Notes (facultatif)
+              <textarea value={venteLibreNotes} onChange={(event) => setVenteLibreNotes(event.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm" />
+            </label>
+            {regimeTva === "franchise" && <p className="mt-2 text-xs text-amber-700">Franchise TVA appliquée selon les paramètres du laboratoire.</p>}
+            {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" disabled={savingVenteLibre} onClick={() => setVenteLibreOpen(false)}>Annuler</Button>
+              <Button type="button" disabled={savingVenteLibre || !venteLibreClient || venteLibreLines.some((line) => !line.description.trim() || !Number.isInteger(Number(line.quantite)) || Number(line.quantite) < 1 || Number(line.prix_unitaire) <= 0)} onClick={createVenteLibre}>
+                {savingVenteLibre ? "Création…" : "Créer le brouillon"}
               </Button>
             </div>
           </section>
