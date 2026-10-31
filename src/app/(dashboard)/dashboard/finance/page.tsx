@@ -41,7 +41,7 @@ export default async function DashboardFinancePage({
 
   let facturesQuery = supabase
     .from("factures")
-    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,billit_order_id,commande:commandes(numero)")
+    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,billit_order_id,billit_is_sent,commande:commandes(numero)")
     .eq("dentiste_id", user.id)
     .order("date_emission", { ascending: false })
     .limit(60);
@@ -236,6 +236,7 @@ export default async function DashboardFinancePage({
                           pdfAvailable={Boolean(f.pdf_storage_path)}
                           emailSent={Boolean(f.email_envoye_at)}
                           billitOrderId={f.billit_order_id}
+                          billitIsSent={f.billit_is_sent}
                         />
                       </td>
                     </tr>

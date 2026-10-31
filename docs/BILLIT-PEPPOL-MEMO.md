@@ -9,6 +9,7 @@
 - Les factures Decerf restent la source du brouillon, des lignes, des montants et du solde local. Quand l’envoi Production est explicitement activé, la validation crée l’Order Billit, l’envoie à Peppol, récupère le PDF Billit et le conserve dans le stockage privé des factures.
 - Le dashboard admin et le dashboard dentiste peuvent actualiser manuellement le statut Billit, la livraison et le solde. Les virements saisis par l’admin sont transmis à Billit uniquement si la facture et la configuration sont en Production.
 - Le dashboard admin permet de créer un brouillon de facture libre (ex. produit hors catalogue) pour un dentiste. Il suit le même parcours de validation que les factures issues de commandes.
+- Les CGV publiées et le PDF CGV partagent le même texte/version. L’admin peut exporter le PDF avec entête et coordonnées depuis Paramètres; le PDF est ajouté comme pièce jointe aux factures Billit Production sans remplacer le PDF officiel de facture.
 - Le dashboard admin permet de préparer un avoir total. Son émission est réservée à une facture réellement émise par Billit et est bloquée tant que Production n’est pas prête. Les avoirs partiels ne sont pas encore pris en charge.
 - Les rappels automatiques ne sont pas implémentés dans Decerf. Le modèle Billit expose des champs de rappel, mais la configuration et le calendrier des relances doivent être confirmés dans le compte Billit. Il faudra choisir un seul système de relance pour éviter les doublons.
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HorairesEditor } from "@/components/ui/horaires-editor";
-import { Save } from "lucide-react";
+import { FileText, Save } from "lucide-react";
 
 type ParamValue = string | number | boolean | null | undefined;
 type Params = Record<string, ParamValue>;
@@ -194,6 +194,14 @@ export function BrandingPanel({ initial }: { initial: Params | null }) {
           ))}
         </CardContent>
       </Card>
+
+      <div className="flex justify-end">
+        <a href="/api/admin/parametres/cgv-pdf">
+          <Button type="button" variant="outline">
+            <FileText className="mr-2 h-4 w-4" /> Télécharger les CGV en PDF
+          </Button>
+        </a>
+      </div>
 
       <Card>
         <CardHeader>

@@ -11,12 +11,14 @@ export function FactureActions({
   pdfAvailable,
   emailSent,
   billitOrderId,
+  billitIsSent,
 }: {
   factureId: string;
   statut: string;
   pdfAvailable: boolean;
   emailSent: boolean;
   billitOrderId?: number | null;
+  billitIsSent?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [emailSending, setEmailSending] = useState(false);
@@ -50,6 +52,24 @@ export function FactureActions({
     }
   };
 
+  const retryBillit = async () => {
+    setEmailSending(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/dashboard/factures/${factureId}/valider`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selected_options: [] }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Nouvelle tentative Billit impossible.");
+      window.location.reload();
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : "Nouvelle tentative Billit impossible.");
+      setEmailSending(false);
+    }
+  };
+
   if (statut === "brouillon") {
     return (
       <Link href={`/dashboard/factures/${factureId}`}>
@@ -64,6 +84,12 @@ export function FactureActions({
         <Button size="sm" variant="outline" onClick={synchroniserBillit} disabled={billitSyncing} title="Actualiser le statut de livraison et le solde Billit">
           {billitSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Statut Peppol
+        </Button>
+      )}
+      {billitOrderId && !billitIsSent && (
+        <Button size="sm" variant="outline" onClick={retryBillit} disabled={emailSending}>
+          {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          Réessayer Billit
         </Button>
       )}
       {pdfAvailable && (

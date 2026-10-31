@@ -29,6 +29,7 @@ type FactureRow = {
   solde_du: number;
   billit_order_id: number | null;
   billit_order_status: string | null;
+  billit_is_sent: boolean;
   billit_delivery_status: string | null;
   billit_is_delivered: boolean | null;
   billit_last_error: string | null;
@@ -246,6 +247,25 @@ export function FacturationPanel({
     }
   };
 
+  const retryBillitInvoice = async (factureId: string) => {
+    setSyncingFactureId(factureId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/dashboard/factures/${factureId}/valider`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selected_options: [] }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Nouvelle tentative Billit impossible.");
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Nouvelle tentative Billit impossible.");
+    } finally {
+      setSyncingFactureId(null);
+    }
+  };
+
   const syncAvoirBillit = async (avoirId: string) => {
     setSyncingAvoirId(avoirId);
     setError(null);
@@ -407,6 +427,11 @@ export function FacturationPanel({
                             {f.billit_is_delivered ? " · Livrée" : ""}
                           </p>
                         )}
+                        {f.billit_order_id && !f.billit_is_sent && (
+                          <Button type="button" size="sm" variant="outline" disabled={!billitProductionReady || syncingFactureId === f.id} onClick={() => retryBillitInvoice(f.id)}>
+                            {syncingFactureId === f.id ? "Envoi…" : "Réessayer Billit"}
+                          </Button>
+                        )}
                         {f.billit_last_error && <p className="mt-1 text-xs text-red-700">{f.billit_last_error}</p>}
                       </div>
                       <div className="text-right">
@@ -418,6 +443,11 @@ export function FacturationPanel({
                         {f.billit_order_id && (
                           <Button type="button" size="sm" variant="outline" disabled={syncingFactureId === f.id} onClick={() => syncFactureBillit(f.id)} aria-label="Actualiser le statut Billit">
                             <RefreshCw className={`h-4 w-4 ${syncingFactureId === f.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
+                        {f.billit_order_id && !f.billit_is_sent && billitProductionReady && (
+                          <Button type="button" size="sm" variant="outline" disabled={syncingFactureId === f.id} onClick={() => retryBillitInvoice(f.id)}>
+                            {syncingFactureId === f.id ? "Envoi…" : "Réessayer Billit"}
                           </Button>
                         )}
                         {Number(f.solde_du) > 0 && !["brouillon", "annulee"].includes(f.statut) && (

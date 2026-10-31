@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createFacturePdf } from "@/lib/facture-pdf";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 import { sendEmail, emailTemplates } from "@/lib/email";
+import { getParametresLabo } from "@/lib/parametres-labo";
+import { createConditionsGeneralesPdf } from "@/lib/conditions-generales-pdf";
 import {
   createBillitSalesInvoice,
   downloadBillitOrderPdf,
@@ -23,6 +25,9 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isAdmin = profile?.role === "admin";
 
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
@@ -39,7 +44,6 @@ export async function POST(
     return NextResponse.json({ error: "Sélection d’options invalide." }, { status: 400 });
   }
 
-  const admin = createAdminClient();
   const billitSendEnabled = process.env.BILLIT_SEND_REAL_INVOICES === "true";
   if (billitSendEnabled) {
     try {
@@ -52,11 +56,10 @@ export async function POST(
   }
   const { data: facture, error: factureError } = await admin
     .from("factures")
-    .select("id, numero, statut, dentiste_id, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at, billit_order_id")
+    .select("id, numero, statut, dentiste_id, commande_id, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, billit_pdf_storage_path, email_envoye_at, billit_order_id")
     .eq("id", id)
-    .eq("dentiste_id", user.id)
     .maybeSingle();
-  if (factureError || !facture) {
+  if (factureError || !facture || (!isAdmin && facture.dentiste_id !== user.id)) {
     return NextResponse.json({ error: factureError?.message || "Facture introuvable." }, { status: 404 });
   }
 
@@ -76,7 +79,7 @@ export async function POST(
   const [{ data: updatedFacture, error: updatedError }, { data: lines, error: linesError }] = await Promise.all([
     admin
       .from("factures")
-      .select("id, numero, statut, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, email_envoye_at, billit_order_id")
+      .select("id, numero, statut, dentiste_id, commande_id, montant_ht, montant_tva, montant_ttc, solde_du, date_emission, date_echeance, billing_snapshot, pdf_storage_path, billit_pdf_storage_path, email_envoye_at, billit_order_id")
       .eq("id", facture.id)
       .single(),
     admin
@@ -90,47 +93,42 @@ export async function POST(
   }
 
   const snapshot = updatedFacture.billing_snapshot as unknown as FactureBillingSnapshot;
-  const logo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
-  const bytes = await createFacturePdf({
-    numero: updatedFacture.numero,
-    date_emission: updatedFacture.date_emission,
-    date_echeance: updatedFacture.date_echeance,
-    montant_ht: Number(updatedFacture.montant_ht),
-    montant_tva: Number(updatedFacture.montant_tva),
-    montant_ttc: Number(updatedFacture.montant_ttc),
-    solde_du: Number(updatedFacture.solde_du),
-    snapshot,
-    lignes: lines.map((line) => ({
-      ...line,
-      quantite: Number(line.quantite),
-      prix_unitaire: Number(line.prix_unitaire),
-      taux_tva: Number(line.taux_tva),
-      total_ligne_ht: Number(line.total_ligne_ht),
-      total_ligne_tva: Number(line.total_ligne_tva),
-      total_ligne_ttc: Number(line.total_ligne_ttc),
-    })),
-  }, logo);
-  let emailPdfBytes: Uint8Array = bytes;
-  const path = `${user.id}/${facture.id}/${updatedFacture.numero}.pdf`;
-  const { error: uploadError } = await admin.storage.from("factures").upload(path, bytes, {
-    contentType: "application/pdf",
-    upsert: true,
-    cacheControl: "31536000",
-  });
-  if (uploadError) {
-    return NextResponse.json({
-      error: `Facture validée, mais archivage PDF impossible : ${uploadError.message}`,
-      validated: true,
-      facture_id: facture.id,
-    }, { status: 500 });
-  }
-
-  const { error: pathError } = await admin
-    .from("factures")
-    .update({ pdf_storage_path: path })
-    .eq("id", facture.id);
-  if (pathError) {
-    return NextResponse.json({ error: pathError.message, validated: true }, { status: 500 });
+  let emailPdfBytes: Uint8Array | null = null;
+  let pdfPath: string | null = null;
+  if (!billitSendEnabled) {
+    const logo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
+    emailPdfBytes = await createFacturePdf({
+      numero: updatedFacture.numero,
+      date_emission: updatedFacture.date_emission,
+      date_echeance: updatedFacture.date_echeance,
+      montant_ht: Number(updatedFacture.montant_ht),
+      montant_tva: Number(updatedFacture.montant_tva),
+      montant_ttc: Number(updatedFacture.montant_ttc),
+      solde_du: Number(updatedFacture.solde_du),
+      snapshot,
+      lignes: lines.map((line) => ({
+        ...line,
+        quantite: Number(line.quantite),
+        prix_unitaire: Number(line.prix_unitaire),
+        taux_tva: Number(line.taux_tva),
+        total_ligne_ht: Number(line.total_ligne_ht),
+        total_ligne_tva: Number(line.total_ligne_tva),
+        total_ligne_ttc: Number(line.total_ligne_ttc),
+      })),
+    }, logo);
+    pdfPath = `${user.id}/${facture.id}/${updatedFacture.numero}.pdf`;
+    const { error: uploadError } = await admin.storage.from("factures").upload(pdfPath, emailPdfBytes, {
+      contentType: "application/pdf",
+      upsert: true,
+      cacheControl: "31536000",
+    });
+    if (uploadError) {
+      return NextResponse.json({ error: `Facture validée, mais archivage PDF impossible : ${uploadError.message}`, validated: true, facture_id: facture.id }, { status: 500 });
+    }
+    const { error: pathError } = await admin.from("factures").update({ pdf_storage_path: pdfPath }).eq("id", facture.id);
+    if (pathError) return NextResponse.json({ error: pathError.message, validated: true, facture_id: facture.id }, { status: 500 });
+  } else if (!updatedFacture.billit_pdf_storage_path) {
+    await admin.from("factures").update({ pdf_storage_path: null }).eq("id", facture.id);
   }
 
   let billitOrderId = updatedFacture.billit_order_id ? Number(updatedFacture.billit_order_id) : null;
@@ -138,6 +136,9 @@ export async function POST(
   if (billitSendEnabled) {
     try {
       if (!billitOrderId) {
+        const labo = await getParametresLabo();
+        const cgvLogo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
+        const cgvPdf = await createConditionsGeneralesPdf(labo, cgvLogo);
         const created = await createBillitSalesInvoice(admin, {
           numero: updatedFacture.numero,
           dateEmission: updatedFacture.date_emission,
@@ -150,6 +151,7 @@ export async function POST(
             vatPercent: Number(line.taux_tva),
             vatCategory: line.categorie_tva_peppol as "S" | "Z" | "E" | undefined,
           })),
+          attachments: [{ fileName: "CGV-Decerf-Lab.pdf", bytes: cgvPdf }],
         });
         billitOrderId = created.orderId;
         const { error: orderIdError } = await admin.from("factures").update({
@@ -168,15 +170,35 @@ export async function POST(
         billitStatus = await getBillitOrderStatus(admin, billitOrderId);
       }
 
+      if (billitStatus.totalExcl !== null && billitStatus.totalVat !== null && billitStatus.totalIncl !== null) {
+        const billitBalance = Math.max(0, billitStatus.toPay ?? billitStatus.totalIncl);
+        const { error: totalsError } = await admin.from("factures").update({
+          montant_ht: billitStatus.totalExcl,
+          montant_tva: billitStatus.totalVat,
+          montant_ttc: billitStatus.totalIncl,
+          solde_du: billitBalance,
+          billit_paid_amount: Math.max(0, billitStatus.totalIncl - billitBalance),
+        }).eq("id", facture.id);
+        if (totalsError) throw new Error(`Facture Billit envoyée, mais la synchronisation des montants a échoué : ${totalsError.message}`);
+        if (updatedFacture.commande_id) {
+          await admin.from("ecritures_compte_client")
+            .update({ montant: billitStatus.totalIncl })
+            .eq("facture_id", facture.id)
+            .eq("type_ecriture", "facture");
+          await admin.from("commandes").update({ montant_total: billitStatus.totalIncl }).eq("id", updatedFacture.commande_id);
+        }
+      }
+
       const officialPdf = await downloadBillitOrderPdf(admin, billitOrderId);
       emailPdfBytes = officialPdf.bytes;
-      const billitPdfPath = `${user.id}/${facture.id}/billit-${officialPdf.fileName}`;
+      const billitPdfPath = `${facture.dentiste_id}/${facture.id}/billit-${officialPdf.fileName}`;
       const { error: billitPdfError } = await admin.storage.from("factures").upload(billitPdfPath, officialPdf.bytes, {
         contentType: officialPdf.mimeType,
         upsert: true,
         cacheControl: "31536000",
       });
       if (billitPdfError) throw new Error(`Facture Billit créée, mais archivage du PDF officiel impossible : ${billitPdfError.message}`);
+      pdfPath = billitPdfPath;
 
       const { error: billitUpdateError } = await admin.from("factures").update({
         billit_status: billitStatus.isSent ? "sent" : "created",
@@ -202,7 +224,7 @@ export async function POST(
   }
 
   let emailSent = Boolean(updatedFacture.email_envoye_at);
-  if (!emailSent && snapshot.client.email) {
+  if (!emailSent && snapshot.client.email && emailPdfBytes) {
     const template = emailTemplates.facture_emise({
       prenom: snapshot.client.prenom,
       numero: updatedFacture.numero,
@@ -227,7 +249,9 @@ export async function POST(
     }
   }
 
-  const { data: signed } = await admin.storage.from("factures").createSignedUrl(path, 60);
+  const signedResult = pdfPath
+    ? await admin.storage.from("factures").createSignedUrl(pdfPath, 60)
+    : { data: null };
   return NextResponse.json({
     success: true,
     facture_id: facture.id,
@@ -240,7 +264,7 @@ export async function POST(
     billit_order_status: billitStatus?.orderStatus ?? null,
     billit_delivery_status: billitStatus?.deliveryStatus ?? null,
     billit_is_delivered: billitStatus?.delivered ?? null,
-    pdf_url: signed?.signedUrl ?? null,
+    pdf_url: signedResult.data?.signedUrl ?? null,
     already_validated: Boolean(validation?.already_validated),
   });
 }

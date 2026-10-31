@@ -16,6 +16,7 @@ type Facture = {
   pdf_storage_path: string | null;
   email_envoye_at: string | null;
   billit_order_id: number | null;
+  billit_is_sent: boolean;
   commande: { numero: string } | { numero: string }[] | null;
 };
 
@@ -119,6 +120,7 @@ export function FacturesList({ factures }: { factures: Facture[] }) {
                   pdfAvailable={Boolean(facture.pdf_storage_path)}
                   emailSent={Boolean(facture.email_envoye_at)}
                   billitOrderId={facture.billit_order_id}
+                  billitIsSent={facture.billit_is_sent}
                 />
               </CardContent>
                 );

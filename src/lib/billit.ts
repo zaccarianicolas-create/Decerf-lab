@@ -262,6 +262,7 @@ export type BillitInvoiceInput = {
     vatPercent: number;
     vatCategory?: "S" | "Z" | "E";
   }[];
+  attachments?: { fileName: string; bytes: Uint8Array }[];
 };
 
 export type BillitCreatedOrder = { orderId: number; orderNumber: string };
@@ -417,6 +418,12 @@ export async function createBillitSalesInvoice(
       PaymentTerms: input.snapshot.issuer.conditions_paiement,
       Customer: buildCustomer(input.snapshot),
       OrderLines: orderLines,
+      ...(input.attachments?.length ? {
+        Attachments: input.attachments.map((file) => ({
+          FileName: file.fileName,
+          FileContent: Buffer.from(file.bytes).toString("base64"),
+        })),
+      } : {}),
     },
   });
   const orderId = Number(typeof created === "number" ? created : created?.OrderID ?? created?.ID);
