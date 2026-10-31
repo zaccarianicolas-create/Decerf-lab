@@ -13,8 +13,8 @@
 **Test API key Sandbox au 31 octobre 2026**
 
 - La clé API et le Party ID configurés localement ont permis la création réelle d’une facture fictive Billit (`OrderID 3488116`). La clé n’est pas enregistrée dans ce mémo.
-- Billit a refusé la commande `commands/send` car le destinataire fictif n’est pas actif sur Peppol. Le GET de statut indique `OrderStatus: ToSend`, `IsSent: false`, `IsDocumentDelivered: false`.
-- Ne pas relancer ce test avec le même faux destinataire. Pour valider le transport, utiliser un destinataire de test Sandbox inscrit sur Peppol ou celui recommandé par Billit.
+- Le premier envoi API a été refusé car le destinataire fictif n’est pas actif sur Peppol. Après une action manuelle dans Billit, le GET de statut indique `OrderStatus: ToPay`, `IsSent: true`, `IsDocumentDelivered: false`.
+- Le statut confirme qu’un envoi est marqué comme lancé, pas que le destinataire l’a reçu. Pour valider une livraison Peppol, utiliser un destinataire Sandbox inscrit sur Peppol ou celui recommandé par Billit.
 
 ## Point d’arrêt
 
