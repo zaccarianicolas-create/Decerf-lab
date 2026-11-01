@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
       .from("factures")
       .select("numero,statut,date_emission,date_echeance,montant_ht,montant_tva,montant_ttc,solde_du,devise,commande:commandes(numero)")
       .eq("dentiste_id", user.id)
+      .neq("statut", "brouillon")
+      .eq("billit_is_sent", true)
+      .not("billit_pdf_storage_path", "is", null)
       .order("date_emission", { ascending: false })
       .limit(1000);
 
@@ -84,6 +87,8 @@ export async function GET(request: NextRequest) {
       .from("avoirs")
       .select("numero,statut,motif,montant,solde_restant,date_emission,facture:factures(numero)")
       .eq("dentiste_id", user.id)
+      .eq("billit_is_sent", true)
+      .not("billit_pdf_storage_path", "is", null)
       .order("date_emission", { ascending: false })
       .limit(1000);
 
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("ecritures_compte_client")
-    .select("created_at,type_ecriture,libelle,montant,facture:factures(numero),avoir:avoirs(numero)")
+    .select("created_at,type_ecriture,libelle,montant,facture:factures(numero,billit_is_sent,billit_pdf_storage_path),avoir:avoirs(numero,billit_is_sent,billit_pdf_storage_path)")
     .eq("dentiste_id", user.id)
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -124,7 +129,12 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  const rows = (data || []).map((l: any) => ({
+  const visibleEntries = (data ?? []).filter((entry) => {
+    const invoice = Array.isArray(entry.facture) ? entry.facture[0] : entry.facture;
+    const credit = Array.isArray(entry.avoir) ? entry.avoir[0] : entry.avoir;
+    return (!invoice || (invoice.billit_is_sent && invoice.billit_pdf_storage_path)) && (!credit || (credit.billit_is_sent && credit.billit_pdf_storage_path));
+  });
+  const rows = visibleEntries.map((l: any) => ({
     created_at: l.created_at,
     type_ecriture: l.type_ecriture,
     libelle: l.libelle,

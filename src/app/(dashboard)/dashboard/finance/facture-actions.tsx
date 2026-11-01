@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Download, Loader2, Mail, RefreshCw } from "lucide-react";
@@ -11,7 +10,6 @@ export function FactureActions({
   pdfAvailable,
   emailSent,
   billitOrderId,
-  billitIsSent,
 }: {
   factureId: string;
   statut: string;
@@ -52,30 +50,8 @@ export function FactureActions({
     }
   };
 
-  const retryBillit = async () => {
-    setEmailSending(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/dashboard/factures/${factureId}/valider`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selected_options: [] }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Nouvelle tentative Billit impossible.");
-      window.location.reload();
-    } catch (retryError) {
-      setError(retryError instanceof Error ? retryError.message : "Nouvelle tentative Billit impossible.");
-      setEmailSending(false);
-    }
-  };
-
   if (statut === "brouillon") {
-    return (
-      <Link href={`/dashboard/factures/${factureId}`}>
-        <Button size="sm">Vérifier et valider</Button>
-      </Link>
-    );
+    return null;
   }
 
   return (
@@ -84,12 +60,6 @@ export function FactureActions({
         <Button size="sm" variant="outline" onClick={synchroniserBillit} disabled={billitSyncing} title="Actualiser le statut de livraison et le solde Billit">
           {billitSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Statut Peppol
-        </Button>
-      )}
-      {billitOrderId && !billitIsSent && (
-        <Button size="sm" variant="outline" onClick={retryBillit} disabled={emailSending}>
-          {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-          Réessayer Billit
         </Button>
       )}
       {pdfAvailable && (
@@ -102,7 +72,7 @@ export function FactureActions({
       {pdfAvailable && !emailSent && (
         <Button size="sm" variant="outline" onClick={renvoyerFacture} disabled={emailSending}>
           {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-          Renvoyer
+          Recevoir par email
         </Button>
       )}
       {pdfAvailable && emailSent && <Check className="h-4 w-4 text-emerald-600" aria-label="Facture envoyée par e-mail" />}

@@ -1,9 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { createFacturePdf } from "@/lib/facture-pdf";
 import type { FactureBillingSnapshot } from "@/lib/facture-workflow";
 import { sendEmail, emailTemplates } from "@/lib/email";
 import {
@@ -24,12 +21,15 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("role, actif, statut_compte").eq("id", user.id).maybeSingle();
   const isAdmin = profile?.role === "admin";
+  if (!isAdmin || !profile?.actif || profile.statut_compte !== "approuve") {
+    return NextResponse.json({ error: "Émission réservée au laboratoire" }, { status: 403 });
+  }
 
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  const selectedOptions: unknown = body.selected_options;
+  let selectedOptions: unknown = body.selected_options ?? [];
   if (
     !Array.isArray(selectedOptions) ||
     selectedOptions.some((selection) =>
@@ -43,6 +43,7 @@ export async function POST(
   }
 
   const billitSendEnabled = process.env.BILLIT_SEND_REAL_INVOICES === "true";
+  if (!billitSendEnabled) return NextResponse.json({ error: "L’émission est réservée au laboratoire et reste bloquée tant que Billit Production n’est pas activé." }, { status: 409 });
   if (billitSendEnabled) {
     try {
       if (getBillitConfig().environment !== "production") {
@@ -59,6 +60,10 @@ export async function POST(
     .maybeSingle();
   if (factureError || !facture || (!isAdmin && facture.dentiste_id !== user.id)) {
     return NextResponse.json({ error: factureError?.message || "Facture introuvable." }, { status: 404 });
+  }
+  if (body.selected_options === undefined) {
+    const draftSnapshot = facture.billing_snapshot as unknown as FactureBillingSnapshot;
+    selectedOptions = draftSnapshot.items.flatMap((item) => (item.options_preselectionnees ?? []).map((service_option_id) => ({ commande_item_id: item.commande_item_id, service_option_id })));
   }
 
   const { data: validation, error: validationError } = await admin.rpc(
@@ -93,39 +98,7 @@ export async function POST(
   const snapshot = updatedFacture.billing_snapshot as unknown as FactureBillingSnapshot;
   let emailPdfBytes: Uint8Array | null = null;
   let pdfPath: string | null = null;
-  if (!billitSendEnabled) {
-    const logo = await readFile(join(process.cwd(), "public", "images", "logodecerflabslogan.png"));
-    emailPdfBytes = await createFacturePdf({
-      numero: updatedFacture.numero,
-      date_emission: updatedFacture.date_emission,
-      date_echeance: updatedFacture.date_echeance,
-      montant_ht: Number(updatedFacture.montant_ht),
-      montant_tva: Number(updatedFacture.montant_tva),
-      montant_ttc: Number(updatedFacture.montant_ttc),
-      solde_du: Number(updatedFacture.solde_du),
-      snapshot,
-      lignes: lines.map((line) => ({
-        ...line,
-        quantite: Number(line.quantite),
-        prix_unitaire: Number(line.prix_unitaire),
-        taux_tva: Number(line.taux_tva),
-        total_ligne_ht: Number(line.total_ligne_ht),
-        total_ligne_tva: Number(line.total_ligne_tva),
-        total_ligne_ttc: Number(line.total_ligne_ttc),
-      })),
-    }, logo);
-    pdfPath = `${user.id}/${facture.id}/${updatedFacture.numero}.pdf`;
-    const { error: uploadError } = await admin.storage.from("factures").upload(pdfPath, emailPdfBytes, {
-      contentType: "application/pdf",
-      upsert: true,
-      cacheControl: "31536000",
-    });
-    if (uploadError) {
-      return NextResponse.json({ error: `Facture validée, mais archivage PDF impossible : ${uploadError.message}`, validated: true, facture_id: facture.id }, { status: 500 });
-    }
-    const { error: pathError } = await admin.from("factures").update({ pdf_storage_path: pdfPath }).eq("id", facture.id);
-    if (pathError) return NextResponse.json({ error: pathError.message, validated: true, facture_id: facture.id }, { status: 500 });
-  } else if (!updatedFacture.billit_pdf_storage_path) {
+  if (!updatedFacture.billit_pdf_storage_path) {
     await admin.from("factures").update({ pdf_storage_path: null }).eq("id", facture.id);
   }
 

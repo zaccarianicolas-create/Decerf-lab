@@ -16,17 +16,19 @@ export async function GET(
   const admin = createAdminClient();
   const { data: facture, error } = await admin
     .from("factures")
-    .select("pdf_storage_path")
+    .select("billit_pdf_storage_path")
     .eq("id", id)
     .eq("dentiste_id", user.id)
+    .neq("statut", "brouillon")
+    .eq("billit_is_sent", true)
     .maybeSingle();
-  if (error || !facture?.pdf_storage_path) {
+  if (error || !facture?.billit_pdf_storage_path) {
     return NextResponse.json({ error: error?.message || "PDF introuvable." }, { status: 404 });
   }
 
   const { data, error: signedUrlError } = await admin.storage
     .from("factures")
-    .createSignedUrl(facture.pdf_storage_path, 60);
+    .createSignedUrl(facture.billit_pdf_storage_path, 60);
   if (signedUrlError || !data?.signedUrl) {
     return NextResponse.json({ error: signedUrlError?.message || "PDF indisponible." }, { status: 500 });
   }

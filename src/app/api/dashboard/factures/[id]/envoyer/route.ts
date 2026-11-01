@@ -18,20 +18,21 @@ export async function POST(
   const admin = createAdminClient();
   const { data: facture, error } = await admin
     .from("factures")
-    .select("id, numero, statut, dentiste_id, montant_ttc, billing_snapshot, pdf_storage_path")
+    .select("id, numero, statut, dentiste_id, montant_ttc, billing_snapshot, billit_pdf_storage_path")
     .eq("id", id)
     .eq("dentiste_id", user.id)
+    .eq("billit_is_sent", true)
     .maybeSingle();
   if (error || !facture) {
     return NextResponse.json({ error: error?.message || "Facture introuvable." }, { status: 404 });
   }
-  if (facture.statut === "brouillon" || !facture.pdf_storage_path) {
+  if (facture.statut === "brouillon" || !facture.billit_pdf_storage_path) {
     return NextResponse.json({ error: "La facture PDF n’est pas encore disponible." }, { status: 409 });
   }
 
   const { data: pdf, error: downloadError } = await admin.storage
     .from("factures")
-    .download(facture.pdf_storage_path);
+    .download(facture.billit_pdf_storage_path);
   if (downloadError || !pdf) {
     return NextResponse.json({ error: downloadError?.message || "PDF introuvable." }, { status: 500 });
   }

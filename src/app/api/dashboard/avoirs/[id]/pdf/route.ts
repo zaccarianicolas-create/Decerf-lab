@@ -15,7 +15,7 @@ export async function GET(
   const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
   const { data: credit, error } = await admin
     .from("avoirs")
-    .select("id, numero, dentiste_id, billit_pdf_storage_path")
+    .select("id, numero, dentiste_id, billit_pdf_storage_path, billit_is_sent")
     .eq("id", id)
     .maybeSingle();
   if (error || !credit) {
@@ -24,7 +24,7 @@ export async function GET(
   if (credit.dentiste_id !== user.id && profile?.role !== "admin") {
     return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
   }
-  if (!credit.billit_pdf_storage_path) {
+  if (!credit.billit_pdf_storage_path || (profile?.role !== "admin" && !credit.billit_is_sent)) {
     return NextResponse.json({ error: "Le PDF Billit n’est pas encore disponible." }, { status: 404 });
   }
 

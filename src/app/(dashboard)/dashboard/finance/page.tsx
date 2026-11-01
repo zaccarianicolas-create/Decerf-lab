@@ -4,17 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Receipt, Scale, TrendingDown } from "lucide-react";
-import { FactureActions } from "./facture-actions";
-
-function factureBadge(statut: string) {
-  if (statut === "brouillon") return <Badge variant="warning">À valider</Badge>;
-  if (statut === "payee") return <Badge variant="success">Payée</Badge>;
-  if (statut === "partiellement_payee") return <Badge variant="warning">Partielle</Badge>;
-  if (statut === "en_retard") return <Badge variant="danger">En retard</Badge>;
-  if (statut === "annulee") return <Badge className="bg-gray-100 text-gray-700">Annulée</Badge>;
-  if (statut === "envoyee") return <Badge variant="info">Envoyée</Badge>;
-  return <Badge variant="default">Émise</Badge>;
-}
+import { FinanceTabs } from "./finance-tabs";
 
 function csvExportUrl(type: "factures" | "avoirs" | "ledger", from?: string, to?: string) {
   const params = new URLSearchParams({ type });
@@ -41,8 +31,11 @@ export default async function DashboardFinancePage({
 
   let facturesQuery = supabase
     .from("factures")
-    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,pdf_storage_path,email_envoye_at,billit_order_id,billit_is_sent,commande:commandes(numero)")
+    .select("id,numero,statut,date_emission,date_echeance,montant_ttc,solde_du,billit_pdf_storage_path,email_envoye_at,billit_order_id,billit_is_sent,commande:commandes(numero)")
     .eq("dentiste_id", user.id)
+    .neq("statut", "brouillon")
+    .eq("billit_is_sent", true)
+    .not("billit_pdf_storage_path", "is", null)
     .order("date_emission", { ascending: false })
     .limit(60);
 
@@ -53,6 +46,8 @@ export default async function DashboardFinancePage({
     .from("avoirs")
     .select("id,numero,statut,motif,montant,solde_restant,date_emission,billit_pdf_storage_path,billit_order_status,billit_delivery_status,billit_is_delivered,billit_last_error,facture:factures(numero)")
     .eq("dentiste_id", user.id)
+    .eq("billit_is_sent", true)
+    .not("billit_pdf_storage_path", "is", null)
     .order("date_emission", { ascending: false })
     .limit(40);
 
@@ -61,7 +56,7 @@ export default async function DashboardFinancePage({
 
   let ledgerQuery = supabase
     .from("ecritures_compte_client")
-    .select("id,created_at,type_ecriture,libelle,montant,facture:factures(numero),avoir:avoirs(numero)")
+    .select("id,created_at,type_ecriture,libelle,montant,facture:factures(numero,billit_is_sent,billit_pdf_storage_path),avoir:avoirs(numero,billit_is_sent,billit_pdf_storage_path)")
     .eq("dentiste_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -75,11 +70,17 @@ export default async function DashboardFinancePage({
     ledgerQuery,
   ]);
 
-  const totalFacture = (factures || []).reduce(
+  const receivedInvoices = factures ?? [];
+  const visibleLedger = (ledger ?? []).filter((entry) => {
+    const invoice = Array.isArray(entry.facture) ? entry.facture[0] : entry.facture;
+    const credit = Array.isArray(entry.avoir) ? entry.avoir[0] : entry.avoir;
+    return (!invoice || (invoice.billit_is_sent && invoice.billit_pdf_storage_path)) && (!credit || (credit.billit_is_sent && credit.billit_pdf_storage_path));
+  });
+  const totalFacture = receivedInvoices.reduce(
     (sum: number, row: any) => sum + Number(row.montant_ttc || 0),
     0
   );
-  const totalSolde = (factures || []).reduce(
+  const totalSolde = receivedInvoices.reduce(
     (sum: number, row: any) => sum + Number(row.solde_du || 0),
     0
   );
@@ -92,8 +93,8 @@ export default async function DashboardFinancePage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
-          <p className="text-sm text-gray-500">Suivi de vos factures, avoirs et écritures comptables.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Factures et paiements</h1>
+          <p className="text-sm text-gray-500">Copies officielles Billit du laboratoire, avoirs et suivi des paiements.</p>
         </div>
         <form className="flex flex-wrap items-end gap-2" method="get">
           <div>
@@ -161,7 +162,7 @@ export default async function DashboardFinancePage({
             </div>
             <div>
               <p className="text-xs text-gray-500">Écritures</p>
-              <p className="text-xl font-semibold text-gray-900">{ledger?.length || 0}</p>
+              <p className="text-xl font-semibold text-gray-900">{visibleLedger.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -193,62 +194,7 @@ export default async function DashboardFinancePage({
         </CardHeader>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Factures</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!factures || factures.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">Aucune facture sur la période.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-left text-sm text-gray-500">
-                    <th className="pb-3 font-medium">Numéro</th>
-                    <th className="pb-3 font-medium">Commande</th>
-                    <th className="pb-3 font-medium">Date</th>
-                    <th className="pb-3 font-medium">Montant</th>
-                    <th className="pb-3 font-medium">Solde</th>
-                    <th className="pb-3 font-medium">Statut</th>
-                    <th className="pb-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {factures.map((f: any) => (
-                    <tr key={f.id}>
-                      <td className="py-3 text-sm font-medium text-gray-900">{f.numero}</td>
-                      <td className="py-3 text-sm text-gray-600">{f.commande?.numero || "—"}</td>
-                      <td className="py-3 text-sm text-gray-600">
-                        {f.date_emission
-                          ? new Date(f.date_emission).toLocaleDateString("fr-FR")
-                          : "—"}
-                      </td>
-                      <td className="py-3 text-sm font-semibold text-gray-900">
-                        {Number(f.montant_ttc || 0).toFixed(2)} €
-                      </td>
-                      <td className="py-3 text-sm text-gray-700">{Number(f.solde_du || 0).toFixed(2)} €</td>
-                      <td className="py-3">{factureBadge(f.statut)}</td>
-                      <td className="py-3 text-right">
-                        <FactureActions
-                          factureId={f.id}
-                          statut={f.statut}
-                          pdfAvailable={Boolean(f.pdf_storage_path)}
-                          emailSent={Boolean(f.email_envoye_at)}
-                          billitOrderId={f.billit_order_id}
-                          billitIsSent={f.billit_is_sent}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <FinanceTabs invoices={(factures ?? []).map((invoice) => ({ ...invoice, pdf_storage_path: invoice.billit_pdf_storage_path, montant_ttc: Number(invoice.montant_ttc), solde_du: Number(invoice.solde_du), commande_numero: (Array.isArray(invoice.commande) ? invoice.commande[0] : invoice.commande)?.numero ?? null }))} creditNotes={
         <Card>
           <CardHeader>
             <CardTitle>Avoirs</CardTitle>
@@ -284,15 +230,15 @@ export default async function DashboardFinancePage({
           </CardContent>
         </Card>
 
-        <Card>
+      } ledger={<Card>
           <CardHeader>
-            <CardTitle>Grand-livre récent</CardTitle>
+            <CardTitle>Relevé du compte</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {!ledger || ledger.length === 0 ? (
+            {visibleLedger.length === 0 ? (
               <p className="py-6 text-center text-sm text-gray-500">Aucune écriture.</p>
             ) : (
-              ledger.slice(0, 20).map((line: any) => (
+              visibleLedger.slice(0, 20).map((line: any) => (
                 <div key={line.id} className="rounded-lg border border-gray-200 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-gray-900">{line.libelle}</p>
@@ -309,7 +255,7 @@ export default async function DashboardFinancePage({
             )}
           </CardContent>
         </Card>
-      </div>
+      } />
     </div>
   );
 }

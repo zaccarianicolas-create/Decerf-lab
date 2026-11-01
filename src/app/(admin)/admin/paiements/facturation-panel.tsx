@@ -6,7 +6,7 @@ import { AlertTriangle, FilePlus2, Plus, RefreshCw, Trash2, X } from "lucide-rea
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, FileText, Receipt, ScrollText } from "lucide-react";
+import { Download, FileText, Receipt, ScrollText, Send } from "lucide-react";
 import { PaiementVirementButton } from "./paiement-virement-button";
 
 type PendingCommande = {
@@ -66,7 +66,7 @@ type LedgerRow = {
 };
 
 function statutFactureBadge(statut: string) {
-  if (statut === "brouillon") return <Badge variant="warning">À valider</Badge>;
+  if (statut === "brouillon") return <Badge variant="warning">Brouillon</Badge>;
   if (statut === "payee") return <Badge variant="success">Payée</Badge>;
   if (statut === "partiellement_payee") {
     return <Badge className="border-amber-200 bg-amber-50 text-amber-700">Partielle</Badge>;
@@ -251,10 +251,10 @@ export function FacturationPanel({
     setSyncingFactureId(factureId);
     setError(null);
     try {
-      const response = await fetch(`/api/dashboard/factures/${factureId}/valider`, {
+      const response = await fetch(`/api/admin/factures/${factureId}/emettre`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selected_options: [] }),
+        body: JSON.stringify({}),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Nouvelle tentative Billit impossible.");
@@ -367,7 +367,7 @@ export function FacturationPanel({
           {!billitProductionReady && (
             <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              Les avoirs peuvent être préparés en brouillon. Leur émission Peppol reste désactivée tant que Billit Production n’est pas validé et configuré.
+              Les factures et avoirs peuvent être préparés en brouillon. Leur émission reste bloquée tant que Billit Production n’est pas validé et configuré.
             </p>
           )}
 
@@ -427,11 +427,6 @@ export function FacturationPanel({
                             {f.billit_is_delivered ? " · Livrée" : ""}
                           </p>
                         )}
-                        {f.billit_order_id && !f.billit_is_sent && (
-                          <Button type="button" size="sm" variant="outline" disabled={!billitProductionReady || syncingFactureId === f.id} onClick={() => retryBillitInvoice(f.id)}>
-                            {syncingFactureId === f.id ? "Envoi…" : "Réessayer Billit"}
-                          </Button>
-                        )}
                         {f.billit_last_error && <p className="mt-1 text-xs text-red-700">{f.billit_last_error}</p>}
                       </div>
                       <div className="text-right">
@@ -445,9 +440,9 @@ export function FacturationPanel({
                             <RefreshCw className={`h-4 w-4 ${syncingFactureId === f.id ? "animate-spin" : ""}`} />
                           </Button>
                         )}
-                        {f.billit_order_id && !f.billit_is_sent && billitProductionReady && (
-                          <Button type="button" size="sm" variant="outline" disabled={syncingFactureId === f.id} onClick={() => retryBillitInvoice(f.id)}>
-                            {syncingFactureId === f.id ? "Envoi…" : "Réessayer Billit"}
+                        {!f.billit_is_sent && (
+                          <Button type="button" size="sm" variant="outline" disabled={!billitProductionReady || syncingFactureId === f.id} onClick={() => retryBillitInvoice(f.id)}>
+                            <Send className="mr-1.5 h-4 w-4" />{syncingFactureId === f.id ? "Émission…" : f.billit_order_id ? "Réessayer Billit" : "Émettre via Billit"}
                           </Button>
                         )}
                         {Number(f.solde_du) > 0 && !["brouillon", "annulee"].includes(f.statut) && (
