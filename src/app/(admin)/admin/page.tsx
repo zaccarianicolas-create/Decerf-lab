@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
+import { ContactDashboardRefresh } from "@/components/contact-dashboard-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,8 @@ export default async function AdminPage() {
     .from("contact_messages")
     .select("id", { count: "exact", head: true })
     .eq("traite", false);
+  const { count: contactsNonLus } = await admin.from("contact_messages")
+    .select("id", { count: "exact", head: true }).eq("traite", false).is("read_at", null);
 
   const { count: rgpdEnAttente } = await admin
     .from("rgpd_requests")
@@ -131,11 +134,18 @@ export default async function AdminPage() {
       tone: "text-sky-700 bg-sky-50 border-sky-200",
     },
     {
-      label: "Contacts non traités",
+      label: "Demandes de contact à traiter",
       value: contactsNonTraites || 0,
-      href: "/admin/messages",
+      href: "/admin/contacts?vue=pending",
       icon: Mail,
       tone: "text-indigo-700 bg-indigo-50 border-indigo-200",
+    },
+    {
+      label: "Demandes de contact non lues",
+      value: contactsNonLus || 0,
+      href: "/admin/contacts?vue=unread",
+      icon: Mail,
+      tone: "text-sky-700 bg-sky-50 border-sky-200",
     },
     {
       label: "Commandes en retard",
@@ -167,10 +177,11 @@ export default async function AdminPage() {
     },
   ];
 
-  const totalNotifications = alertes.reduce((sum, a) => sum + a.value, 0);
+  const totalNotifications = alertes.reduce((sum, a) => sum + a.value, 0) - (contactsNonLus || 0);
 
   return (
     <div>
+      <ContactDashboardRefresh />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Administration DECERF LAB

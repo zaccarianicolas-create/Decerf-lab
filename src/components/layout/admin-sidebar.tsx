@@ -21,6 +21,7 @@ import {
   Archive,
   Megaphone,
   Scan,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -37,6 +38,7 @@ const adminLinks = [
   { label: "Commandes", href: "/admin/commandes", icon: Package },
   { label: "Lecteur de fichiers", href: "/admin/lecteur", icon: Scan },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Demandes de contact", href: "/admin/contacts", icon: Mail },
   { label: "Annonces", href: "/admin/annonces", icon: Megaphone },
   { label: "Services", href: "/admin/services", icon: Wrench },
   { label: "Collaborateurs", href: "/admin/collaborateurs", icon: Users },

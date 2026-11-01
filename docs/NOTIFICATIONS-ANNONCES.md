@@ -8,6 +8,18 @@
 - Chaque utilisateur garde son propre `last_read_at`. La lecture d'un collaborateur ne retire pas les badges du dentiste ou des autres membres du labo.
 - Les notifications navigateur sont regroupees par conversation et fermees quand le compteur devient nul. Leur affichage exige la permission du navigateur.
 
+## Demandes de contact
+
+- Boite admin dediee : `/admin/contacts`, distincte du chat des dentistes.
+- Une demande ouverte avec le navigateur visible et au premier plan devient lue ; elle reste a traiter.
+- Le bouton "Marquer comme traitee" retire la demande de la file a traiter. "Remettre a traiter" conserve la premiere lecture.
+- "Repondre par email" ouvre le logiciel de messagerie ; l'application ne peut pas confirmer cet envoi et ne classe donc pas automatiquement la demande.
+- Le tableau de bord distingue les demandes non lues et a traiter, avec les liens filtres correspondants et sans double comptage dans le total des actions.
+- La lecture est partagee entre les admins du labo, contrairement au chat dont la lecture reste individuelle.
+- Les demandes historiques n'avaient pas de suivi de lecture : aucune date passee n'est inventee. Une ancienne demande non traitee reste non lue jusqu'a son ouverture dans cette boite.
+- Premiere lecture et traitement sont horodates avec l'admin concerne. Les actions `lire`, `traiter`, `reouvrir` passent par `admin_contact_action`, reservee aux admins actifs et approuves.
+- La boite affiche les 500 demandes les plus recentes ; les compteurs du tableau de bord portent sur toute la base. Les metadonnees IP et user-agent ne sont pas exposees dans l'interface.
+
 ## Preferences email
 
 - Dentiste : Mon profil. Admin : Parametres. Collaborateur : Atelier > Mes parametres.
