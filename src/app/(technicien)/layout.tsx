@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, Briefcase, MessageCircle, Settings } from "lucide-react";
+import { LogOut, Briefcase, MessageCircle, Settings, Scan } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AtelierLayoutShell } from "@/components/layout/atelier-layout-shell";
 
@@ -39,13 +39,13 @@ export default async function TechnicienLayout({
               alt="DECERF LAB"
               width={120}
               height={32}
-              className="h-8 w-auto"
+              className="h-7 w-auto sm:h-8"
             />
             <span className="hidden text-sm font-medium text-gray-600 sm:inline">
               · Atelier
             </span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             <span className="hidden text-sm text-gray-600 sm:inline">
               {profile?.prenom} {profile?.nom}
             </span>
@@ -59,6 +59,7 @@ export default async function TechnicienLayout({
             <Link href="/atelier/messages" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Messages" aria-label="Messages">
               <MessageCircle className="h-4 w-4" />
             </Link>
+            <Link href="/atelier/lecteur" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Lecteur de fichiers" aria-label="Lecteur de fichiers"><Scan className="h-4 w-4" /></Link>
             <Link href="/atelier/parametres" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Mes paramètres" aria-label="Mes paramètres">
               <Settings className="h-4 w-4" />
             </Link>

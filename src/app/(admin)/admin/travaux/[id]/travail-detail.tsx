@@ -37,6 +37,7 @@ import { CertificatModal } from "./certificat-modal";
 import { OrthoPanel } from "./ortho-panel";
 import { EquipePanel } from "@/components/equipe/equipe-panel";
 import { ScanPreview } from "@/components/scans/scan-preview";
+import { isReadableFile } from "@/lib/commande-files";
 import { ProtocoleInstancePanel } from "@/components/protocoles/protocole-instance-panel";
 import { StockMovementPanel } from "../../../../../components/stock/stock-movement-panel";
 import {
@@ -285,13 +286,14 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
     router.refresh();
   };
 
-  const openPreview = (file: any) => {
-    const { data } = supabase.storage
+  const openPreview = async (file: any) => {
+    const { data, error } = await supabase.storage
       .from(file.storage_bucket || FILE_BUCKET)
-      .getPublicUrl(file.storage_path);
+      .createSignedUrl(file.storage_path, 3600);
+    if (error || !data) { alert("Impossible d’ouvrir ce fichier."); return; }
 
     setPreviewTarget({
-      url: data.publicUrl,
+      url: data.signedUrl,
       fileName: file.nom_original,
       format: file.format_3d || getScanFormat(file.nom_original, file.type_mime),
     });
@@ -584,14 +586,14 @@ export function TravailDetail({ commande, currentUserId, protocoles = [], protoc
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        {f.apercu_disponible && isPreviewable3D(f.nom_original, f.type_mime) && (
+                        {isReadableFile(f.nom_original) && (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             onClick={() => openPreview(f)}
                           >
-                            Aperçu
+                            Ouvrir le lecteur
                           </Button>
                         )}
                       </div>

@@ -22,6 +22,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { ScanPreview } from "@/components/scans/scan-preview";
+import { isReadableFile } from "@/lib/commande-files";
 import { OrthoReadonly } from "@/components/ortho/ortho-readonly";
 import {
   COMMANDE_FILE_ACCEPT,
@@ -131,13 +132,14 @@ export function CommandeDetail({ commande }: { commande: any }) {
     window.location.reload();
   };
 
-  const openPreview = (file: any) => {
-    const { data } = supabase.storage
+  const openPreview = async (file: any) => {
+    const { data, error } = await supabase.storage
       .from(file.storage_bucket || FILE_BUCKET)
-      .getPublicUrl(file.storage_path);
+      .createSignedUrl(file.storage_path, 3600);
+    if(error || !data){alert("Impossible d’ouvrir ce fichier.");return;}
 
     setPreviewTarget({
-      url: data.publicUrl,
+      url: data.signedUrl,
       fileName: file.nom_original,
       format: file.format_3d || getScanFormat(file.nom_original, file.type_mime),
     });
@@ -279,7 +281,7 @@ export function CommandeDetail({ commande }: { commande: any }) {
                             : ""}
                           {f.version ? ` • v${f.version}` : ""}
                         </span>
-                        {f.apercu_disponible && isPreviewable3D(f.nom_original, f.type_mime) && (
+                        {isReadableFile(f.nom_original) && (
                           <Button size="sm" variant="outline" onClick={() => openPreview(f)}>
                             Aperçu
                           </Button>

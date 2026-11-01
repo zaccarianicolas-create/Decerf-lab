@@ -257,6 +257,7 @@ export function ChatModalWindow({
               </div>
             )}
             <iframe
+              allowFullScreen
               src={chatUrl}
               title="Chat"
               className="h-full w-full border-none"

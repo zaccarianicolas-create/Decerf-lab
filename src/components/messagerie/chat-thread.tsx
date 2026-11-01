@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { COMMANDE_FILE_ACCEPT, isReadableFile } from "@/lib/commande-files";
+import { ScanPreview } from "@/components/scans/scan-preview";
 import {
   Send,
   Camera,
@@ -21,6 +23,7 @@ import {
   CornerUpLeft,
   Mic,
   MicOff,
+  Eye,
 } from "lucide-react";
 
 type Author = {
@@ -87,6 +90,7 @@ export function ChatThread({
   const [messageError, setMessageError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [startingRecording, setStartingRecording] = useState(false);
+  const [preview, setPreview] = useState<{ url: string; fileName: string } | null>(null);
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -654,6 +658,7 @@ export function ChatThread({
                           )}
                         </>
                       )}
+                      {!isDeleted && msg.attachment_url && msg.attachment_name && isReadableFile(msg.attachment_name) && ["admin","technicien"].includes(authorsMap[currentUserId]?.role || "") && <button type="button" title="Ouvrir le lecteur" aria-label="Ouvrir le lecteur" className="rounded p-1 hover:bg-gray-100" onClick={()=>setPreview({url:msg.attachment_url!,fileName:msg.attachment_name!})}><Eye className="h-4 w-4" /></button>}
                       <span>
                         {new Date(msg.created_at).toLocaleTimeString("fr-FR", {
                           hour: "2-digit",
@@ -734,7 +739,7 @@ export function ChatThread({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+              accept={`${COMMANDE_FILE_ACCEPT},video/*,audio/*,.doc,.docx`}
               hidden
               onChange={onFile}
             />
@@ -829,6 +834,7 @@ export function ChatThread({
           {uploadError && <p role="alert" className="mt-2 text-xs text-red-600">{uploadError}</p>}
         </div>
       )}
+      {preview && <ScanPreview open onClose={()=>setPreview(null)} url={preview.url} fileName={preview.fileName} format={null} />}
     </div>
   );
 }

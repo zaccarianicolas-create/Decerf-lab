@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Archive,
   Megaphone,
+  Scan,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -34,6 +35,7 @@ const adminLinks = [
   { label: "Stock", href: "/admin/stock", icon: Archive },
   { label: "Fiches manuelles", href: "/admin/fiches-manuelles", icon: ClipboardList },
   { label: "Commandes", href: "/admin/commandes", icon: Package },
+  { label: "Lecteur de fichiers", href: "/admin/lecteur", icon: Scan },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
   { label: "Annonces", href: "/admin/annonces", icon: Megaphone },
   { label: "Services", href: "/admin/services", icon: Wrench },
@@ -77,7 +79,7 @@ export function AdminSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {adminLinks.map((link) => {
             const isActive =
               pathname === link.href ||
