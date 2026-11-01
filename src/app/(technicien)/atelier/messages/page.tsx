@@ -17,7 +17,7 @@ export default async function AtelierMessagesPage({ searchParams }: {
           <p className="text-sm text-gray-500">Dentistes et équipe du laboratoire.</p>
         </div>
       )}
-      <MessengerAdmin {...messenger} isEmbed={isEmbed} />
+      <MessengerAdmin {...messenger} isEmbed={isEmbed} initialActiveId={typeof params.conversation === "string" ? params.conversation : undefined} />
     </div>
   );
 }

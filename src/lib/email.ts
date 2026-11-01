@@ -5,6 +5,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEFAULT_NOTIFICATION_PREFERENCES, type NotificationPreferences } from "@/lib/notification-preferences";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || "DECERF LAB <noreply@decerf-lab.be>";
@@ -36,15 +37,7 @@ type SendArgs = {
   prefKey?: keyof PrefsRow;
 };
 
-type PrefsRow = {
-  email_invitation: boolean;
-  email_certificat: boolean;
-  email_facture: boolean;
-  email_commande: boolean;
-  email_message: boolean;
-  email_assignation: boolean;
-  email_rgpd: boolean;
-};
+type PrefsRow = NotificationPreferences;
 
 async function checkPref(
   userId: string | null | undefined,
@@ -53,15 +46,16 @@ async function checkPref(
   if (!userId || !key) return true;
   try {
     const admin = createAdminClient();
-    const { data } = await admin
+    const { data, error } = await admin
       .from("notification_preferences")
       .select(key as string)
       .eq("user_id", userId)
       .maybeSingle();
-    if (!data) return true; // par défaut activé
-    return Boolean((data as unknown as Record<string, unknown>)[key as string]);
+    if (error) return false;
+    if (!data) return DEFAULT_NOTIFICATION_PREFERENCES[key];
+    return (data as unknown as Record<string, unknown>)[key] === true;
   } catch {
-    return true;
+    return false;
   }
 }
 

@@ -6,6 +6,7 @@ import { BrandingPanel } from "./branding-panel";
 import { PartenairesPanel, type Partenaire } from "./partenaires-panel";
 import { EmailTestsPanel } from "./email-tests-panel";
 import { BillitPanel } from "./billit-panel";
+import { NotificationsPanel } from "@/app/(dashboard)/dashboard/profil/notifications-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export default async function AdminParametresPage() {
           totalProtocoles: totalProtocoles ?? 0,
         }}
       />
+      <div className="mt-8"><NotificationsPanel userId={user.id} /></div>
 
       <div className="mt-10">
         <h2 className="mb-4 text-xl font-bold text-gray-900">

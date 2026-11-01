@@ -142,7 +142,7 @@ export function ChatModalWindow({
     };
   }, [isDragging, dragOffset]);
 
-  if (!mounted) return null;
+  if (!mounted || !isOpen) return null;
 
   return (
     <div

@@ -4,6 +4,10 @@
 # working directory name when running `supabase init`.
 project_id = "decerf-lab"
 
+[functions.notification-email-worker]
+verify_jwt = false
+entrypoint = "./functions/notification-email-worker/index.js"
+
 [api]
 enabled = true
 # Port to use for the API URL.

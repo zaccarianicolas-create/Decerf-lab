@@ -95,6 +95,7 @@ export function ChatThread({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mountedRef = useRef(true);
+  const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -141,10 +142,6 @@ export function ChatThread({
       setLoading(false);
     });
 
-    // Mark unread incoming as read
-    await supabase.rpc("mark_conversation_messages_read", {
-      p_conversation_id: conversationId,
-    });
   }, [supabase, conversationId]);
 
   useEffect(() => {
@@ -154,6 +151,27 @@ export function ChatThread({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, reactions]);
+
+  useEffect(() => {
+    if (loading || !messages.length) return;
+    const newestMessage = messages.reduce((latest, message) => message.created_at > latest.created_at ? message : latest);
+    const markVisibleMessages = () => {
+      if (document.visibilityState !== "visible" || !document.hasFocus() || !threadRef.current?.getClientRects().length) return;
+      void supabase.rpc("mark_conversation_messages_read", {
+        p_conversation_id: conversationId,
+        p_read_until: newestMessage.created_at,
+      }).then(({ error }) => {
+        if (error && mountedRef.current) setMessageError("Impossible de confirmer la lecture des messages. Réessaie après rechargement.");
+      });
+    };
+    markVisibleMessages();
+    window.addEventListener("focus", markVisibleMessages);
+    document.addEventListener("visibilitychange", markVisibleMessages);
+    return () => {
+      window.removeEventListener("focus", markVisibleMessages);
+      document.removeEventListener("visibilitychange", markVisibleMessages);
+    };
+  }, [messages, loading, supabase, conversationId]);
 
   useEffect(() => {
     const channel = supabase
@@ -168,12 +186,7 @@ export function ChatThread({
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setMessages((p) => [...p, payload.new as ChatMessage]);
-            if ((payload.new as ChatMessage).auteur_id !== currentUserId) {
-              void supabase.rpc("mark_conversation_messages_read", {
-                p_conversation_id: conversationId,
-              });
-            }
+            setMessages((p) => p.some((message) => message.id === payload.new.id) ? p : [...p, payload.new as ChatMessage]);
           } else if (payload.eventType === "UPDATE") {
             setMessages((p) =>
               p.map((m) =>
@@ -461,7 +474,7 @@ export function ChatThread({
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div ref={threadRef} className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
         {loading ? (
           <div className="flex h-full items-center justify-center">

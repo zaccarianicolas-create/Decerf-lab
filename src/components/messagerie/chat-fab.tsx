@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ChatModalWindow } from "./chat-modal-window";
 
 export function ChatFab({ href }: { href: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,6 +19,8 @@ export function ChatFab({ href }: { href: string }) {
     let refreshInterval: number | null = null;
     let refreshOnFocus: (() => void) | null = null;
     let refreshOnVisibility: (() => void) | null = null;
+    const notifications = new Map<string, Notification>();
+    const timers = new Set<number>();
 
     const start = async () => {
       const {
@@ -30,7 +33,10 @@ export function ChatFab({ href }: { href: string }) {
 
         if (isMounted && !error) {
           setUnreadCount((data ?? []).reduce((total: number, row: { unread_count: number | string }) => total + Number(row.unread_count), 0));
+          const unread = new Set((data ?? []).filter((row: { unread_count: number | string }) => Number(row.unread_count) > 0).map((row: { conversation_id: string }) => row.conversation_id));
+          for (const [id, notification] of notifications) if (!unread.has(id)) { notification.close(); notifications.delete(id); }
         }
+        return error ? null : data;
       };
 
       await refreshUnread();
@@ -47,8 +53,22 @@ export function ChatFab({ href }: { href: string }) {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "messages" },
-          () => {
+          (payload) => {
             void refreshUnread();
+            if (payload.eventType !== "INSERT" || payload.new.auteur_id === user.id || !("Notification" in window) || Notification.permission !== "granted") return;
+            const id = payload.new.conversation_id as string;
+            const timer = window.setTimeout(async () => {
+              timers.delete(timer);
+              const rows = await refreshUnread();
+              if (!isMounted || !rows?.some((row: { conversation_id: string; unread_count: number | string }) => row.conversation_id === id && Number(row.unread_count) > 0)) return;
+              try {
+                notifications.get(id)?.close();
+                const notification = new Notification("DECERF LAB", { body: "Vous avez des messages non lus.", tag: `decerf-chat-${id}` });
+                notification.onclick = () => { window.focus(); router.push(`${href}?conversation=${encodeURIComponent(id)}`); notification.close(); };
+                notifications.set(id, notification);
+              } catch { notifications.delete(id); }
+            }, 1500);
+            timers.add(timer);
           }
         )
         .on("postgres_changes", { event: "*", schema: "public", table: "conversation_participants" }, () => {
@@ -65,8 +85,10 @@ export function ChatFab({ href }: { href: string }) {
       if (refreshOnFocus) window.removeEventListener("focus", refreshOnFocus);
       if (refreshOnVisibility) document.removeEventListener("visibilitychange", refreshOnVisibility);
       if (channel) supabase.removeChannel(channel);
+      for (const timer of timers) window.clearTimeout(timer);
+      for (const notification of notifications.values()) notification.close();
     };
-  }, [supabase]);
+  }, [supabase, href, router]);
 
   if (pathname?.startsWith(href)) return null;
 

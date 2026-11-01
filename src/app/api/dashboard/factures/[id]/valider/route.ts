@@ -226,7 +226,7 @@ export async function POST(
     });
     const emailResult = await sendEmail({
       to: snapshot.client.email,
-      toUserId: user.id,
+      toUserId: facture.dentiste_id,
       template: "facture_emise",
       subject: template.subject,
       html: template.html,

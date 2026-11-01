@@ -77,10 +77,12 @@ Un déclencheur métier est l'action applicative qui décide d'envoyer un email 
 | Accusé RGPD | Dépôt d'une demande RGPD | Demande de test explicitement autorisée |
 | Commande reçue | Aucun appel à ce modèle trouvé | Raccordement à définir avant test métier |
 | Statut de commande | Aucun appel à ce modèle trouvé | Raccordement et statuts notifiables à définir |
-| Nouveau message | Le formulaire de contact utilise ce libellé de journal ; pas d'appel trouvé au modèle de notification de discussion | Raccordement de la messagerie à définir |
+| Nouveau message | File différée `notification_email_jobs`, cinq minutes, regroupement et annulation après lecture | Configurer Resend dans les secrets du worker puis tester un chat dédié |
 | Certificat disponible | Aucun appel à ce modèle trouvé | Notifier lors du partage autorisé, pas à l'émission interne |
 
 La migration email crée les préférences et le journal ; elle ne crée pas de déclencheurs SQL d'envoi. La présence d'un modèle n'implique donc pas son activation automatique. Aucun de ces parcours métier n'est déclenché par le panneau de démonstration.
+
+Les migrations `20261101160000_notifications_annonces.sql` et `20261101163000_notification_worker_schedule.sql` ajoutent désormais la file d'emails de messagerie et d'annonces, ainsi que son planning. Voir [NOTIFICATIONS-ANNONCES.md](NOTIFICATIONS-ANNONCES.md). La configuration SMTP Auth reste indépendante des secrets de ce worker.
 
 ## Références
 

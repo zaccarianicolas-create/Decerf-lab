@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, Briefcase, MessageCircle } from "lucide-react";
+import { LogOut, Briefcase, MessageCircle, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AtelierLayoutShell } from "@/components/layout/atelier-layout-shell";
 
@@ -58,6 +58,9 @@ export default async function TechnicienLayout({
             </Link>
             <Link href="/atelier/messages" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Messages" aria-label="Messages">
               <MessageCircle className="h-4 w-4" />
+            </Link>
+            <Link href="/atelier/parametres" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Mes paramètres" aria-label="Mes paramètres">
+              <Settings className="h-4 w-4" />
             </Link>
             <form action="/api/auth/signout" method="post">
               <button

@@ -21,6 +21,7 @@ export function MessengerAdmin({
   contacts,
   authorsMap,
   initialOpenNew,
+  initialActiveId,
   isEmbed,
 }: {
   initialConversations: LabChatConversation[];
@@ -29,13 +30,14 @@ export function MessengerAdmin({
   contacts: LabChatContact[];
   authorsMap: Record<string, LabChatAuthor>;
   initialOpenNew?: boolean;
+  initialActiveId?: string;
   isEmbed?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] =
     useState<LabChatConversation[]>(initialConversations);
   const [activeId, setActiveId] = useState<string | null>(
-    initialConversations[0]?.id ?? null
+    initialConversations.find((conversation) => conversation.id === initialActiveId)?.id ?? initialConversations[0]?.id ?? null
   );
   const [unread, setUnread] = useState(initialUnread);
   const [search, setSearch] = useState("");
@@ -73,21 +75,6 @@ export function MessengerAdmin({
           void refreshUnread();
           if (payload.eventType !== "INSERT") return;
           const m = payload.new as { conversation_id: string; auteur_id: string };
-          const isIncoming = m.auteur_id !== currentUserId;
-          const isInactiveConversation = m.conversation_id !== activeId;
-
-          if (
-            isIncoming &&
-            isInactiveConversation &&
-            typeof window !== "undefined" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification("Nouveau message", {
-              body: `${label(authorsMap[m.auteur_id])} vous a écrit`,
-            });
-          }
-
           setConversations((convs) =>
             convs
               .map((c) =>

@@ -56,21 +56,6 @@ export function MessengerDentiste({
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const m = payload.new as { conversation_id: string; auteur_id: string };
-          const isIncoming = m.auteur_id !== currentUserId;
-          const isInactiveConversation = m.conversation_id !== activeId;
-
-          if (
-            isIncoming &&
-            isInactiveConversation &&
-            typeof window !== "undefined" &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification("Nouveau message", {
-              body: "DECERF LAB vous a écrit",
-            });
-          }
-
           setConversations((convs) =>
             convs
               .map((c) =>

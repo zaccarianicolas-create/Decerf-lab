@@ -32,6 +32,7 @@ export default async function AdminMessagesPage({
       )}
       <MessengerAdmin
         {...messenger}
+        initialActiveId={typeof resolvedSearchParams?.conversation === "string" ? resolvedSearchParams.conversation : undefined}
         initialOpenNew={Boolean(initialOpenNew)}
         isEmbed={Boolean(isEmbed)}
       />

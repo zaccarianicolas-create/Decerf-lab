@@ -19,6 +19,7 @@ import {
   Shield,
   ClipboardList,
   Archive,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -34,6 +35,7 @@ const adminLinks = [
   { label: "Fiches manuelles", href: "/admin/fiches-manuelles", icon: ClipboardList },
   { label: "Commandes", href: "/admin/commandes", icon: Package },
   { label: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { label: "Annonces", href: "/admin/annonces", icon: Megaphone },
   { label: "Services", href: "/admin/services", icon: Wrench },
   { label: "Collaborateurs", href: "/admin/collaborateurs", icon: Users },
   { label: "Protocoles", href: "/admin/protocoles", icon: BookOpen },

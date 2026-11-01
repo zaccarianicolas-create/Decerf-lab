@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { getStatusLabel, getStatusColor, formatDate } from "@/lib/utils";
+import { AnnoncesFeed } from "@/components/annonces-feed";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -70,6 +71,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      <AnnoncesFeed userId={user.id} />
       {/* Statistiques */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
