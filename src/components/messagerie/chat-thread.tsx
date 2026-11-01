@@ -86,6 +86,7 @@ export function ChatThread({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
+  const [startingRecording, setStartingRecording] = useState(false);
   const [reactionTargetId, setReactionTargetId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,6 +94,21 @@ export function ChatThread({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      const recorder = recorderRef.current;
+      if (!recorder) return;
+      recorder.onstop = null;
+      recorder.onerror = null;
+      if (recorder.state !== "inactive") recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      recorderRef.current = null;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const { data: msgs } = await supabase
@@ -314,30 +330,61 @@ export function ChatThread({
       return;
     }
     setUploadError(null);
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setUploadError("Le vocal nécessite un navigateur compatible et une connexion HTTPS (ou localhost).");
+      return;
+    }
+    if (startingRecording) return;
+    setStartingRecording(true);
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      const mimeType = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"]
+        .find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       recorder.onerror = () => {
-        stream.getTracks().forEach((track) => track.stop());
+        recorder.onstop = null;
+        if (recorder.state !== "inactive") recorder.stop();
+        recorder.stream.getTracks().forEach((track) => track.stop());
+        recorderRef.current = null;
+        setRecording(false);
         setUploadError("L’enregistrement vocal a échoué.");
       };
       recorder.onstop = async () => {
         setRecording(false);
-        stream.getTracks().forEach((track) => track.stop());
+        recorder.stream.getTracks().forEach((track) => track.stop());
+        recorderRef.current = null;
         const mimeType = recorder.mimeType || "audio/webm";
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        const extension = mimeType.includes("mp4") ? "m4a" : "webm";
+        if (!blob.size) {
+          setUploadError("Aucun son enregistré. Réessaie le vocal.");
+          return;
+        }
+        const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
         await uploadAttachment(new File([blob], `vocal-${Date.now()}.${extension}`, { type: mimeType }));
       };
       recorderRef.current = recorder;
       recorder.start();
       setRecording(true);
-    } catch {
-      setUploadError("Autorise l’accès au microphone pour enregistrer un vocal.");
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop());
+      recorderRef.current = null;
+      if (mountedRef.current) {
+        setRecording(false);
+        setUploadError(error instanceof DOMException && error.name === "NotFoundError"
+          ? "Aucun microphone disponible sur cet appareil."
+          : "Impossible de démarrer le vocal. Vérifie l’autorisation du microphone.");
+      }
+    } finally {
+      if (mountedRef.current) setStartingRecording(false);
     }
   };
 
@@ -660,7 +707,7 @@ export function ChatThread({
             </div>
           )}
 
-          <div className="flex items-end gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-end gap-1.5 sm:flex-nowrap sm:gap-2">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -700,7 +747,7 @@ export function ChatThread({
             <button
               type="button"
               onClick={toggleRecording}
-              disabled={uploading}
+              disabled={uploading || startingRecording}
               aria-label={recording ? "Arrêter le vocal" : "Enregistrer un vocal"}
               className={`rounded-md p-2 ${recording ? "bg-red-50 text-red-600" : "text-gray-500 hover:bg-gray-100"}`}
               title={recording ? "Arrêter le vocal" : "Vocal"}
@@ -708,7 +755,7 @@ export function ChatThread({
               {recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
 
-            <div className="relative flex-1">
+            <div className="relative order-first w-full min-w-0 flex-auto sm:order-none sm:w-auto sm:flex-1">
               <textarea
                 ref={textareaRef}
                 value={input}

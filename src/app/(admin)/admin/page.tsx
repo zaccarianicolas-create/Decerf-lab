@@ -72,11 +72,8 @@ export default async function AdminPage() {
     .select("id", { count: "exact", head: true })
     .eq("statut", "en_attente");
 
-  const { count: messagesNonLus } = await admin
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("lu", false)
-    .neq("auteur_id", user.id);
+  const { data: unreadCounts } = await supabase.rpc("get_chat_unread_counts");
+  const messagesNonLus = (unreadCounts ?? []).reduce((total: number, row: { unread_count: number | string }) => total + Number(row.unread_count), 0);
 
   const { count: contactsNonTraites } = await admin
     .from("contact_messages")

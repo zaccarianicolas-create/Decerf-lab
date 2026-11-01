@@ -26,14 +26,10 @@ export function ChatFab({ href }: { href: string }) {
       if (!isMounted || !user) return;
 
       const refreshUnread = async () => {
-        const { count } = await supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("lu", false)
-          .neq("auteur_id", user.id);
+        const { data, error } = await supabase.rpc("get_chat_unread_counts");
 
-        if (isMounted) {
-          setUnreadCount(count ?? 0);
+        if (isMounted && !error) {
+          setUnreadCount((data ?? []).reduce((total: number, row: { unread_count: number | string }) => total + Number(row.unread_count), 0));
         }
       };
 
@@ -55,6 +51,9 @@ export function ChatFab({ href }: { href: string }) {
             void refreshUnread();
           }
         )
+        .on("postgres_changes", { event: "*", schema: "public", table: "conversation_participants" }, () => {
+          void refreshUnread();
+        })
         .subscribe();
     };
 

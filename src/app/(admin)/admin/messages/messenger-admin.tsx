@@ -12,52 +12,28 @@ import {
   Search,
 } from "lucide-react";
 import { ChatThread } from "@/components/messagerie/chat-thread";
-
-type Author = {
-  id: string;
-  nom: string | null;
-  prenom: string | null;
-  avatar_url: string | null;
-  role: string | null;
-};
-
-type Conversation = {
-  id: string;
-  titre: string | null;
-  commande_id: string | null;
-  dentiste_id: string;
-  derniere_activite: string;
-  dentiste: Author | null;
-  commande: { numero: string } | null;
-};
-
-type Dentiste = {
-  id: string;
-  nom: string | null;
-  prenom: string | null;
-  email: string | null;
-};
+import type { LabChatAuthor, LabChatContact, LabChatConversation } from "@/lib/lab-messenger";
 
 export function MessengerAdmin({
   initialConversations,
   unreadMap: initialUnread,
   currentUserId,
-  dentistes,
+  contacts,
   authorsMap,
   initialOpenNew,
   isEmbed,
 }: {
-  initialConversations: Conversation[];
+  initialConversations: LabChatConversation[];
   unreadMap: Record<string, number>;
   currentUserId: string;
-  dentistes: Dentiste[];
-  authorsMap: Record<string, Author>;
+  contacts: LabChatContact[];
+  authorsMap: Record<string, LabChatAuthor>;
   initialOpenNew?: boolean;
   isEmbed?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] =
-    useState<Conversation[]>(initialConversations);
+    useState<LabChatConversation[]>(initialConversations);
   const [activeId, setActiveId] = useState<string | null>(
     initialConversations[0]?.id ?? null
   );
@@ -67,6 +43,13 @@ export function MessengerAdmin({
   const [isConversationListCollapsed, setIsConversationListCollapsed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const peer = (conversation: LabChatConversation) => conversation.dentiste ?? authorsMap[
+    conversation.private_user_low === currentUserId ? conversation.private_user_high ?? "" : conversation.private_user_low ?? ""
+  ];
+  const label = (person?: LabChatAuthor | LabChatContact) => {
+    const name = [person?.prenom, person?.nom].filter(Boolean).join(" ");
+    return person?.role === "dentiste" ? `Dr ${name}` : name || "Membre du laboratoire";
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -77,12 +60,18 @@ export function MessengerAdmin({
 
   // Realtime sur nouvelles convs + activité
   useEffect(() => {
+    const refreshUnread = async () => {
+      const { data, error } = await supabase.rpc("get_chat_unread_counts");
+      if (!error) setUnread(Object.fromEntries((data ?? []).map((row: { conversation_id: string; unread_count: number | string }) => [row.conversation_id, Number(row.unread_count)])));
+    };
     const channel = supabase
       .channel("admin-conv-list")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        { event: "*", schema: "public", table: "messages" },
         (payload) => {
+          void refreshUnread();
+          if (payload.eventType !== "INSERT") return;
           const m = payload.new as { conversation_id: string; auteur_id: string };
           const isIncoming = m.auteur_id !== currentUserId;
           const isInactiveConversation = m.conversation_id !== activeId;
@@ -94,21 +83,11 @@ export function MessengerAdmin({
             "Notification" in window &&
             Notification.permission === "granted"
           ) {
-            const conv = conversations.find((c) => c.id === m.conversation_id);
-            const convLabel = conv?.dentiste
-              ? `Dr ${conv.dentiste.prenom ?? ""} ${conv.dentiste.nom ?? ""}`.trim()
-              : "une conversation";
             new Notification("Nouveau message", {
-              body: `${convLabel} vous a écrit`,
+              body: `${label(authorsMap[m.auteur_id])} vous a écrit`,
             });
           }
 
-          if (m.auteur_id !== currentUserId && m.conversation_id !== activeId) {
-            setUnread((u) => ({
-              ...u,
-              [m.conversation_id]: (u[m.conversation_id] || 0) + 1,
-            }));
-          }
           setConversations((convs) =>
             convs
               .map((c) =>
@@ -122,22 +101,37 @@ export function MessengerAdmin({
           );
         }
       )
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, (payload) => {
+        if (payload.eventType === "DELETE") {
+          setConversations((current) => current.filter((conversation) => conversation.id !== payload.old.id));
+          return;
+        }
+        const row = payload.new as Omit<LabChatConversation, "dentiste">;
+        const conversation: LabChatConversation = { ...row, dentiste: row.dentiste_id ? authorsMap[row.dentiste_id] ?? null : null };
+        setConversations((current) => [conversation, ...current.filter((existing) => existing.id !== conversation.id)]
+          .sort((first, second) => second.derniere_activite.localeCompare(first.derniere_activite)));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_participants" }, () => {
+        void refreshUnread();
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, activeId, currentUserId]);
+  }, [supabase, activeId, currentUserId, authorsMap]);
 
   const open = (id: string) => {
     setActiveId(id);
     setUnread((u) => ({ ...u, [id]: 0 }));
   };
 
-  const createConv = async (dentisteId: string) => {
-    const d = dentistes.find((x) => x.id === dentisteId);
+  const createConv = async (recipientId: string) => {
+    const d = contacts.find((contact) => contact.id === recipientId);
     if (!d) return;
     const existingConversation = conversations.find(
-      (conversation) => conversation.dentiste_id === dentisteId
+      (conversation) => d.role === "dentiste"
+        ? conversation.dentiste_id === recipientId
+        : !conversation.dentiste_id && peer(conversation)?.id === recipientId
     );
     if (existingConversation) {
       open(existingConversation.id);
@@ -146,10 +140,9 @@ export function MessengerAdmin({
     }
     setCreating(true);
     setCreateError(null);
-    const { data: conversationId, error: ensureError } = await supabase.rpc(
-      "get_or_create_dentist_conversation",
-      { p_dentiste_id: dentisteId }
-    );
+    const { data: conversationId, error: ensureError } = d.role === "dentiste"
+      ? await supabase.rpc("get_or_create_dentist_conversation", { p_dentiste_id: recipientId })
+      : await supabase.rpc("get_or_create_internal_conversation", { p_recipient_id: recipientId });
     if (ensureError || !conversationId) {
       setCreating(false);
       setCreateError(ensureError?.message || "Impossible de créer la conversation.");
@@ -158,7 +151,7 @@ export function MessengerAdmin({
     const { data: conv, error } = await supabase
       .from("conversations")
       .select(
-        `*, dentiste:profiles!conversations_dentiste_id_fkey(id, nom, prenom, avatar_url, role), commande:commandes(numero)`
+        "id, titre, commande_id, dentiste_id, private_user_low, private_user_high, derniere_activite"
       )
       .eq("id", conversationId)
       .single();
@@ -168,7 +161,8 @@ export function MessengerAdmin({
       return;
     }
     if (conv) {
-      setConversations((p) => [conv as Conversation, ...p.filter((conversation) => conversation.id !== conv.id)]);
+      const conversation: LabChatConversation = { ...conv, dentiste: conv.dentiste_id ? authorsMap[conv.dentiste_id] ?? null : null };
+      setConversations((p) => [conversation, ...p.filter((current) => current.id !== conv.id)]);
       open(conv.id);
     }
     setShowNew(false);
@@ -178,10 +172,8 @@ export function MessengerAdmin({
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      c.dentiste?.nom?.toLowerCase().includes(q) ||
-      c.dentiste?.prenom?.toLowerCase().includes(q) ||
-      c.titre?.toLowerCase().includes(q) ||
-      c.commande?.numero?.toLowerCase().includes(q)
+      label(peer(c)).toLowerCase().includes(q) ||
+      c.titre?.toLowerCase().includes(q)
     );
   });
 
@@ -217,12 +209,12 @@ export function MessengerAdmin({
             </div>
             {showNew && (
               <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
-                {dentistes.length === 0 ? (
+                {contacts.length === 0 ? (
                   <p className="p-3 text-sm text-gray-500">
-                    Aucun praticien trouvé pour ouvrir une nouvelle conversation.
+                    Aucun contact disponible.
                   </p>
                 ) : (
-                  dentistes.map((d) => (
+                  contacts.map((d) => (
                     <button
                       key={d.id}
                       onClick={() => createConv(d.id)}
@@ -235,9 +227,9 @@ export function MessengerAdmin({
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">
-                          Dr {d.prenom} {d.nom}
+                          {label(d)}
                         </p>
-                        <p className="text-xs text-gray-500">{d.email}</p>
+                        <p className="text-xs text-gray-500">{d.role === "dentiste" ? "Dentiste" : d.role === "admin" ? "Administrateur · Privé" : "Collaborateur · Privé"}</p>
                       </div>
                     </button>
                   ))
@@ -251,7 +243,7 @@ export function MessengerAdmin({
             <MessageSquare className="h-12 w-12 text-gray-300" />
             <p className="mt-3 text-base font-medium text-gray-700">Aucune conversation</p>
             <p className="mt-1 text-sm">
-              Choisissez un praticien pour démarrer un échange avec le laboratoire.
+              Aucun échange pour le moment.
             </p>
             <button
               type="button"
@@ -260,7 +252,7 @@ export function MessengerAdmin({
               className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
-              {showNew ? "Masquer les praticiens" : "Démarrer une conversation"}
+              {showNew ? "Masquer les contacts" : "Démarrer une conversation"}
             </button>
           </div>
         </div>
@@ -274,13 +266,13 @@ export function MessengerAdmin({
         className={`${
           isEmbed
             ? "flex h-full min-h-0 flex-col md:flex-row"
-            : "flex h-[calc(100dvh-9rem)] min-h-[420px] md:h-[calc(100vh-200px)] md:min-h-[520px]"
+            : "flex h-[calc(100dvh-9rem)] min-h-[420px] flex-col md:h-[calc(100vh-200px)] md:min-h-[520px] md:flex-row"
         }`}
       >
         <aside
-          className={`flex flex-col border-gray-200 ${
+          className={`flex-col border-gray-200 ${
             isEmbed
-              ? `h-1/2 min-h-0 border-b md:h-full md:shrink-0 md:border-b-0 md:border-r ${isConversationListCollapsed ? "md:w-16" : "md:w-72"}`
+              ? `h-full min-h-0 border-b md:shrink-0 md:border-b-0 md:border-r ${activeId ? "hidden md:flex" : "flex"} ${isConversationListCollapsed ? "md:w-16" : "md:w-72"}`
               : `w-full border-b md:w-80 md:border-b-0 md:border-r ${activeId ? "hidden md:flex" : "flex"}`
           }`}
         >
@@ -344,12 +336,12 @@ export function MessengerAdmin({
               </div>
               {showNew && (
                 <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow">
-                  {dentistes.length === 0 ? (
+                  {contacts.length === 0 ? (
                     <p className="p-3 text-sm text-gray-500">
-                      Aucun praticien trouvé pour ouvrir une nouvelle conversation.
+                      Aucun contact disponible.
                     </p>
                   ) : (
-                    dentistes.map((d) => (
+                    contacts.map((d) => (
                       <button
                         key={d.id}
                         onClick={() => createConv(d.id)}
@@ -361,8 +353,8 @@ export function MessengerAdmin({
                           {d.nom?.[0]}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Dr {d.prenom} {d.nom}</p>
-                          <p className="text-xs text-gray-500">{d.email}</p>
+                          <p className="font-medium text-gray-900">{label(d)}</p>
+                          <p className="text-xs text-gray-500">{d.role === "dentiste" ? "Dentiste" : d.role === "admin" ? "Administrateur · Privé" : "Collaborateur · Privé"}</p>
                         </div>
                       </button>
                     ))
@@ -387,20 +379,20 @@ export function MessengerAdmin({
                 <button
                   key={c.id}
                   onClick={() => open(c.id)}
-                  title={`Dr ${c.dentiste?.prenom ?? ""} ${c.dentiste?.nom ?? ""}`}
-                  aria-label={`Ouvrir la conversation avec Dr ${c.dentiste?.prenom ?? ""} ${c.dentiste?.nom ?? ""}`}
+                  title={label(peer(c))}
+                  aria-label={`Ouvrir la conversation avec ${label(peer(c))}`}
                   className={`flex w-full items-start gap-3 border-b border-gray-50 px-4 py-3 text-left ${
                     activeId === c.id ? "bg-sky-50" : "hover:bg-gray-50"
                   } ${isEmbed && isConversationListCollapsed ? "justify-center px-2 md:items-center" : ""}`}
                 >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-medium text-sky-700">
-                    {c.dentiste?.prenom?.[0] || "?"}
-                    {c.dentiste?.nom?.[0] || ""}
+                    {peer(c)?.prenom?.[0] || "?"}
+                    {peer(c)?.nom?.[0] || ""}
                   </div>
                   <div className={`min-w-0 flex-1 ${isEmbed && isConversationListCollapsed ? "md:hidden" : ""}`}>
                     <div className="flex items-center justify-between">
                       <p className="truncate text-sm font-medium text-gray-900">
-                        Dr {c.dentiste?.prenom} {c.dentiste?.nom}
+                        {label(peer(c))}
                       </p>
                       {(unread[c.id] || 0) > 0 && (
                         <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-600 px-1.5 text-xs font-medium text-white">
@@ -409,7 +401,7 @@ export function MessengerAdmin({
                       )}
                     </div>
                     <p className="truncate text-xs text-gray-500">
-                      {c.titre || (c.commande ? `Commande ${c.commande.numero}` : "Conversation")}
+                      {c.dentiste_id ? "Dentiste · Équipe du laboratoire" : "Échange interne · Privé"}
                     </p>
                     <p className="text-xs text-gray-400">
                       {new Date(c.derniere_activite).toLocaleDateString("fr-FR", {
@@ -444,27 +436,24 @@ export function MessengerAdmin({
           ) : (
             <>
               <div className="flex items-center justify-between border-b border-gray-200 px-3 py-3 md:px-6">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <button type="button" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 md:hidden" onClick={() => setActiveId(null)} aria-label="Retour aux conversations">
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-sm font-medium text-sky-700">
-                    {activeConv.dentiste?.prenom?.[0]}
-                    {activeConv.dentiste?.nom?.[0]}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-medium text-sky-700">
+                    {peer(activeConv)?.prenom?.[0]}
+                    {peer(activeConv)?.nom?.[0]}
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      Dr {activeConv.dentiste?.prenom} {activeConv.dentiste?.nom}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-gray-900">
+                      {label(peer(activeConv))}
                     </p>
-                    {activeConv.commande && (
-                      <p className="text-xs text-gray-500">
-                        {activeConv.commande.numero}
-                      </p>
-                    )}
+                    <p className="truncate text-xs text-gray-500">{activeConv.dentiste_id ? "Dentiste · Équipe du laboratoire" : "Échange interne · Privé"}</p>
                   </div>
                 </div>
               </div>
               <ChatThread
+                key={activeConv.id}
                 conversationId={activeConv.id}
                 currentUserId={currentUserId}
                 authorsMap={authorsMap}

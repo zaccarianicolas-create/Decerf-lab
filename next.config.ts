@@ -58,7 +58,16 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        source: "/(admin|dashboard)/messages",
+        source: "/(admin|dashboard|atelier)/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=(), interest-cohort=()",
+          },
+        ],
+      },
+      {
+        source: "/(admin|dashboard|atelier)/messages",
         headers: [
           {
             key: "Content-Security-Policy",

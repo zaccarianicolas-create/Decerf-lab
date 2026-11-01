@@ -29,7 +29,6 @@ export function MessengerDentiste({
   isEmbed,
 }: {
   initialConversations: Conversation[];
-  unreadMap: Record<string, number>;
   currentUserId: string;
   authorsMap: Record<string, Author>;
   isEmbed?: boolean;
@@ -85,6 +84,11 @@ export function MessengerDentiste({
           );
         }
       )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "conversations", filter: `dentiste_id=eq.${currentUserId}` }, (payload) => {
+        const conversation = { ...payload.new, commande: null } as Conversation;
+        setConversations((current) => [conversation, ...current.filter((existing) => existing.id !== conversation.id)]);
+        setActiveId((current) => current ?? conversation.id);
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -124,7 +128,7 @@ export function MessengerDentiste({
       return;
     }
     const conversation = data as Conversation;
-    setConversations((current) => [conversation, ...current]);
+    setConversations((current) => [conversation, ...current.filter((existing) => existing.id !== conversation.id)]);
     open(conversation.id);
   };
 
@@ -168,6 +172,7 @@ export function MessengerDentiste({
           {active && (
             <>
               <ChatThread
+                key={active.id}
                 conversationId={active.id}
                 currentUserId={currentUserId}
                 authorsMap={authorsMap}

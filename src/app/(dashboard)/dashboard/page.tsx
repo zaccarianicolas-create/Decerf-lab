@@ -41,18 +41,14 @@ export default async function DashboardPage() {
         .select("id", { count: "exact", head: true })
         .eq("dentiste_id", user.id)
         .in("statut", ["en_attente", "acceptee", "en_cours", "controle_qualite"]),
-      supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("lu", false)
-        .neq("auteur_id", user.id),
+      supabase.rpc("get_chat_unread_counts"),
     ]);
 
   const { data: profile } = profileResult;
   const { data: commandes } = commandesResult;
   const { count: totalCommandes } = totalCommandesResult;
   const { count: commandesEnCours } = commandesEnCoursResult;
-  const { count: messagesNonLus } = messagesNonLusResult;
+  const messagesNonLus = (messagesNonLusResult.data ?? []).reduce((total: number, row: { unread_count: number | string }) => total + Number(row.unread_count), 0);
 
   return (
     <div>

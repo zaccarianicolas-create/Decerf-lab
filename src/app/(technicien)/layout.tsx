@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, Briefcase } from "lucide-react";
+import { LogOut, Briefcase, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { AtelierLayoutShell } from "@/components/layout/atelier-layout-shell";
 
 export default async function TechnicienLayout({
   children,
@@ -17,16 +18,19 @@ export default async function TechnicienLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, prenom, nom")
+    .select("role, prenom, nom, actif, actif_collaborateur, statut_compte")
     .eq("id", user.id)
     .single();
 
   if (profile?.role !== "technicien") {
     redirect(profile?.role === "admin" ? "/admin" : "/dashboard");
   }
+  if (!profile.actif || !profile.actif_collaborateur || profile.statut_compte !== "approuve") {
+    redirect("/compte-en-attente");
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AtelierLayoutShell header={
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href="/atelier" className="flex items-center gap-2">
@@ -52,6 +56,9 @@ export default async function TechnicienLayout({
             >
               <Briefcase className="h-4 w-4" />
             </Link>
+            <Link href="/atelier/messages" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" title="Messages" aria-label="Messages">
+              <MessageCircle className="h-4 w-4" />
+            </Link>
             <form action="/api/auth/signout" method="post">
               <button
                 type="submit"
@@ -64,7 +71,8 @@ export default async function TechnicienLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-    </div>
+    }>
+      {children}
+    </AtelierLayoutShell>
   );
 }
