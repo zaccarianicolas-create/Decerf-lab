@@ -28,6 +28,16 @@ globalThis.Deno.serve(async (request) => {
   };
   try {
     const result = await processNotificationEmails({ rpc, send,
+      resolveImages: async (paths) => {
+        const urls = {};
+        for (const path of paths) {
+          const response = await fetch(`${base}/storage/v1/object/sign/annonces/${path}`, { method: "POST", headers: { "Content-Type": "application/json", apikey: service, Authorization: `Bearer ${service}` }, body: JSON.stringify({ expiresIn: 604800 }) });
+          if (!response.ok) throw new Error("Announcement image unavailable");
+          const data = await response.json();
+          urls[path] = `${base}/storage/v1${data.signedURL}`;
+        }
+        return urls;
+      },
       appUrl: env.get("APP_URL") || "https://www.decerf-lab.be",
       from: env.get("EMAIL_FROM") || "DECERF LAB <noreply@notifications.decerf-lab.be>",
     });

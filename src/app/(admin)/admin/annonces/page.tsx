@@ -10,5 +10,7 @@ export default async function AdminAnnoncesPage() {
   if (!user) redirect("/login");
   const { data, error } = await supabase.from("lab_annonces").select("*").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return <AnnoncesEditor initial={data ?? []} userId={user.id} />;
+  const { data: categories, error: categoriesError } = await supabase.from("lab_annonce_categories").select("*").order("created_at");
+  if (categoriesError) throw new Error(categoriesError.message);
+  return <AnnoncesEditor initial={data ?? []} initialCategories={categories ?? []} userId={user.id} />;
 }

@@ -1,8 +1,14 @@
+import type { AnnouncementNode } from "@/lib/annonce-document.mjs";
+
+export type AnnonceCategory = { code: string; label: string; email_kind: "information" | "promotion"; is_closure: boolean; actif: boolean };
+
 export type LabAnnonce = {
   id: string;
   titre: string;
   message: string;
-  categorie: "information" | "fermeture" | "voeux" | "promotion";
+  categorie: string;
+  message_document?: AnnouncementNode | null;
+  image_paths?: string[];
   statut: "brouillon" | "publie" | "archive";
   starts_at: string;
   ends_at: string | null;

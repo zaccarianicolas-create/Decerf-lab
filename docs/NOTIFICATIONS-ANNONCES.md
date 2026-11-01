@@ -21,6 +21,10 @@
 - Les annonces actives sont visibles a tous les dentistes approuves. La lecture est individuelle et laisse l'annonce dans l'historique.
 - L'option d'envoi email respecte `email_annonce` ou `email_promotion`. Une annonce deja lue, archivee ou terminee ne genere pas d'email.
 - Les annonces publiees ne sont plus modifiables : creer une nouvelle annonce pour une correction qui doit renotifier les destinataires.
+- L'editeur Tiptap propose gras, italique, souligne, barre, titres, listes, citations, liens, images dans le texte et annuler/retablir.
+- L'apercu dentiste utilise le meme rendu que l'annonce. Les images integrees restent a leur position dans le texte ; la piece jointe se place en bas.
+- Les categories peuvent etre ajoutees, renommees, desactivees et reactivees. Leur type email est fixe a la creation pour ne pas contourner le consentement commercial.
+- Le contenu riche est valide et stocke en JSON ; seuls les liens autorises et les images du stockage prive sont rendus. Les anciennes annonces en texte simple restent compatibles.
 
 ## Envoi differe
 
