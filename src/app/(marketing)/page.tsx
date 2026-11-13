@@ -201,7 +201,7 @@ export default async function HomePage() {
           <div className="animate-fade-in-up max-w-3xl">
             <div className="mb-5 inline-flex items-center gap-2 border-l-2 border-teal-300 pl-3 text-sm font-semibold text-teal-100">
               <Microscope className="h-4 w-4" />
-              Prothèse dentaire · Orthodontie · Flux numérique
+              Laboratoire de proximité
             </div>
             <h1 className="font-display text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
               Bien plus qu’une prothèse,
@@ -255,7 +255,7 @@ export default async function HomePage() {
       </section>
 
       {/* Services */}
-      <section id="services" className="bg-white py-16 sm:py-20">
+      <section id="services" className="bg-white pt-16 pb-10 sm:pt-20 sm:pb-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
@@ -264,9 +264,8 @@ export default async function HomePage() {
             <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               Au service de votre pratique
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Une gamme complète de solutions pour répondre à vos besoins
-              cliniques, avec un accompagnement flexible, numérique ou traditionnel.
+            <p className="mt-4 text-base text-slate-600 sm:text-lg">
+              Des solutions adaptées, du traditionnel au numérique.
             </p>
           </div>
 
@@ -310,44 +309,22 @@ export default async function HomePage() {
             ))}
           </div>
 
-          <div className="mt-14 grid gap-10 border-t border-slate-200 pt-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
-                Un laboratoire de proximité
+          <div className="mt-12 border-b border-slate-200 pb-8 sm:mt-14 sm:pb-10">
+            <div className="mx-auto max-w-5xl border-l-2 border-sky-500 py-1 pl-5 sm:pl-7">
+              <p className="text-xs font-semibold uppercase tracking-widest text-sky-600">
+                Notre engagement
               </p>
-              <h3 className="font-display mt-3 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-                La technologie soutient le savoir-faire, elle ne le remplace pas.
+              <h3 className="font-display mt-2 text-xl font-semibold leading-snug text-slate-900 sm:text-2xl">
+                La technologie soutient le{" "}
+                <span className="text-sky-700">savoir-faire</span>, elle ne le remplace pas.
               </h3>
-              <p className="mt-4 max-w-xl leading-relaxed text-slate-600">
-                Un suivi direct avec l&apos;équipe, des échanges simples et une attention portée à chaque réalisation, de la réception des fichiers jusqu&apos;à la finition.
-              </p>
-            </div>
-
-            <div className="divide-y divide-slate-200 border-y border-slate-200">
-              {services.slice(3).map((service) => (
-                <div key={service.title} className="flex items-start gap-4 py-4 first:pt-4">
-                  <span
-                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${service.color}`}
-                  >
-                    {service.icon && <service.icon aria-hidden="true" className="h-5 w-5" />}
-                  </span>
-                  <div className="pt-0.5">
-                    <h4 className="font-semibold text-slate-900">
-                      {service.title}
-                    </h4>
-                    <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                      {service.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section id="comment-ca-marche" className="bg-white py-16 sm:py-20">
+      <section id="comment-ca-marche" className="bg-white pt-10 pb-16 sm:pt-12 sm:pb-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 text-center sm:mb-10">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">
