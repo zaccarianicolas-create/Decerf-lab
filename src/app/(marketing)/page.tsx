@@ -11,8 +11,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Microscope,
-  Clock,
-  Award,
+  Phone,
+  Monitor,
+  Truck,
+  LogIn,
+  Info,
 } from "lucide-react";
 import { formatAdresseLabo, getParametresLabo, safeHttpsUrl } from "@/lib/parametres-labo";
 
@@ -80,30 +83,57 @@ const services: Service[] = [
   },
 ];
 
-const steps = [
+const orderMethods = [
   {
-    step: "01",
-    title: "Créez votre compte",
-    description: "Inscription rapide et gratuite en tant que praticien.",
-    icon: Award,
+    title: "Par téléphone et fiche papier",
+    image: "/images/fiche commande.png",
+    imageAlt: "Empreinte dentaire et fiche de commande Decerf Lab",
+    icon: Phone,
+    buttonLabel: "Nous contacter",
+    buttonHref: "/contact",
+    buttonIcon: Phone,
+    steps: [
+      {
+        title: "Contactez le laboratoire",
+        description: "Échangeons sur votre besoin et le travail à réaliser.",
+      },
+      {
+        title: "Préparez votre fiche et vos empreintes",
+        description: "Complétez la fiche de commande et joignez vos empreintes (ou modèles).",
+      },
+      {
+        title: "Organisation du ramassage et de la livraison",
+        description: "Nous planifions ensemble l'enlèvement de vos empreintes et le retour de votre travail.",
+      },
+    ],
   },
   {
-    step: "02",
-    title: "Passez commande",
-    description: "Décrivez les travaux, envoyez vos fichiers STL et photos, ou demandez un ramassage.",
-    icon: Upload,
-  },
-  {
-    step: "03",
-    title: "Suivi en temps réel",
-    description: "Suivez l'avancement et échangez directement avec le labo.",
-    icon: Clock,
-  },
-  {
-    step: "04",
-    title: "Réception",
-    description: "Recevez vos prothèses avec contrôle qualité rigoureux.",
-    icon: CheckCircle2,
+    title: "Via notre plateforme en ligne",
+    image: "/images/pcplateforme.png",
+    imageAlt: "Plateforme de commande Decerf Lab affichée sur un ordinateur",
+    icon: Monitor,
+    buttonLabel: "Accéder à mon espace",
+    buttonHref: "/login",
+    buttonIcon: LogIn,
+    steps: [
+      {
+        title: "Créez votre compte gratuitement",
+        description: "Inscription simple et rapide en tant que praticien.",
+      },
+      {
+        title: "Passez votre commande",
+        description: "Décrivez le travail à réaliser et ajoutez vos fichiers (STL, photos, etc.) ou indiquez que vous souhaitez l'envoi d'empreintes / modèles physiques.",
+      },
+      {
+        title: "Demandez un ramassage si nécessaire",
+        description: "Planifiez l'enlèvement de vos empreintes, modèles ou travaux, directement depuis la plateforme, en quelques clics.",
+        icon: Truck,
+      },
+      {
+        title: "Suivez et recevez votre réalisation",
+        description: "Suivez l'avancement de votre commande, échangez avec le labo et recevez votre prothèse après contrôle qualité.",
+      },
+    ],
   },
 ];
 
@@ -285,77 +315,91 @@ export default async function HomePage() {
       {/* How it works */}
       <section id="comment-ca-marche" className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-            {/* Image */}
-            <div className="relative">
-              <div className="overflow-hidden rounded-2xl border border-slate-200/70">
-                <Image
-                  src="/images/empreinte.jpeg"
-                  alt="Empreinte dentaire tenue par des mains gantées"
-                  width={800}
-                  height={600}
-                  className="h-auto w-full object-cover object-center"
-                />
-              </div>
-              <div className="absolute -bottom-4 -right-4 -z-10 h-64 w-64 rounded-2xl bg-sky-100" />
-            </div>
+          <div className="mb-8 text-center sm:mb-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">
+              Commander au laboratoire
+            </p>
+            <h2 className="font-display mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Deux façons de commander, un même accompagnement
+            </h2>
+            <p className="mx-auto mt-3 max-w-3xl text-lg text-slate-600">
+              Avec ou sans scanner intra-oral, Decerf Lab s&apos;adapte à votre façon de travailler.
+            </p>
+          </div>
 
-            {/* Steps */}
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
-                Comment ça marche
-              </p>
-              <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Simple, rapide, transparent
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                De la commande à la réception, un processus fluide en 4 étapes.
-              </p>
-
-              <div className="mt-6 rounded-xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-sm font-semibold text-sky-900">
-                  Vous n&apos;avez pas de scanner intra-oral ?
-                </p>
-                <p className="mt-1 text-sm text-sky-800">
-                  Aucun souci: le laboratoire travaille aussi avec les empreintes
-                  et modèles en plâtre traditionnels.
-                </p>
-                <div className="mt-3">
-                  <Link href="/contact">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-sky-200 bg-white text-sky-700 hover:bg-sky-100"
-                    >
-                      Parler à un technicien
-                    </Button>
-                  </Link>
+          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
+            {orderMethods.map((method) => (
+              <article
+                key={method.title}
+                className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5"
+              >
+                <div className="relative h-52 w-full sm:h-56">
+                  <Image
+                    src={method.image}
+                    alt={method.imageAlt}
+                    fill
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="object-cover object-center"
+                  />
                 </div>
-              </div>
 
-              <div className="mt-8 space-y-6">
-                {steps.map((step, index) => (
-                  <div key={step.step} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-sm font-bold text-white">
-                        {step.step}
-                      </div>
-                      {index < steps.length - 1 && (
-                        <div className="mt-2 h-full w-px bg-sky-200" />
-                      )}
-                    </div>
-                    <div className={index < steps.length - 1 ? "pb-8" : "pb-0"}>
-                      <h3 className="text-lg font-semibold text-slate-900">
-                        {step.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {step.description}
-                      </p>
-                    </div>
+                <div className="flex flex-1 flex-col p-5 sm:p-6">
+                  <div className="mb-5 flex items-center gap-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                      <method.icon aria-hidden="true" className="h-6 w-6" />
+                    </span>
+                    <h3 className="font-display text-xl font-bold text-slate-900 sm:text-2xl">
+                      {method.title}
+                    </h3>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  <div className="space-y-4">
+                    {method.steps.map((step, index) => (
+                      <div key={step.title} className="flex gap-3">
+                        <div className="flex w-9 shrink-0 flex-col items-center">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-sm font-bold text-white">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          {index < method.steps.length - 1 && (
+                            <span className="mt-1 w-px flex-1 bg-sky-200" />
+                          )}
+                        </div>
+                        <div className="pb-3">
+                          {step.icon && (
+                            <step.icon aria-hidden="true" className="mb-1 h-5 w-5 text-sky-600" />
+                          )}
+                          <h4 className="text-sm font-bold text-slate-900 sm:text-base">
+                            {step.title}
+                          </h4>
+                          <p className="mt-0.5 text-sm leading-snug text-slate-600">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-auto pt-4 text-center">
+                    <Link href={method.buttonHref}>
+                      <Button className="h-11 w-full max-w-xs gap-2 bg-sky-600 px-6 text-white hover:bg-sky-700">
+                        <method.buttonIcon aria-hidden="true" className="h-5 w-5" />
+                        {method.buttonLabel}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-5 flex items-start justify-center gap-3 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-700 sm:mt-6 sm:items-center">
+            <Info aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 sm:mt-0" />
+            <p>
+              <span className="font-semibold text-slate-900">
+                Commande en ligne ou par téléphone, avec envoi de fichiers ou d&apos;empreintes physiques :
+              </span>{" "}
+              à vous de choisir, le service et la qualité Decerf Lab restent les mêmes.
+            </p>
           </div>
         </div>
       </section>
