@@ -255,30 +255,30 @@ export default async function HomePage() {
       </section>
 
       {/* Services */}
-      <section id="services" className="bg-slate-50 py-16 sm:py-20">
+      <section id="services" className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
               Nos services
             </p>
             <h2 className="font-display mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Tout pour vos travaux prothétiques
+              Au service de votre pratique
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Une gamme complète de solutions pour répondre à tous vos besoins
-              cliniques, avec un workflow entièrement digitalisé.
+              Une gamme complète de solutions pour répondre à vos besoins
+              cliniques, avec un accompagnement flexible, numérique ou traditionnel.
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((service) => (
+          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {services.slice(0, 3).map((service) => (
               <Card
                 key={service.title}
-                className="stagger-item group border-0 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                className="stagger-item group h-full rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md"
               >
-                <CardContent className="p-6">
+                <CardContent className="p-5 sm:p-6">
                   <div
-                    className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${service.color} transition-transform duration-300 group-hover:scale-110`}
+                    className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl ${service.color}`}
                   >
                     {service.image ? (
                       <span
@@ -299,7 +299,7 @@ export default async function HomePage() {
                       <service.icon className="h-6 w-6" />
                     ) : null}
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900">
+                  <h3 className="font-display text-xl font-semibold text-slate-900">
                     {service.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-500">
@@ -308,6 +308,40 @@ export default async function HomePage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          <div className="mt-14 grid gap-10 border-t border-slate-200 pt-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-sky-600">
+                Un laboratoire de proximité
+              </p>
+              <h3 className="font-display mt-3 text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
+                La technologie soutient le savoir-faire, elle ne le remplace pas.
+              </h3>
+              <p className="mt-4 max-w-xl leading-relaxed text-slate-600">
+                Un suivi direct avec l&apos;équipe, des échanges simples et une attention portée à chaque réalisation, de la réception des fichiers jusqu&apos;à la finition.
+              </p>
+            </div>
+
+            <div className="divide-y divide-slate-200 border-y border-slate-200">
+              {services.slice(3).map((service) => (
+                <div key={service.title} className="flex items-start gap-4 py-4 first:pt-4">
+                  <span
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${service.color}`}
+                  >
+                    {service.icon && <service.icon aria-hidden="true" className="h-5 w-5" />}
+                  </span>
+                  <div className="pt-0.5">
+                    <h4 className="font-semibold text-slate-900">
+                      {service.title}
+                    </h4>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                      {service.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
