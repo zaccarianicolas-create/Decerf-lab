@@ -43,7 +43,7 @@ const services: Service[] = [
     image: "/images/protheses_amovibles.png",
     title: "Prothèses amovibles",
     description:
-      "Prothèses partielles et complètes, châssis métalliques. Confort optimal.",
+      "Prothèses partielles et complètes. Confort optimal.",
     color: "bg-teal-50 text-teal-600",
   },
   {
