@@ -488,7 +488,7 @@ export default async function HomePage() {
                     />
                   </div>
                   <figcaption className="mt-2 text-center text-sm font-medium text-slate-800">
-                    Julie Decerf <span className="font-normal text-slate-500">· Prothésiste dentaire</span>
+                    Julie Decerf <span className="font-normal text-slate-500">· Votre prothésiste dentaire</span>
                   </figcaption>
                 </figure>
                 <div className="hidden flex-col items-start gap-3 lg:flex">
